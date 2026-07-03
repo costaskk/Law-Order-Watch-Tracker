@@ -1,11 +1,47 @@
 {
-  "status": "debug file installed",
-  "message": "Run the Trakt status sync workflow again. This file will be replaced with account, matching, and watched-show diagnostics.",
-  "expectedAfterWorkflow": [
-    "account.username",
-    "traktWatchedShowCount",
-    "candidateShowsSeen",
-    "matchedShows",
-    "workbookRowsMarkedWatched"
-  ]
+  "fetchedAt": "2026-07-03T20:41:13Z",
+  "endpoint": "/sync/watched/shows?extended=full",
+  "traktWatchedShowCount": 100,
+  "matchedShows": {
+    "Law & Order": 0,
+    "Homicide: Life on the Street": 0,
+    "Law & Order: Special Victims Unit": 0,
+    "Law & Order: Criminal Intent": 0,
+    "Law & Order: Trial by Jury": 0,
+    "Conviction": 0,
+    "Law & Order: UK": 0,
+    "Law & Order: LA": 0,
+    "Law & Order True Crime": 0,
+    "Law & Order: Organized Crime": 0,
+    "Criminal Intent: Toronto": 0,
+    "Deadline": 0,
+    "New York Undercover": 0
+  },
+  "candidateShowsSeen": [
+    {
+      "title": "Law & Order",
+      "slug": "law-order",
+      "year": 1990,
+      "watchedEpisodes": 0
+    },
+    {
+      "title": "Law & Order: Special Victims Unit",
+      "slug": "law-order-special-victims-unit",
+      "year": 1999,
+      "watchedEpisodes": 0
+    }
+  ],
+  "unmatchedRelevantShows": [],
+  "allLawRelatedTitlesSeen": [],
+  "totalMatchedLawOrderUniverseEpisodes": 0,
+  "account": {
+    "username": "costaskk",
+    "name": "costas grekas",
+    "accountFetchError": null
+  },
+  "workbookRowsChecked": 1727,
+  "workbookRowsMarkedWatched": 0,
+  "statusJsonPath": "law_order_tracker_app/data/watched_status.json",
+  "outputWorkbookPath": "Law_Order_Professional_Watch_Tracker_Trakt_Synced.xlsx",
+  "sampleWatchedStatusRows": []
 }
