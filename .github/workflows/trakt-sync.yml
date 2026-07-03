@@ -20,7 +20,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
       - name: Setup Python
@@ -33,30 +32,52 @@ jobs:
           python -m pip install --upgrade pip
           pip install requests openpyxl
 
-      - name: Write Trakt config/token
+      - name: Validate required secrets
         run: |
-          printf '%s' '{"client_id":"${{ secrets.TRAKT_CLIENT_ID }}","client_secret":"${{ secrets.TRAKT_CLIENT_SECRET }}"}' > trakt_config.json
-          printf '%s' '${{ secrets.TRAKT_TOKEN_JSON }}' > trakt_token.json
+          test -n "${{ secrets.TRAKT_CLIENT_ID }}" || (echo "Missing TRAKT_CLIENT_ID" && exit 1)
+          test -n "${{ secrets.TRAKT_CLIENT_SECRET }}" || (echo "Missing TRAKT_CLIENT_SECRET" && exit 1)
+          test -n "${{ secrets.TRAKT_TOKEN_JSON }}" || (echo "Missing TRAKT_TOKEN_JSON" && exit 1)
 
-      - name: Sync Trakt
+      - name: Write Trakt config/token
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, os
+          config = {
+              "client_id": os.environ["TRAKT_CLIENT_ID"],
+              "client_secret": os.environ["TRAKT_CLIENT_SECRET"],
+          }
+          token_raw = os.environ["TRAKT_TOKEN_JSON"].strip()
+          token = json.loads(token_raw)
+          open("trakt_config.json", "w", encoding="utf-8").write(json.dumps(config))
+          open("trakt_token.json", "w", encoding="utf-8").write(json.dumps(token))
+          PY
+        env:
+          TRAKT_CLIENT_ID: ${{ secrets.TRAKT_CLIENT_ID }}
+          TRAKT_CLIENT_SECRET: ${{ secrets.TRAKT_CLIENT_SECRET }}
+          TRAKT_TOKEN_JSON: ${{ secrets.TRAKT_TOKEN_JSON }}
+
+      - name: Sync Trakt and update app data
         run: python sync_trakt_and_excel.py
 
       - name: Remove private temp files
-        run: |
-          rm -f trakt_config.json trakt_token.json
+        if: always()
+        run: rm -f trakt_config.json trakt_token.json
 
-      - name: Commit and push updates
+      - name: Commit updated watched status
+        shell: bash
         run: |
           git config user.name "law-order-trakt-bot"
           git config user.email "actions@users.noreply.github.com"
 
           git add law_order_tracker_app/data/watched_status.json || true
-          git add Law_Order_Professional_Watch_Tracker_Trakt_Synced.xlsx || true
+          git add law_order_watch_status_from_trakt.json || true
 
           if git diff --cached --quiet; then
-            echo "No changes to commit"
+            echo "No Trakt status changes to commit."
             exit 0
           fi
 
           git commit -m "Update Trakt watched status"
+          git pull --rebase --autostash origin main
           git push origin HEAD:main
