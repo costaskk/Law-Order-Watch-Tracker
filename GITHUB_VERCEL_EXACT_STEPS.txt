@@ -1,0 +1,89 @@
+GITHUB + VERCEL EXACT UPLOAD INSTRUCTIONS
+=========================================
+
+Your GitHub repo:
+https://github.com/costaskk/Law-Order-Watch-Tracker.git
+
+OPTION A - Upload with GitHub Desktop (easiest)
+----------------------------------------------
+1. Install GitHub Desktop: https://desktop.github.com/
+2. Open GitHub Desktop and sign into your GitHub account.
+3. File -> Clone repository.
+4. Select URL and paste:
+   https://github.com/costaskk/Law-Order-Watch-Tracker.git
+5. Choose a local folder, for example:
+   R:\Law-Order-Watch-Tracker
+6. Click Clone.
+7. Open this package folder and copy EVERYTHING inside Law_Order_Professional_Tracker_Package into:
+   R:\Law-Order-Watch-Tracker
+   The repo root should contain package.json, vercel.json, README.txt, and the law_order_tracker_app folder.
+8. Go back to GitHub Desktop.
+9. You should see all changed files.
+10. In Summary, type:
+    Initial professional Law & Order tracker app
+11. Click Commit to main.
+12. Click Push origin.
+
+OPTION B - Upload with PowerShell / Git command line
+---------------------------------------------------
+1. Install Git for Windows: https://git-scm.com/download/win
+2. Open PowerShell.
+3. Run:
+   cd R:   git clone https://github.com/costaskk/Law-Order-Watch-Tracker.git
+   cd Law-Order-Watch-Tracker
+4. Copy EVERYTHING from this package's Law_Order_Professional_Tracker_Package folder into:
+   R:\Law-Order-Watch-Tracker
+5. Back in PowerShell, run:
+   git status
+   git add .
+   git commit -m "Initial professional Law & Order tracker app"
+   git push origin main
+
+GITHUB PAGES HOSTING
+--------------------
+1. Open your repo on GitHub.
+2. Go to Settings -> Pages.
+3. Under Build and deployment, choose:
+   Source: Deploy from a branch
+   Branch: main
+   Folder: / (root)
+4. Click Save.
+5. Wait 1-3 minutes.
+6. Your app should be available at:
+   https://costaskk.github.io/Law-Order-Watch-Tracker/law_order_tracker_app/
+
+VERCEL HOSTING
+--------------
+1. Go to https://vercel.com and sign in with GitHub.
+2. Click Add New -> Project.
+3. Import:
+   Law-Order-Watch-Tracker
+4. Framework Preset: Other
+5. Build Command: leave empty
+6. Output Directory: law_order_tracker_app
+7. Install Command: leave empty
+8. Click Deploy.
+9. Vercel will give you a public URL you can open on your phone.
+
+USING IT ON YOUR PHONE
+----------------------
+1. Open the GitHub Pages or Vercel URL on your phone.
+2. In Chrome/Android: three dots -> Add to Home screen.
+3. In Safari/iPhone: Share -> Add to Home Screen.
+
+TRAKT AUTO-SYNC ON GITHUB/VERCEL
+--------------------------------
+The web app reads:
+law_order_tracker_app/data/watched_status.json
+
+To update it from your PC:
+1. Run:
+   python sync_trakt_and_excel.py --web-status-only
+2. Confirm that this file changed:
+   law_order_tracker_app/data/watched_status.json
+3. Commit and push:
+   git add law_order_tracker_app/data/watched_status.json
+   git commit -m "Update watched status from Trakt"
+   git push origin main
+
+After GitHub/Vercel updates, the phone app auto-scans every 5 minutes and applies the new watched statuses.

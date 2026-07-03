@@ -1,0 +1,32 @@
+name: Trakt status sync
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 */6 * * *'
+permissions:
+  contents: write
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests openpyxl
+      - name: Write Trakt config/token from GitHub Secrets
+        run: |
+          cat > trakt_config.json <<EOF
+          {"client_id":"${{ secrets.TRAKT_CLIENT_ID }}","client_secret":"${{ secrets.TRAKT_CLIENT_SECRET }}"}
+          EOF
+          cat > trakt_token.json <<EOF
+          ${{ secrets.TRAKT_TOKEN_JSON }}
+          EOF
+      - run: python sync_trakt_and_excel.py
+      - name: Commit updated app status
+        run: |
+          git config user.name "law-order-trakt-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add law_order_tracker_app/data/watched_status.json Law_Order_Professional_Watch_Tracker_Trakt_Synced.xlsx
+          git commit -m "Update Trakt watched status" || echo "No changes"
+          git push

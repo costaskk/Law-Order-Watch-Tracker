@@ -1,0 +1,54 @@
+FIRST-TIME GITHUB PUSH - EXACT COMMANDS
+Repo: https://github.com/costaskk/Law-Order-Watch-Tracker.git
+
+OPTION A - If the GitHub repo is EMPTY (recommended)
+1) Extract this zip.
+2) Open PowerShell.
+3) Run these commands, changing the first cd path if you extracted somewhere else:
+
+cd R:\Law_Order_Professional_Watch_Tracker_Package_ARTWORK_XML_FIXED\Law_Order_Professional_Tracker_Package
+
+git init
+
+git branch -M main
+
+git remote add origin https://github.com/costaskk/Law-Order-Watch-Tracker.git
+
+git add .
+
+git commit -m "Initial Law Order watch tracker app"
+
+git push -u origin main
+
+OPTION B - If GitHub says the repo already has files/README
+Use this instead:
+
+cd R:\
+
+git clone https://github.com/costaskk/Law-Order-Watch-Tracker.git
+
+cd Law-Order-Watch-Tracker
+
+# Copy everything INSIDE the extracted Law_Order_Professional_Tracker_Package folder into this folder.
+# Then run:
+
+git add .
+
+git commit -m "Add Law Order watch tracker app"
+
+git push origin main
+
+ENABLE GITHUB PAGES
+1) Open: https://github.com/costaskk/Law-Order-Watch-Tracker/settings/pages
+2) Source: Deploy from a branch
+3) Branch: main
+4) Folder: / root
+5) Save
+
+Your app will be here after GitHub finishes deploying:
+https://costaskk.github.io/Law-Order-Watch-Tracker/law_order_tracker_app/
+
+IMPORTANT
+- Do not open assets/*.svg directly from the old package. The old SVGs had unescaped & characters.
+- This fixed package validates all SVG artwork files.
+- The app should be opened from law_order_tracker_app/index.html locally, or from GitHub Pages/Vercel online.

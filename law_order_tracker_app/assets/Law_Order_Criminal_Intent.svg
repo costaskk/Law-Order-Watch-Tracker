@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700" role="img" aria-label="Law &amp; Order: Criminal Intent artwork">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7c3aed"/><stop offset="0.55" stop-color="#111827"/><stop offset="1" stop-color="#05070d"/></linearGradient>
+    <radialGradient id="r" cx="78%" cy="18%" r="60%"><stop offset="0" stop-color="#ddd6fe" stop-opacity=".32"/><stop offset="1" stop-color="#ddd6fe" stop-opacity="0"/></radialGradient>
+    <filter id="shadow"><feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#000" flood-opacity=".45"/></filter>
+  </defs>
+  <rect width="1200" height="700" fill="url(#g)"/>
+  <rect width="1200" height="700" fill="url(#r)"/>
+  <g opacity=".14" stroke="#fff" stroke-width="2">
+    <path d="M80 110h1040M80 220h1040M80 330h1040M80 440h1040M80 550h1040"/>
+    <path d="M160 60v580M320 60v580M480 60v580M640 60v580M800 60v580M960 60v580"/>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="78" y="82" width="300" height="300" rx="52" fill="rgba(0,0,0,.35)" stroke="rgba(255,255,255,.22)"/>
+    <text x="228" y="250" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="76" font-weight="900" fill="#fff">CI</text>
+  </g>
+  <text x="78" y="485" font-family="Arial, Helvetica, sans-serif" font-size="58" font-weight="900" fill="#fff">Law &amp; Order: Criminal Intent</text>
+  <text x="82" y="545" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="700" fill="rgba(255,255,255,.78)">Chronological Master Watch Tracker</text>
+  <path d="M900 116c122 48 196 146 214 293" fill="none" stroke="rgba(255,255,255,.32)" stroke-width="28" stroke-linecap="round"/>
+  <circle cx="1012" cy="485" r="72" fill="rgba(0,0,0,.2)" stroke="rgba(255,255,255,.24)" stroke-width="8"/>
+</svg>

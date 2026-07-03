@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#111827">
+  <title>Law & Order Master Watch Tracker</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brandBlock"><div class="badgeLogo">L&O</div><div><h1>Law & Order Master Watch Tracker</h1><p>Chronological guide • Trakt sync • mobile-friendly app</p></div></div>
+    <div class="topActions"><button id="syncNowBtn" class="primary smallBtn">Sync status</button><button id="themeBtn" class="ghost smallBtn">Theme</button></div>
+  </header>
+
+  <section class="dashboard">
+    <div class="card hero" id="heroCard">
+      <div class="heroText"><span class="label">Next episode</span><h2 id="nextTitle">Loading…</h2><p id="nextMeta"></p><p id="nextNotes" class="notes"></p><div class="heroBtns"><button id="markNextWatched" class="primary">Mark next watched</button><button id="jumpNext">Jump to next</button></div></div>
+      <img id="nextPoster" alt="Show artwork" class="poster">
+    </div>
+    <div class="card stat"><span>Total</span><strong id="totalCount">0</strong></div>
+    <div class="card stat"><span>Watched</span><strong id="watchedCount">0</strong></div>
+    <div class="card stat"><span>Remaining</span><strong id="remainingCount">0</strong></div>
+    <div class="card stat"><span>Progress</span><strong id="progressPct">0%</strong><div class="progress"><span id="progressBar"></span></div></div>
+  </section>
+
+  <section class="syncPanel card">
+    <div><h2>Automatic Trakt status refresh</h2><p id="syncStatus" class="small">The app checks for <code>data/watched_status.json</code> when hosted on GitHub/Vercel or when your local sync script updates it.</p></div>
+    <label class="toggle"><input type="checkbox" id="autoSync" checked> Auto-scan every 5 minutes</label>
+  </section>
+
+  <section class="showStrip" id="showStrip"></section>
+  <section class="appNotice card" id="appNotice"><strong>Tip:</strong> Host this folder on GitHub Pages or Vercel for full phone access. Local file mode works for viewing, but auto-sync needs a server.</section>
+
+  <section class="controls card">
+    <input id="searchBox" placeholder="Search title, show, notes…" autocomplete="off">
+    <select id="showFilter"><option value="">All shows</option></select>
+    <select id="seasonFilter"><option value="">All seasons</option></select>
+    <select id="statusFilter"><option value="unwatched">Only unwatched</option><option value="all">Show all</option><option value="watched">Only watched</option><option value="watching">Watching</option><option value="skipped">Skipped</option></select>
+    <label class="toggle"><input type="checkbox" id="hideWatched" checked> Hide watched</label>
+  </section>
+
+  <section class="actions card">
+    <button id="exportJson">Export Status JSON</button><label class="fileBtn">Import Status JSON<input id="importJson" type="file" accept="application/json"></label><button id="exportCsv">Export Current View CSV</button><button id="installBtn">Install app</button><button id="resetFilters" class="ghost">Reset filters</button>
+  </section>
+
+  <section class="seasonPanel card"><h2>Season Manager</h2><div class="seasonControls"><select id="bulkShow"></select><select id="bulkSeason"></select><button id="markSeasonWatched" class="primary">Mark season watched</button><button id="markSeasonUnwatched">Mark season unwatched</button><button id="markShowWatched">Mark whole show watched</button></div><p class="small">Bulk changes save instantly in your browser. Export JSON to back up or move to another device.</p></section>
+  <main id="episodeList" class="episodeList"></main>
+  <nav class="bottomNav"><button data-status="unwatched">Unwatched</button><button data-status="all">All</button><button data-status="watched">Watched</button><button id="bottomNext">Next</button></nav>
+  <script src="data/show_themes.js"></script><script src="data/episodes.js"></script><script src="app.js"></script>
+</body>
+</html>

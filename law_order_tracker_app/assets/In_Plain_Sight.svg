@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 405" role="img" aria-label="In Plain Sight">
+  <defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#64748b"/><stop offset="0.55" stop-color="#0f172a"/><stop offset="1" stop-color="#050505"/></linearGradient><filter id="shadow"><feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#000" flood-opacity="0.45"/></filter></defs>
+  <rect width="720" height="405" fill="url(#g)"/>
+  <circle cx="640" cy="55" r="190" fill="#e2e8f0" opacity="0.10"/>
+  <circle cx="70" cy="345" r="150" fill="#fff" opacity="0.06"/>
+  <g filter="url(#shadow)"><rect x="44" y="52" width="632" height="300" rx="26" fill="#000" opacity="0.23"/><text x="70" y="145" fill="#fff" font-size="28" font-family="Arial, sans-serif" font-weight="700" opacity="0.92">LAW &amp; ORDER UNIVERSE</text><text x="70" y="235" fill="#fff" font-size="72" font-family="Arial Black, Arial, sans-serif" font-weight="900">IPS</text><text x="70" y="292" fill="#e2e8f0" font-size="34" font-family="Arial, sans-serif" font-weight="700">In Plain Sight</text></g>
+</svg>

@@ -1,0 +1,7 @@
+{
+  "scripts": {
+    "dev": "vercel dev",
+    "start": "python -m http.server 8000 --directory law_order_tracker_app"
+  },
+  "devDependencies": {}
+}
