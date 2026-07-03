@@ -33,7 +33,7 @@ button,input,select,.fileBtn{background:linear-gradient(180deg,rgba(255,255,255,
 <body>
   <header class="topbar">
     <div class="brandBlock"><div class="badgeLogo">L&O</div><div><h1>Law & Order Master Watch Tracker</h1><p>Chronological guide • Trakt sync • mobile-friendly app</p></div></div>
-    <div class="topActions"><button id="syncNowBtn" class="primary smallBtn">Sync status</button><button id="themeBtn" class="ghost smallBtn">Theme</button></div>
+    <div class="topActions"><button id="syncNowBtn" class="primary smallBtn">Sync with Trakt</button><button id="pullStatusBtn" class="smallBtn">Pull latest</button><button id="themeBtn" class="ghost smallBtn">Theme</button></div>
   </header>
 
   <div class="appShell">
@@ -49,7 +49,7 @@ button,input,select,.fileBtn{background:linear-gradient(180deg,rgba(255,255,255,
   </section>
 
   <section class="syncPanel card">
-    <div><h2>Automatic Trakt status refresh</h2><p id="syncStatus" class="small">The app checks for <code>data/watched_status.json</code> when hosted on GitHub/Vercel or when your local sync script updates it.</p></div>
+    <div><h2>Automatic Trakt status refresh</h2><p id="syncStatus" class="small">Click <strong>Sync with Trakt</strong> to start the secure GitHub Actions sync from inside the website. Click <strong>Pull latest</strong> to reload the current <code>data/watched_status.json</code> after the workflow finishes.</p></div>
     <label class="toggle"><input type="checkbox" id="autoSync" checked> Auto-scan every 5 minutes</label>
   </section>
 

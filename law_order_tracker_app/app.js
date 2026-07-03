@@ -430,6 +430,68 @@ async function fetchHostedStatus() {
   }
 }
 
+async function triggerCloudSync() {
+  if (window.location.protocol === 'file:') {
+    await showModal({
+      title: 'Cloud sync unavailable locally',
+      message: 'The in-website sync button works on Vercel because it uses a secure serverless API route. Locally, run python sync_trakt_and_excel.py instead.',
+      type: 'warning',
+      confirmText: 'OK'
+    });
+    return;
+  }
+
+  const ok = await showModal({
+    title: 'Sync with Trakt now?',
+    message: 'This will trigger the GitHub Actions Trakt sync. It usually takes 1–3 minutes, then Vercel redeploys the updated watched status automatically.',
+    type: 'info',
+    confirmText: 'Start sync',
+    cancelText: 'Cancel'
+  });
+  if (!ok) return;
+
+  const btn = document.getElementById('syncNowBtn');
+  const previousText = btn ? btn.textContent : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Starting sync…';
+  }
+  setText('syncStatus', 'Starting cloud Trakt sync via GitHub Actions…');
+
+  try {
+    const response = await fetch('/api/trigger-sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ source: 'law-order-tracker-app', ts: Date.now() })
+    });
+    let payload = {};
+    try { payload = await response.json(); } catch (_) {}
+    if (!response.ok || payload.ok === false) {
+      throw new Error(payload.error || `HTTP ${response.status}`);
+    }
+    const urlText = payload.run_url ? ` Open the workflow run: ${payload.run_url}` : '';
+    setText('syncStatus', 'Cloud sync started. Wait 1–3 minutes, then refresh/pull status.' + urlText);
+    showToast('Cloud sync started', 'GitHub Actions is now syncing Trakt. Vercel will update after the workflow commits.', 'success');
+    window.setTimeout(fetchHostedStatus, 15000);
+    window.setTimeout(fetchHostedStatus, 60000);
+    window.setTimeout(fetchHostedStatus, 150000);
+  } catch (err) {
+    setText('syncStatus', `Cloud sync failed: ${err.message}`);
+    showToast('Cloud sync failed', err.message, 'danger');
+    await showModal({
+      title: 'Could not start cloud sync',
+      message: `${err.message}\n\nCheck that Vercel has GITHUB_PAT, GITHUB_REPO, and GITHUB_WORKFLOW environment variables set, then redeploy.`,
+      type: 'danger',
+      confirmText: 'OK'
+    });
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = previousText || 'Sync with Trakt';
+    }
+  }
+}
+
 function setAutoSync(enabled) {
   localStorage.setItem(AUTOSYNC_KEY, enabled ? '1' : '0');
   if (autoTimer) clearInterval(autoTimer);
@@ -498,7 +560,9 @@ function bindEvents() {
   document.getElementById('jumpNext').addEventListener('click', jump);
   document.getElementById('bottomNext').addEventListener('click', jump);
 
-  document.getElementById('syncNowBtn').addEventListener('click', fetchHostedStatus);
+  document.getElementById('syncNowBtn').addEventListener('click', triggerCloudSync);
+  const pullBtn = document.getElementById('pullStatusBtn');
+  if (pullBtn) pullBtn.addEventListener('click', fetchHostedStatus);
   document.getElementById('exportJson').addEventListener('click', exportJson);
   document.getElementById('exportCsv').addEventListener('click', exportCsv);
   document.getElementById('resetFilters').addEventListener('click', () => {
