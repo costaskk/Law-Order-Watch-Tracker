@@ -72,6 +72,7 @@ jobs:
 
           git add law_order_tracker_app/data/watched_status.json || true
           git add law_order_watch_status_from_trakt.json || true
+          git add law_order_tracker_app/data/trakt_sync_debug.json || true
 
           if git diff --cached --quiet; then
             echo "No Trakt status changes to commit."

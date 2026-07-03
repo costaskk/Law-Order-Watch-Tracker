@@ -1,0 +1,11 @@
+{
+  "status": "debug file installed",
+  "message": "Run the Trakt status sync workflow again. This file will be replaced with account, matching, and watched-show diagnostics.",
+  "expectedAfterWorkflow": [
+    "account.username",
+    "traktWatchedShowCount",
+    "candidateShowsSeen",
+    "matchedShows",
+    "workbookRowsMarkedWatched"
+  ]
+}
