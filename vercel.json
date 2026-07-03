@@ -1,9 +1,10 @@
 {
-  "cleanUrls": false,
-  "trailingSlash": true,
+  "cleanUrls": true,
+  "trailingSlash": false,
   "rewrites": [
-    { "source": "/", "destination": "/index.html" },
-    { "source": "/app/", "destination": "/law_order_tracker_app/index.html" },
-    { "source": "/law_order_tracker_app/", "destination": "/law_order_tracker_app/index.html" }
+    {
+      "source": "/law_order_tracker_app",
+      "destination": "/law_order_tracker_app/"
+    }
   ]
 }

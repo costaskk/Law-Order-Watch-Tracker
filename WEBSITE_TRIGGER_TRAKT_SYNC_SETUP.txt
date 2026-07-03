@@ -1,0 +1,80 @@
+WEBSITE BUTTON → TRAKT SYNC SETUP
+=================================
+
+This package adds a Vercel serverless endpoint:
+
+  /api/trigger-trakt-sync
+
+The website's "Sync status" button now calls that endpoint. The endpoint safely triggers your GitHub Actions workflow:
+
+  .github/workflows/trakt-sync.yml
+
+IMPORTANT SECURITY NOTE
+-----------------------
+Do NOT put any GitHub token in app.js, index.html, or any public file.
+The token must only be stored as a Vercel Environment Variable.
+
+1) Create a GitHub token
+------------------------
+Recommended: Fine-grained token.
+
+GitHub → profile picture → Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token
+
+Repository access:
+  Only selected repositories → costaskk/Law-Order-Watch-Tracker
+
+Permissions:
+  Actions: Read and write
+  Contents: Read-only is enough for triggering, but Read and write is also OK.
+
+Copy the generated token.
+
+2) Add token to Vercel
+----------------------
+Vercel → your Law Order project → Settings → Environment Variables
+
+Add:
+  GITHUB_DISPATCH_TOKEN = your GitHub token
+
+Optional, but recommended:
+  GITHUB_OWNER = costaskk
+  GITHUB_REPO = Law-Order-Watch-Tracker
+  GITHUB_WORKFLOW_FILE = trakt-sync.yml
+  GITHUB_REF = main
+
+Make sure the variables are enabled for Production.
+
+3) Redeploy Vercel
+------------------
+After adding environment variables, redeploy the project.
+Vercel environment variable changes only apply to new deployments.
+
+4) Check workflow file
+----------------------
+.github/workflows/trakt-sync.yml must contain:
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 */6 * * *"
+
+5) Use the site
+---------------
+Open your Vercel app and press "Sync status".
+The site will trigger GitHub Actions.
+After GitHub commits the updated watched_status.json, Vercel should redeploy automatically.
+Wait about 1-3 minutes, then refresh the site.
+
+Troubleshooting
+---------------
+If the website shows "Missing Vercel environment variable GITHUB_DISPATCH_TOKEN":
+  Add the token in Vercel Settings → Environment Variables, then redeploy.
+
+If the website shows HTTP 404 from GitHub:
+  Check GITHUB_OWNER, GITHUB_REPO, and GITHUB_WORKFLOW_FILE.
+
+If the website shows HTTP 401/403:
+  Your GitHub token is invalid or lacks Actions: Read and write permission.
+
+If the workflow starts but status does not change:
+  Check GitHub Actions logs and confirm watched_status.json was committed.
