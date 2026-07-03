@@ -40,10 +40,12 @@ function getStatus(ep) {
   return statusMap[ep.id] || ep.status || 'Not Started';
 }
 
-function setStatus(ep, status) {
+function setStatus(ep, status, silent = false) {
+  const previous = getStatus(ep);
   statusMap[ep.id] = status;
   save();
   render();
+  if (!silent && previous !== status) showToast('Status updated', `${ep.show} ${ep.code} is now ${status}.`, 'success');
 }
 
 function pct(n, d) {
@@ -83,6 +85,60 @@ function setImageSafe(img, src) {
   img.onerror = () => { img.onerror = null; img.src = artwork('Law & Order'); };
   img.src = src || artwork('Law & Order');
   img.style.display = '';
+}
+
+
+function showToast(title, message = '', type = 'info', timeout = 4200) {
+  const host = document.getElementById('toastHost');
+  if (!host) return;
+  const colors = { success: '#28c76f', error: '#ef4444', warning: '#f6ad3d', info: '#60a5fa' };
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.style.setProperty('--toastColor', colors[type] || colors.info);
+  toast.innerHTML = `<strong>${esc(title)}</strong>${message ? `<p>${esc(message)}</p>` : ''}`;
+  host.appendChild(toast);
+  window.setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(8px)';
+    window.setTimeout(() => toast.remove(), 220);
+  }, timeout);
+}
+
+function showModal({ title, message, type = 'info', confirmText = 'OK', cancelText = '', danger = false } = {}) {
+  return new Promise(resolve => {
+    const overlay = document.getElementById('modalOverlay');
+    if (!overlay) {
+      resolve(true);
+      return;
+    }
+    const colors = { success: '#28c76f', error: '#ef4444', warning: '#f6ad3d', info: '#60a5fa' };
+    const icon = type === 'success' ? '✓' : type === 'error' ? '!' : type === 'warning' ? '!' : 'i';
+    overlay.innerHTML = `
+      <div class="modal" style="--modalColor:${colors[type] || colors.info}">
+        <div class="modalIcon">${icon}</div>
+        <h2>${esc(title || 'Confirm')}</h2>
+        <p>${esc(message || '')}</p>
+        <div class="modalActions">
+          ${cancelText ? `<button id="modalCancel" class="ghost">${esc(cancelText)}</button>` : ''}
+          <button id="modalOk" class="${danger ? 'primary danger' : 'primary'}">${esc(confirmText)}</button>
+        </div>
+      </div>`;
+    overlay.classList.add('show');
+    const close = result => {
+      overlay.classList.remove('show');
+      overlay.innerHTML = '';
+      resolve(result);
+    };
+    overlay.querySelector('#modalOk').addEventListener('click', () => close(true));
+    const cancel = overlay.querySelector('#modalCancel');
+    if (cancel) cancel.addEventListener('click', () => close(false));
+    overlay.addEventListener('click', function outside(ev) {
+      if (ev.target === overlay) {
+        overlay.removeEventListener('click', outside);
+        close(false);
+      }
+    });
+  });
 }
 
 function normalizeEpisodes() {
@@ -222,14 +278,14 @@ function renderNext(next) {
 
   if (!next) {
     nextTitle.textContent = 'Everything is watched';
-    nextMeta.textContent = 'Your Law & Order universe tracker is complete.';
+    nextMeta.innerHTML = '<span class="metaPill">Your Law & Order universe tracker is complete.</span>';
     nextNotes.textContent = '';
     setImageSafe(poster, artwork('Law & Order'));
     return;
   }
 
   nextTitle.textContent = `${next.show} ${next.code}${next.title ? ' — ' + next.title : ''}`;
-  nextMeta.textContent = `#${next.order} • ${next.airDate || 'No air date'} • Season ${next.season}, Episode ${next.episode}`;
+  nextMeta.innerHTML = `<span class="metaPill">#${esc(next.order)}</span><span class="metaPill">${esc(next.airDate || 'No air date')}</span><span class="metaPill">Season ${esc(next.season)}, Episode ${esc(next.episode)}</span>`;
   nextNotes.textContent = next.notes || '';
   heroCard.style.setProperty('--showColor', t.primary);
 
@@ -287,22 +343,31 @@ function setStatusById(encodedId, status) {
   if (ep) setStatus(ep, status);
 }
 
-function markBulk(scope, status) {
+async function markBulk(scope, status) {
   const show = document.getElementById('bulkShow').value;
   const season = document.getElementById('bulkSeason').value;
+  const targets = episodes.filter(ep => ep.show === show && (scope === 'show' || String(ep.season) === String(season)));
+  const label = scope === 'show' ? `${show}` : `${show} Season ${season}`;
+  const ok = await showModal({
+    title: status === 'Watched' ? 'Mark as watched?' : 'Mark as unwatched?',
+    message: `${label}: this will update ${targets.length} episodes to ${status === 'Watched' ? 'Watched' : 'Not Started'}.`,
+    type: status === 'Watched' ? 'success' : 'warning',
+    confirmText: status === 'Watched' ? 'Yes, update' : 'Yes, reset',
+    cancelText: 'Cancel',
+    danger: status !== 'Watched'
+  });
+  if (!ok) return;
   let changed = 0;
-  episodes.forEach(ep => {
-    const sameShow = ep.show === show;
-    const sameSeason = String(ep.season) === String(season);
-    if (sameShow && (scope === 'show' || sameSeason)) {
-      if (statusMap[ep.id] !== status) changed++;
-      statusMap[ep.id] = status;
-    }
+  targets.forEach(ep => {
+    if (statusMap[ep.id] !== status) changed++;
+    statusMap[ep.id] = status;
   });
   save();
   render();
   setText('syncStatus', `${changed} episode statuses updated.`);
+  showToast('Bulk update complete', `${changed} episodes updated for ${label}.`, 'success');
 }
+
 
 function exportJson() {
   const payload = {
@@ -311,6 +376,7 @@ function exportJson() {
     statuses: statusMap
   };
   downloadBlob(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }), 'law_order_watch_status.json');
+  showToast('Export ready', 'Status JSON downloaded.', 'success');
 }
 
 function exportCsv() {
@@ -318,6 +384,7 @@ function exportCsv() {
   current.forEach(ep => rows.push([ep.order, getStatus(ep), ep.airDate, ep.show, ep.season, ep.episode, ep.code, ep.title, ep.notes]));
   const csv = rows.map(row => row.map(value => `"${String(value ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
   downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8' }), 'law_order_current_view.csv');
+  showToast('Export ready', 'Current view CSV downloaded.', 'success');
 }
 
 function downloadBlob(blob, name) {
@@ -344,6 +411,7 @@ async function importStatusPayload(payload, source = 'import') {
   if (changed) save();
   render();
   setText('syncStatus', `${source}: ${changed} status changes applied at ${new Date().toLocaleTimeString()}.`);
+  showToast(source, `${changed} status changes applied.`, changed ? 'success' : 'info');
 }
 
 async function fetchHostedStatus() {
@@ -358,6 +426,7 @@ async function fetchHostedStatus() {
     await importStatusPayload(await response.json(), 'Auto-sync');
   } catch (err) {
     setText('syncStatus', `Auto-sync checked: ${err.message}. Run the Python sync script or upload watched_status.json to data/.`);
+    showToast('Sync warning', err.message, 'warning');
   }
 }
 
@@ -405,9 +474,17 @@ function bindEvents() {
   document.getElementById('markSeasonUnwatched').addEventListener('click', () => markBulk('season', 'Not Started'));
   document.getElementById('markShowWatched').addEventListener('click', () => markBulk('show', 'Watched'));
 
-  document.getElementById('markNextWatched').addEventListener('click', () => {
+  document.getElementById('markNextWatched').addEventListener('click', async () => {
     const next = episodes.find(e => getStatus(e) !== 'Watched');
-    if (next) setStatus(next, 'Watched');
+    if (!next) return showToast('Nothing to mark', 'All episodes are already watched.', 'info');
+    const ok = await showModal({
+      title: 'Mark next episode watched?',
+      message: `${next.show} ${next.code}${next.title ? ' — ' + next.title : ''}`,
+      type: 'success',
+      confirmText: 'Mark watched',
+      cancelText: 'Cancel'
+    });
+    if (ok) setStatus(next, 'Watched');
   });
 
   const jump = () => {
@@ -432,6 +509,7 @@ function bindEvents() {
     document.getElementById('hideWatched').checked = true;
     updateSeasonOptions();
     render();
+    showToast('Filters reset', 'Showing unwatched episodes again.', 'info');
   });
 
   document.querySelectorAll('.bottomNav button[data-status]').forEach(button => {
@@ -454,7 +532,7 @@ function bindEvents() {
     try {
       await importStatusPayload(JSON.parse(await file.text()), 'Manual import');
     } catch (err) {
-      alert('Could not import JSON: ' + err.message);
+      showModal({ title: 'Import failed', message: err.message, type: 'error', confirmText: 'OK' });
     } finally {
       event.target.value = '';
     }
@@ -465,7 +543,7 @@ function bindEvents() {
       deferredInstallPrompt.prompt();
       deferredInstallPrompt = null;
     } else {
-      alert('On mobile, open the browser menu and choose Add to Home Screen / Install app.');
+      showModal({ title: 'Install app', message: 'On mobile, open the browser menu and choose Add to Home Screen / Install app.', type: 'info', confirmText: 'OK' });
     }
   });
 
