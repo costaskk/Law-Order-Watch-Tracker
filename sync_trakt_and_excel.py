@@ -1,31 +1,22 @@
 #!/usr/bin/env python3
 """
-Sync Trakt watched status into the Law & Order chronological Excel guide.
+Sync Trakt watched status into the Law & Order chronological tracker.
 
-What it updates:
-- Workbook: Law_Order_Professional_Watch_Tracker.xlsx
-- Sheet: Chronological Guide
-- Column B: Status
-- Marks rows as "Watched" when Trakt has the same show/season/episode in watched history.
-
-Requirements:
-    pip install requests openpyxl
-
-Setup:
-    1) Copy trakt_config.example.json to trakt_config.json
-    2) Add your Trakt client_id and client_secret
-    3) Run: python trakt_sync_law_order.py
+This fixed version writes a website-friendly watched_status.json that marks
+watched items by stable Show+Season+Episode keys. It also writes a diagnostic
+file so you can see exactly what Trakt returned and why something did/didn't
+match.
 """
-
 from __future__ import annotations
 
+import argparse
 import json
+import re
 import sys
 import time
 import warnings
-import argparse
 from pathlib import Path
-from typing import Dict, Iterable, Set, Tuple
+from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 import requests
 from openpyxl import load_workbook
@@ -39,48 +30,82 @@ TOKEN_PATH = Path("trakt_token.json")
 WORKBOOK_PATH = Path("Law_Order_Professional_Watch_Tracker.xlsx")
 OUTPUT_PATH = Path("Law_Order_Professional_Watch_Tracker_Trakt_Synced.xlsx")
 APP_STATUS_PATH = Path("law_order_tracker_app/data/watched_status.json")
+DEBUG_PATH = Path("law_order_tracker_app/data/trakt_sync_debug.json")
 
-SHOW_SLUGS = {
-    "Law & Order": "law-and-order",
-    "Homicide: Life on the Street": "homicide-life-on-the-street",
-    "Law & Order: Special Victims Unit": "law-and-order-special-victims-unit",
-    "Law & Order: Criminal Intent": "law-and-order-criminal-intent",
-    "Law & Order: Trial by Jury": "law-and-order-trial-by-jury",
-    "Conviction": "conviction",
-    "Law & Order: UK": "law-and-order-uk",
-    "Law & Order: LA": "law-and-order-la",
-    "Law & Order True Crime": "law-and-order-true-crime",
-    "Law & Order: Organized Crime": "law-and-order-organized-crime",
-    "Criminal Intent: Toronto": "criminal-intent-toronto",
-    "Deadline": "deadline",
-    "New York Undercover": "new-york-undercover",
+# The actual show names used in your guide + Trakt names/slugs that may appear.
+SHOW_VARIANTS: Dict[str, List[str]] = {
+    "Law & Order": ["Law & Order", "law-and-order", "law-order"],
+    "Homicide: Life on the Street": ["Homicide: Life on the Street", "homicide-life-on-the-street"],
+    "Law & Order: SVU": [
+        "Law & Order: SVU", "Law & Order: Special Victims Unit",
+        "Special Victims Unit", "SVU", "law-and-order-special-victims-unit",
+        "law-order-special-victims-unit"
+    ],
+    "Criminal Intent": [
+        "Criminal Intent", "Law & Order: Criminal Intent",
+        "law-and-order-criminal-intent", "law-order-criminal-intent"
+    ],
+    "Trial by Jury": ["Trial by Jury", "Law & Order: Trial by Jury", "law-and-order-trial-by-jury", "law-order-trial-by-jury"],
+    "Conviction": ["Conviction", "conviction"],
+    "Law & Order: UK": ["Law & Order: UK", "Law & Order UK", "Law and Order UK", "law-and-order-uk", "law-order-uk"],
+    "Law & Order: LA": ["Law & Order: LA", "Law & Order LA", "Law and Order LA", "law-and-order-la", "law-order-la"],
+    "True Crime": ["True Crime", "Law & Order True Crime", "Law & Order: True Crime", "law-and-order-true-crime", "law-order-true-crime"],
+    "Law & Order: Organized Crime": ["Law & Order: Organized Crime", "Organized Crime", "law-and-order-organized-crime", "law-order-organized-crime"],
+    "Law & Order Toronto: Criminal Intent": [
+        "Law & Order Toronto: Criminal Intent", "Law & Order Toronto Criminal Intent",
+        "Law & Order: Toronto Criminal Intent", "Criminal Intent: Toronto",
+        "Law & Order: Toronto: Criminal Intent", "law-and-order-toronto-criminal-intent",
+        "law-order-toronto-criminal-intent", "criminal-intent-toronto"
+    ],
+    "Deadline": ["Deadline", "deadline"],
+    "NY Undercover": ["NY Undercover", "New York Undercover", "new-york-undercover"],
+    "In Plain Sight": ["In Plain Sight", "in-plain-sight"],
 }
 
-# A few aliases in case the workbook has shorter show names in some rows.
-SHOW_ALIASES = {
-    "SVU": "Law & Order: Special Victims Unit",
-    "Law & Order: SVU": "Law & Order: Special Victims Unit",
-    "Criminal Intent": "Law & Order: Criminal Intent",
-    "Organized Crime": "Law & Order: Organized Crime",
-    "Trial by Jury": "Law & Order: Trial by Jury",
-    "Law & Order UK": "Law & Order: UK",
-    "Law & Order LA": "Law & Order: LA",
-}
+
+def norm_text(value: object) -> str:
+    value = str(value or "").lower().strip()
+    value = value.replace("&", " and ")
+    value = re.sub(r"[^a-z0-9]+", " ", value)
+    value = re.sub(r"\s+", " ", value).strip()
+    return value
+
+
+VARIANT_TO_GUIDE: Dict[str, str] = {}
+for guide_show, variants in SHOW_VARIANTS.items():
+    for variant in [guide_show] + variants:
+        VARIANT_TO_GUIDE[norm_text(variant)] = guide_show
+
+# Some common title formats normalize differently; add explicit aliases.
+VARIANT_TO_GUIDE[norm_text("Law and Order Special Victims Unit")] = "Law & Order: SVU"
+VARIANT_TO_GUIDE[norm_text("Law Order Special Victims Unit")] = "Law & Order: SVU"
+VARIANT_TO_GUIDE[norm_text("Law Order Criminal Intent")] = "Criminal Intent"
+VARIANT_TO_GUIDE[norm_text("New York Undercover")] = "NY Undercover"
+
+
+def match_show(title: object = "", slug: object = "") -> Optional[str]:
+    candidates = [norm_text(title), norm_text(slug)]
+    # Slugs from Trakt may contain years or omit "and". Try broad contains too.
+    joined = " ".join(c for c in candidates if c)
+    for c in candidates:
+        if c in VARIANT_TO_GUIDE:
+            return VARIANT_TO_GUIDE[c]
+    for variant_norm, guide_show in VARIANT_TO_GUIDE.items():
+        if variant_norm and joined and (variant_norm in joined or joined in variant_norm):
+            return guide_show
+    return None
 
 
 def load_config() -> dict:
     if not CONFIG_PATH.exists():
-        raise SystemExit(
-            "Missing trakt_config.json. Copy trakt_config.example.json to trakt_config.json "
-            "and add your Trakt client_id/client_secret."
-        )
+        raise SystemExit("Missing trakt_config.json. Create it with client_id/client_secret.")
     cfg = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
     if not cfg.get("client_id") or not cfg.get("client_secret"):
         raise SystemExit("trakt_config.json must contain client_id and client_secret.")
     return cfg
 
 
-def headers(cfg: dict, token: str | None = None) -> dict:
+def headers(cfg: dict, token: Optional[str] = None) -> dict:
     h = {
         "Content-Type": "application/json",
         "trakt-api-version": "2",
@@ -112,35 +137,25 @@ def refresh_token(cfg: dict, token: dict) -> dict:
 
 
 def device_auth(cfg: dict) -> dict:
-    r = requests.post(
-        f"{BASE_URL}/oauth/device/code",
-        json={"client_id": cfg["client_id"]},
-        headers=headers(cfg),
-        timeout=30,
-    )
+    r = requests.post(f"{BASE_URL}/oauth/device/code", json={"client_id": cfg["client_id"]}, headers=headers(cfg), timeout=30)
     r.raise_for_status()
     device = r.json()
-
     print("\nAuthorize this script with Trakt:")
     print(f"  1) Open: {device['verification_url']}")
     print(f"  2) Enter code: {device['user_code']}")
     print("Waiting for authorization...\n")
-
     interval = int(device.get("interval", 5))
     deadline = time.time() + int(device.get("expires_in", 600))
-
     while time.time() < deadline:
         time.sleep(interval)
-        payload = {
-            "code": device["device_code"],
-            "client_id": cfg["client_id"],
-            "client_secret": cfg["client_secret"],
-        }
-        rr = requests.post(f"{BASE_URL}/oauth/device/token", json=payload, headers=headers(cfg), timeout=30)
+        rr = requests.post(
+            f"{BASE_URL}/oauth/device/token",
+            json={"code": device["device_code"], "client_id": cfg["client_id"], "client_secret": cfg["client_secret"]},
+            headers=headers(cfg),
+            timeout=30,
+        )
         if rr.status_code == 200:
-            token = rr.json()
-            token["created_at_local"] = int(time.time())
-            save_token(token)
+            token = rr.json(); token["created_at_local"] = int(time.time()); save_token(token)
             print("Authorized successfully.\n")
             return token
         if rr.status_code in (400, 404):
@@ -148,7 +163,6 @@ def device_auth(cfg: dict) -> dict:
         if rr.status_code == 418:
             raise SystemExit("Authorization was denied in Trakt.")
         rr.raise_for_status()
-
     raise SystemExit("Timed out waiting for Trakt authorization.")
 
 
@@ -172,156 +186,189 @@ def trakt_get(cfg: dict, token: dict, path: str) -> requests.Response:
     return r
 
 
-def fetch_all_watched_shows(cfg: dict, token: dict) -> Dict[str, Set[Tuple[int, int]]]:
-    """
-    Fetch watched episodes for all shows in one call.
+def merge_watched(watched: Dict[str, Set[Tuple[int, int]]], show: Optional[str], season: object, episode: object) -> bool:
+    if not show:
+        return False
+    try:
+        s = int(season); e = int(episode)
+    except (TypeError, ValueError):
+        return False
+    if s < 0 or e <= 0:
+        return False
+    watched.setdefault(show, set()).add((s, e))
+    return True
 
-    Trakt no longer supports /shows/{slug}/watched, which returns HTTP 405.
-    The correct authenticated endpoint is /sync/watched/shows.
-    It returns every watched show with seasons/episodes. We then map those
-    results back to the show names used in the workbook.
-    """
-    r = trakt_get(cfg, token, "/sync/watched/shows")
-    data = r.json()
 
-    watched_by_show: Dict[str, Set[Tuple[int, int]]] = {show: set() for show in SHOW_SLUGS}
-    slug_to_workbook_show = {slug: show for show, slug in SHOW_SLUGS.items()}
+def fetch_watched(cfg: dict, token: dict) -> Tuple[Dict[str, Set[Tuple[int, int]]], dict]:
+    """Fetch watched episodes using both Trakt watched and history endpoints."""
+    watched: Dict[str, Set[Tuple[int, int]]] = {show: set() for show in SHOW_VARIANTS}
+    debug = {
+        "exportedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "matchedShows": {},
+        "unmatchedTraktShows": [],
+        "sources": {},
+    }
 
-    # Extra fallback by normalized title in case a Trakt slug differs slightly.
-    title_to_workbook_show = {show.lower(): show for show in SHOW_SLUGS}
-    title_to_workbook_show.update({alias.lower(): canonical for alias, canonical in SHOW_ALIASES.items()})
-
-    for item in data:
-        show_info = item.get("show", {}) or {}
-        ids = show_info.get("ids", {}) or {}
-        trakt_slug = ids.get("slug")
-        trakt_title = str(show_info.get("title") or "").strip()
-
-        workbook_show = None
-        if trakt_slug in slug_to_workbook_show:
-            workbook_show = slug_to_workbook_show[trakt_slug]
-        elif trakt_title.lower() in title_to_workbook_show:
-            workbook_show = title_to_workbook_show[trakt_title.lower()]
-
-        if not workbook_show:
-            continue
-
-        for season in item.get("seasons", []) or []:
-            s_num = season.get("number")
-            if not isinstance(s_num, int):
+    # 1) Main watched state endpoint.
+    try:
+        data = trakt_get(cfg, token, "/sync/watched/shows").json()
+        debug["sources"]["/sync/watched/shows"] = len(data)
+        for item in data:
+            show_info = item.get("show", {}) or {}
+            ids = show_info.get("ids", {}) or {}
+            guide_show = match_show(show_info.get("title"), ids.get("slug"))
+            if not guide_show:
+                debug["unmatchedTraktShows"].append({"title": show_info.get("title"), "slug": ids.get("slug"), "source": "watched"})
                 continue
-            for ep in season.get("episodes", []) or []:
-                e_num = ep.get("number")
-                if isinstance(e_num, int):
-                    watched_by_show[workbook_show].add((s_num, e_num))
+            before = len(watched.get(guide_show, set()))
+            for season in item.get("seasons", []) or []:
+                for ep in season.get("episodes", []) or []:
+                    merge_watched(watched, guide_show, season.get("number"), ep.get("number"))
+            after = len(watched.get(guide_show, set()))
+            debug["matchedShows"].setdefault(guide_show, {"watchedEndpoint": 0, "historyEndpoint": 0})["watchedEndpoint"] += max(0, after - before)
+    except Exception as exc:
+        debug["sources"]["/sync/watched/shows_error"] = str(exc)
 
-    return watched_by_show
+    # 2) Fallback: watched history endpoint. This catches accounts where history is populated
+    # but watched state is not returned as expected. Paginate defensively.
+    page = 1
+    total_history_items = 0
+    while page <= 20:  # 20 * 1000 entries is plenty for this tracker; prevents accidental infinite loops.
+        try:
+            r = trakt_get(cfg, token, f"/sync/history/shows?page={page}&limit=1000")
+        except Exception as exc:
+            debug["sources"]["/sync/history/shows_error"] = str(exc)
+            break
+        items = r.json()
+        total_history_items += len(items)
+        for item in items:
+            show_info = item.get("show", {}) or {}
+            ids = show_info.get("ids", {}) or {}
+            ep_info = item.get("episode", {}) or {}
+            guide_show = match_show(show_info.get("title"), ids.get("slug"))
+            if not guide_show:
+                # Keep debug small and relevant: only list items that look related.
+                title_norm = norm_text(show_info.get("title"))
+                if any(w in title_norm for w in ["law", "order", "criminal", "homicide", "undercover", "plain sight", "deadline", "conviction"]):
+                    debug["unmatchedTraktShows"].append({"title": show_info.get("title"), "slug": ids.get("slug"), "source": "history"})
+                continue
+            before = len(watched.get(guide_show, set()))
+            merge_watched(watched, guide_show, ep_info.get("season"), ep_info.get("number"))
+            after = len(watched.get(guide_show, set()))
+            debug["matchedShows"].setdefault(guide_show, {"watchedEndpoint": 0, "historyEndpoint": 0})["historyEndpoint"] += max(0, after - before)
+        if len(items) < 1000:
+            break
+        page += 1
+    debug["sources"]["/sync/history/shows"] = total_history_items
+    debug["finalCounts"] = {show: len(items) for show, items in watched.items() if items}
+    return watched, debug
 
-def normalize_show(show: str) -> str:
-    show = str(show or "").strip()
-    return SHOW_ALIASES.get(show, show)
+
+def find_columns(ws) -> dict:
+    header = [cell.value for cell in ws[1]]
+    required = ["Status", "Show", "Season", "Episode"]
+    cols = {}
+    for name in required:
+        if name not in header:
+            raise SystemExit(f"Workbook is missing expected column: {name}. Headers found: {header}")
+        cols[name] = header.index(name) + 1
+    cols["Order"] = 1
+    return cols
 
 
 def run_once() -> None:
     cfg = load_config()
     token = get_token(cfg)
-
     if not WORKBOOK_PATH.exists():
         raise SystemExit(f"Workbook not found: {WORKBOOK_PATH}")
 
     print("Reading watched history from Trakt...")
-    try:
-        watched_by_show = fetch_all_watched_shows(cfg, token)
-    except requests.HTTPError as exc:
-        raise SystemExit(f"Could not fetch Trakt watched history: {exc}")
+    watched_by_show, debug = fetch_watched(cfg, token)
+    for show in SHOW_VARIANTS:
+        print(f"  {show}: {len(watched_by_show.get(show, set()))} watched episodes")
 
-    for workbook_show in SHOW_SLUGS:
-        print(f"  {workbook_show}: {len(watched_by_show.get(workbook_show, set()))} watched episodes")
-
-    print("\nUpdating workbook...")
+    print("\nUpdating workbook and website status...")
     wb = load_workbook(WORKBOOK_PATH)
+    if "Chronological Guide" not in wb.sheetnames:
+        raise SystemExit("Workbook is missing sheet: Chronological Guide")
     ws = wb["Chronological Guide"]
+    cols = find_columns(ws)
 
-    header = [cell.value for cell in ws[1]]
-    try:
-        status_col = header.index("Status") + 1
-        show_col = header.index("Show") + 1
-        season_col = header.index("Season") + 1
-        episode_col = header.index("Episode") + 1
-    except ValueError as exc:
-        raise SystemExit(f"Workbook is missing an expected column: {exc}")
-
-    total = 0
+    total_rows = 0
     marked_watched = 0
+    app_status = {
+        "version": 7,
+        "source": "trakt",
+        "exportedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "summary": {},
+        "statuses": {},
+        "episodes": [],
+    }
 
     for row in range(2, ws.max_row + 1):
-        show = normalize_show(ws.cell(row=row, column=show_col).value)
-        season = ws.cell(row=row, column=season_col).value
-        episode = ws.cell(row=row, column=episode_col).value
-        if show not in watched_by_show:
-            continue
+        show_raw = str(ws.cell(row=row, column=cols["Show"]).value or "").strip()
+        guide_show = match_show(show_raw, show_raw) or show_raw
+        season = ws.cell(row=row, column=cols["Season"]).value
+        episode = ws.cell(row=row, column=cols["Episode"]).value
+        order = ws.cell(row=row, column=cols["Order"]).value
         try:
             key = (int(season), int(episode))
         except (TypeError, ValueError):
             continue
-
-        total += 1
-        if key in watched_by_show[show]:
-            ws.cell(row=row, column=status_col).value = "Watched"
+        total_rows += 1
+        is_watched = key in watched_by_show.get(guide_show, set())
+        status = "Watched" if is_watched else "Not Started"
+        ws.cell(row=row, column=cols["Status"]).value = status
+        if is_watched:
             marked_watched += 1
-        else:
-            ws.cell(row=row, column=status_col).value = "Not Started"
+            # Important: for the website, write keys using the exact guide show name too.
+            ep_id = f"{show_raw}|{int(season)}|{int(episode)}|{order}"
+            app_status["statuses"][ep_id] = "Watched"
+            app_status["statuses"][f"{show_raw}|{int(season)}|{int(episode)}"] = "Watched"
+            app_status["statuses"][f"{guide_show}|{int(season)}|{int(episode)}"] = "Watched"
+            app_status["episodes"].append({
+                "show": show_raw,
+                "guideShow": guide_show,
+                "season": int(season),
+                "episode": int(episode),
+                "status": "Watched",
+            })
+
+    app_status["summary"] = {
+        "guideRowsScanned": total_rows,
+        "guideRowsMarkedWatched": marked_watched,
+        "traktWatchedCountsByShow": {show: len(items) for show, items in watched_by_show.items()},
+    }
+    debug["appStatusSummary"] = app_status["summary"]
 
     wb.save(OUTPUT_PATH)
-
-    # Also export a status JSON that the mobile web app can import.
-    # We include both the old exact row-id map and a safer show/season/episode array.
-    # The array lets the website still match watched items even if the chronological
-    # order number changed after catalog updates.
-    app_status = {
-        "version": 5,
-        "exportedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        "statuses": {},
-        "episodes": []
-    }
-    for row in range(2, ws.max_row + 1):
-        order = ws.cell(row=row, column=1).value
-        show = ws.cell(row=row, column=show_col).value
-        season = ws.cell(row=row, column=season_col).value
-        episode = ws.cell(row=row, column=episode_col).value
-        status = ws.cell(row=row, column=status_col).value or "Not Started"
-        ep_id = f"{show}|{season}|{episode}|{order}"
-        app_status["statuses"][ep_id] = status
-        try:
-            s_num = int(season)
-            e_num = int(episode)
-        except (TypeError, ValueError):
-            continue
-        app_status["episodes"].append({
-            "show": str(show or "").strip(),
-            "season": s_num,
-            "episode": e_num,
-            "status": status
-        })
-    Path("law_order_watch_status_from_trakt.json").write_text(json.dumps(app_status, indent=2), encoding="utf-8")
     APP_STATUS_PATH.parent.mkdir(parents=True, exist_ok=True)
     APP_STATUS_PATH.write_text(json.dumps(app_status, indent=2), encoding="utf-8")
+    Path("law_order_watch_status_from_trakt.json").write_text(json.dumps(app_status, indent=2), encoding="utf-8")
+    DEBUG_PATH.write_text(json.dumps(debug, indent=2), encoding="utf-8")
 
-    print(f"\nDone. Matched {marked_watched}/{total} guide rows as watched.")
+    print(f"\nDone. Matched {marked_watched}/{total_rows} guide rows as watched.")
     print(f"Saved: {OUTPUT_PATH}")
+    print(f"Saved website status: {APP_STATUS_PATH}")
+    print(f"Saved debug report: {DEBUG_PATH}")
+    if marked_watched == 0:
+        print("\nWARNING: Trakt sync ran, but 0 guide episodes were marked watched.")
+        print("Open law_order_tracker_app/data/trakt_sync_debug.json to see which Trakt shows were returned.")
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Sync Trakt watched status to Excel and the mobile web app.")
+    parser = argparse.ArgumentParser(description="Sync Trakt watched status to Excel and the web app.")
     parser.add_argument("--loop", action="store_true", help="Keep scanning Trakt automatically.")
     parser.add_argument("--minutes", type=int, default=15, help="Minutes between automatic scans when --loop is used.")
     args = parser.parse_args()
     if not args.loop:
-        run_once(); return
+        run_once()
+        return
     while True:
         run_once()
         print(f"Sleeping {args.minutes} minutes before the next automatic Trakt scan...\n")
         time.sleep(max(5, args.minutes) * 60)
+
 
 if __name__ == "__main__":
     main()

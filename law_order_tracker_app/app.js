@@ -457,11 +457,15 @@ function downloadBlob(blob, name) {
 
 async function importStatusPayload(payload, source = 'import') {
   const incoming = payload.statuses || payload || {};
+  const traktOnly = payload && payload.source === 'trakt';
   let changed = 0;
   let matched = 0;
 
   function applyToEpisode(ep, status) {
     if (!ep || !status) return;
+    // Cloud Trakt payloads should mark watched episodes. Do not let a cloud
+    // "Not Started" reset manual local progress.
+    if (traktOnly && status !== 'Watched') return;
     matched++;
     if (statusMap[ep.id] !== status) {
       statusMap[ep.id] = status;
@@ -511,8 +515,10 @@ async function importStatusPayload(payload, source = 'import') {
 
   if (changed) save();
   render();
-  setText('syncStatus', `${source}: ${changed} status changes applied, ${matched} guide rows matched at ${new Date().toLocaleTimeString()}.`);
-  showToast(source, `${changed} changes applied. ${matched} guide rows matched.`, changed ? 'success' : 'info');
+  const summary = payload && payload.summary ? payload.summary : null;
+  const summaryText = summary ? ` Trakt marked ${summary.guideRowsMarkedWatched || 0}/${summary.guideRowsScanned || 0} guide rows as watched.` : '';
+  setText('syncStatus', `${source}: ${changed} status changes applied, ${matched} guide rows matched at ${new Date().toLocaleTimeString()}.${summaryText}`);
+  showToast(source, `${changed} changes applied. ${matched} guide rows matched.${summaryText}`, changed || matched ? 'success' : 'warning');
 }
 
 async function fetchHostedStatus() {
