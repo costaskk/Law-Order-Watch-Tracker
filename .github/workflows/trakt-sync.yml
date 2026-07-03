@@ -8,6 +8,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: trakt-status-sync
+  cancel-in-progress: true
+
 jobs:
   sync:
     runs-on: ubuntu-latest
@@ -16,7 +20,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          persist-credentials: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -28,15 +33,19 @@ jobs:
           python -m pip install --upgrade pip
           pip install requests openpyxl
 
-      - name: Write Trakt config/token from GitHub Secrets
+      - name: Write Trakt config/token
         run: |
-          echo '{"client_id":"${{ secrets.TRAKT_CLIENT_ID }}","client_secret":"${{ secrets.TRAKT_CLIENT_SECRET }}"}' > trakt_config.json
-          echo '${{ secrets.TRAKT_TOKEN_JSON }}' > trakt_token.json
+          printf '%s' '{"client_id":"${{ secrets.TRAKT_CLIENT_ID }}","client_secret":"${{ secrets.TRAKT_CLIENT_SECRET }}"}' > trakt_config.json
+          printf '%s' '${{ secrets.TRAKT_TOKEN_JSON }}' > trakt_token.json
 
-      - name: Sync Trakt and Excel
+      - name: Sync Trakt
         run: python sync_trakt_and_excel.py
 
-      - name: Commit updated watched status
+      - name: Remove private temp files
+        run: |
+          rm -f trakt_config.json trakt_token.json
+
+      - name: Commit and push updates
         run: |
           git config user.name "law-order-trakt-bot"
           git config user.email "actions@users.noreply.github.com"
@@ -44,8 +53,10 @@ jobs:
           git add law_order_tracker_app/data/watched_status.json || true
           git add Law_Order_Professional_Watch_Tracker_Trakt_Synced.xlsx || true
 
-          git diff --cached --quiet && echo "No changes to commit" && exit 0
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
 
           git commit -m "Update Trakt watched status"
-          git pull --rebase origin main
-          git push
+          git push origin HEAD:main
