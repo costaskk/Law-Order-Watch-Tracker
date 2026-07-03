@@ -430,78 +430,6 @@ async function fetchHostedStatus() {
   }
 }
 
-
-async function triggerServerTraktSync() {
-  if (window.location.protocol === 'file:') {
-    await showModal({
-      title: 'Website sync unavailable in file mode',
-      message: 'Open the Vercel version of the app to trigger GitHub Actions from the website. Local file mode can only read existing status JSON.',
-      type: 'warning',
-      confirmText: 'OK'
-    });
-    return;
-  }
-
-  const ok = await showModal({
-    title: 'Trigger Trakt sync now?',
-    message: 'This will start your GitHub Actions Trakt sync workflow. It usually takes 1–3 minutes, then Vercel redeploys the updated watched_status.json.',
-    type: 'info',
-    confirmText: 'Start sync',
-    cancelText: 'Cancel'
-  });
-  if (!ok) return;
-
-  const button = document.getElementById('syncNowBtn');
-  const oldText = button ? button.textContent : '';
-  if (button) {
-    button.disabled = true;
-    button.textContent = 'Starting sync…';
-  }
-
-  try {
-    setText('syncStatus', 'Requesting GitHub Actions Trakt sync…');
-    const response = await fetch('/api/trigger-trakt-sync', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ requestedAt: new Date().toISOString() })
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok || !data.ok) {
-      throw new Error(data.error || `HTTP ${response.status}`);
-    }
-
-    setText('syncStatus', 'Trakt sync started. Wait 1–3 minutes for GitHub Actions + Vercel redeploy, then refresh or use Auto-scan.');
-    showToast('Trakt sync started', 'GitHub Actions is now updating your watched status.', 'success', 6500);
-    await showModal({
-      title: 'Trakt sync started',
-      message: 'GitHub Actions is running now. When it commits watched_status.json, Vercel will redeploy automatically. Give it a couple of minutes, then refresh the app.',
-      type: 'success',
-      confirmText: 'OK'
-    });
-
-    // Poll the currently deployed status file a few times. The real update appears after Vercel redeploys.
-    let tries = 0;
-    const quickPoll = setInterval(() => {
-      tries += 1;
-      fetchHostedStatus();
-      if (tries >= 10) clearInterval(quickPoll);
-    }, 30000);
-  } catch (err) {
-    setText('syncStatus', `Could not trigger Trakt sync: ${err.message}`);
-    await showModal({
-      title: 'Could not start sync',
-      message: err.message + '\n\nCheck that Vercel has GITHUB_DISPATCH_TOKEN set and redeploy after adding it.',
-      type: 'error',
-      confirmText: 'OK'
-    });
-  } finally {
-    if (button) {
-      button.disabled = false;
-      button.textContent = oldText || 'Sync status';
-    }
-  }
-}
-
 function setAutoSync(enabled) {
   localStorage.setItem(AUTOSYNC_KEY, enabled ? '1' : '0');
   if (autoTimer) clearInterval(autoTimer);
@@ -570,7 +498,7 @@ function bindEvents() {
   document.getElementById('jumpNext').addEventListener('click', jump);
   document.getElementById('bottomNext').addEventListener('click', jump);
 
-  document.getElementById('syncNowBtn').addEventListener('click', triggerServerTraktSync);
+  document.getElementById('syncNowBtn').addEventListener('click', fetchHostedStatus);
   document.getElementById('exportJson').addEventListener('click', exportJson);
   document.getElementById('exportCsv').addEventListener('click', exportCsv);
   document.getElementById('resetFilters').addEventListener('click', () => {
