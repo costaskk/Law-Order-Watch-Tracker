@@ -36,13 +36,70 @@ function save() {
   localStorage.setItem(STORE_KEY, JSON.stringify(statusMap));
 }
 
+function normText(value) {
+  return String(value ?? '')
+    .toLowerCase()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+function normNum(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? String(Math.trunc(n)) : String(value ?? '').trim();
+}
+
+const SHOW_NAME_ALIASES = {
+  [normText('Law & Order: SVU')]: normText('Law & Order: Special Victims Unit'),
+  [normText('SVU')]: normText('Law & Order: Special Victims Unit'),
+  [normText('Criminal Intent')]: normText('Law & Order: Criminal Intent'),
+  [normText('Law Order Criminal Intent')]: normText('Law & Order: Criminal Intent'),
+  [normText('Organized Crime')]: normText('Law & Order: Organized Crime'),
+  [normText('Trial by Jury')]: normText('Law & Order: Trial by Jury'),
+  [normText('Law Order UK')]: normText('Law & Order: UK'),
+  [normText('Law Order LA')]: normText('Law & Order: LA'),
+  [normText('True Crime')]: normText('Law & Order True Crime'),
+  [normText('NY Undercover')]: normText('New York Undercover')
+};
+
+function normShow(value) {
+  const n = normText(value);
+  return SHOW_NAME_ALIASES[n] || n;
+}
+
+function episodeKey(ep) {
+  return `${normShow(ep.show)}|${normNum(ep.season)}|${normNum(ep.episode)}`;
+}
+
+const episodeByExactId = new Map(episodes.map(ep => [String(ep.id), ep]));
+const episodesByNoOrderKey = episodes.reduce((map, ep) => {
+  const key = episodeKey(ep);
+  if (!map.has(key)) map.set(key, []);
+  map.get(key).push(ep);
+  return map;
+}, new Map());
+
+function normalizeStatus(value) {
+  const v = String(value ?? '').trim().toLowerCase();
+  if (['watched', 'complete', 'completed', 'yes', 'true', '1'].includes(v)) return 'Watched';
+  if (['watching', 'in progress', 'started'].includes(v)) return 'Watching';
+  if (['skipped', 'skip'].includes(v)) return 'Skipped';
+  if (['not started', 'todo', 'unwatched', 'false', '0', ''].includes(v)) return 'Not Started';
+  return ['Not Started', 'Watching', 'Watched', 'Skipped'].includes(value) ? value : null;
+}
+
+function statusFromMap(ep) {
+  return statusMap[ep.id] || statusMap[episodeKey(ep)] || null;
+}
+
 function getStatus(ep) {
-  return statusMap[ep.id] || ep.status || 'Not Started';
+  return statusFromMap(ep) || ep.status || 'Not Started';
 }
 
 function setStatus(ep, status, silent = false) {
   const previous = getStatus(ep);
   statusMap[ep.id] = status;
+  statusMap[episodeKey(ep)] = status;
   save();
   render();
   if (!silent && previous !== status) showToast('Status updated', `${ep.show} ${ep.code} is now ${status}.`, 'success');
@@ -401,17 +458,61 @@ function downloadBlob(blob, name) {
 async function importStatusPayload(payload, source = 'import') {
   const incoming = payload.statuses || payload || {};
   let changed = 0;
-  for (const [id, value] of Object.entries(incoming)) {
-    if (!['Not Started', 'Watching', 'Watched', 'Skipped'].includes(value)) continue;
-    if (statusMap[id] !== value) {
-      statusMap[id] = value;
+  let matched = 0;
+
+  function applyToEpisode(ep, status) {
+    if (!ep || !status) return;
+    matched++;
+    if (statusMap[ep.id] !== status) {
+      statusMap[ep.id] = status;
+      changed++;
+    }
+    const noOrder = episodeKey(ep);
+    if (statusMap[noOrder] !== status) statusMap[noOrder] = status;
+  }
+
+  // Preferred new format: [{show, season, episode, status}]
+  if (Array.isArray(payload.episodes)) {
+    for (const item of payload.episodes) {
+      const status = normalizeStatus(item.status);
+      const key = `${normShow(item.show)}|${normNum(item.season)}|${normNum(item.episode)}`;
+      const eps = episodesByNoOrderKey.get(key) || [];
+      eps.forEach(ep => applyToEpisode(ep, status));
+    }
+  }
+
+  // Backward compatible format: {statuses: {'Show|Season|Episode|Order': 'Watched'}}
+  for (const [rawId, rawValue] of Object.entries(incoming)) {
+    const status = normalizeStatus(rawValue);
+    if (!status) continue;
+
+    const exact = episodeByExactId.get(String(rawId));
+    if (exact) {
+      applyToEpisode(exact, status);
+      continue;
+    }
+
+    const parts = String(rawId).split('|');
+    if (parts.length >= 3) {
+      const key = `${normShow(parts[0])}|${normNum(parts[1])}|${normNum(parts[2])}`;
+      const eps = episodesByNoOrderKey.get(key) || [];
+      if (eps.length) {
+        eps.forEach(ep => applyToEpisode(ep, status));
+        continue;
+      }
+    }
+
+    // Keep unknown statuses so an exported file does not lose data.
+    if (statusMap[rawId] !== status) {
+      statusMap[rawId] = status;
       changed++;
     }
   }
+
   if (changed) save();
   render();
-  setText('syncStatus', `${source}: ${changed} status changes applied at ${new Date().toLocaleTimeString()}.`);
-  showToast(source, `${changed} status changes applied.`, changed ? 'success' : 'info');
+  setText('syncStatus', `${source}: ${changed} status changes applied, ${matched} guide rows matched at ${new Date().toLocaleTimeString()}.`);
+  showToast(source, `${changed} changes applied. ${matched} guide rows matched.`, changed ? 'success' : 'info');
 }
 
 async function fetchHostedStatus() {
@@ -421,7 +522,8 @@ async function fetchHostedStatus() {
   }
 
   try {
-    const response = await fetch('data/watched_status.json?ts=' + Date.now(), { cache: 'no-store' });
+    const statusUrl = new URL('data/watched_status.json?ts=' + Date.now(), window.location.href);
+    const response = await fetch(statusUrl, { cache: 'no-store' });
     if (!response.ok) throw new Error(`status file returned HTTP ${response.status}`);
     await importStatusPayload(await response.json(), 'Auto-sync');
   } catch (err) {

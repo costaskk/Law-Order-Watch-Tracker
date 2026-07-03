@@ -275,7 +275,15 @@ def run_once() -> None:
     wb.save(OUTPUT_PATH)
 
     # Also export a status JSON that the mobile web app can import.
-    app_status = {"version": 2, "exportedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "statuses": {}}
+    # We include both the old exact row-id map and a safer show/season/episode array.
+    # The array lets the website still match watched items even if the chronological
+    # order number changed after catalog updates.
+    app_status = {
+        "version": 5,
+        "exportedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "statuses": {},
+        "episodes": []
+    }
     for row in range(2, ws.max_row + 1):
         order = ws.cell(row=row, column=1).value
         show = ws.cell(row=row, column=show_col).value
@@ -284,6 +292,17 @@ def run_once() -> None:
         status = ws.cell(row=row, column=status_col).value or "Not Started"
         ep_id = f"{show}|{season}|{episode}|{order}"
         app_status["statuses"][ep_id] = status
+        try:
+            s_num = int(season)
+            e_num = int(episode)
+        except (TypeError, ValueError):
+            continue
+        app_status["episodes"].append({
+            "show": str(show or "").strip(),
+            "season": s_num,
+            "episode": e_num,
+            "status": status
+        })
     Path("law_order_watch_status_from_trakt.json").write_text(json.dumps(app_status, indent=2), encoding="utf-8")
     APP_STATUS_PATH.parent.mkdir(parents=True, exist_ok=True)
     APP_STATUS_PATH.write_text(json.dumps(app_status, indent=2), encoding="utf-8")
