@@ -1,9 +1,9 @@
 {
-  "exportedAt": "2026-07-04T05:05:54Z",
+  "exportedAt": "2026-07-04T07:12:13Z",
   "matchedShows": {
     "Law & Order": {
       "watchedEndpoint": 0,
-      "historyEndpoint": 3
+      "historyEndpoint": 4
     },
     "Law & Order: SVU": {
       "watchedEndpoint": 0,
@@ -614,17 +614,17 @@
   ],
   "sources": {
     "/sync/watched/shows": 100,
-    "/sync/history/shows": 9593
+    "/sync/history/shows": 9594
   },
   "finalCounts": {
-    "Law & Order": 3,
+    "Law & Order": 4,
     "Law & Order: SVU": 108
   },
   "appStatusSummary": {
     "guideRowsScanned": 1796,
-    "guideRowsMarkedWatched": 111,
+    "guideRowsMarkedWatched": 112,
     "traktWatchedCountsByShow": {
-      "Law & Order": 3,
+      "Law & Order": 4,
       "Homicide: Life on the Street": 0,
       "Law & Order: SVU": 108,
       "Criminal Intent": 0,
