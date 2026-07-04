@@ -1,7 +1,47 @@
 {
-  "fetchedAt": "2026-07-03T20:52:14Z",
-  "endpoint": "/sync/watched/shows?extended=full",
+  "fetchedAt": "2026-07-04T04:21:38Z",
+  "mode": "merge-preserve-local",
+  "account": {
+    "username": "costaskk",
+    "private": false,
+    "deleted": false,
+    "name": "costas grekas",
+    "vip": false,
+    "vip_ep": false,
+    "director": false,
+    "ids": {
+      "slug": "costaskk",
+      "uuid": "c393fd85dad71a4fd4baa30fc1ee4d0b5e39d944"
+    },
+    "joined_at": "2015-07-04T14:55:14.000Z",
+    "location": null,
+    "about": null,
+    "gender": null,
+    "age": null,
+    "images": {
+      "avatar": {
+        "full": "https://secure.gravatar.com/avatar/8ff038bed74ef516cc246ab831118c75?d=https%3A%2F%2Fmedia.trakt.tv%2Fhotlink-ok%2Fplaceholders%2Fmedium%2Fzoidberg.png&r=pg&s=256"
+      }
+    },
+    "vip_og": false,
+    "vip_years": 0,
+    "vip_cover_image": null
+  },
   "traktWatchedShowCount": 100,
+  "candidateShowsSeen": [
+    {
+      "title": "Law & Order",
+      "slug": "law-order",
+      "matchedAs": "Law & Order",
+      "watchedEpisodes": 0
+    },
+    {
+      "title": "Law & Order: Special Victims Unit",
+      "slug": "law-order-special-victims-unit",
+      "matchedAs": "Law & Order: Special Victims Unit",
+      "watchedEpisodes": 0
+    }
+  ],
   "matchedShows": {
     "Law & Order": 0,
     "Homicide: Life on the Street": 0,
@@ -15,33 +55,127 @@
     "Law & Order: Organized Crime": 0,
     "Criminal Intent: Toronto": 0,
     "Deadline": 0,
-    "New York Undercover": 0
+    "New York Undercover": 0,
+    "In Plain Sight": 0
   },
-  "candidateShowsSeen": [
+  "fallbackHistoryChecks": [
     {
-      "title": "Law & Order",
-      "slug": "law-order",
-      "year": 1990,
-      "watchedEpisodes": 0
+      "show": "Law & Order",
+      "slug": "law-and-order",
+      "episodesFound": 0
     },
     {
-      "title": "Law & Order: Special Victims Unit",
-      "slug": "law-order-special-victims-unit",
-      "year": 1999,
-      "watchedEpisodes": 0
+      "show": "Homicide: Life on the Street",
+      "slug": "homicide-life-on-the-street",
+      "episodesFound": 0
+    },
+    {
+      "show": "Law & Order: Special Victims Unit",
+      "slug": "law-and-order-special-victims-unit",
+      "episodesFound": 0
+    },
+    {
+      "show": "Law & Order: Criminal Intent",
+      "slug": "law-and-order-criminal-intent",
+      "episodesFound": 0
+    },
+    {
+      "show": "Law & Order: Trial by Jury",
+      "slug": "law-and-order-trial-by-jury",
+      "episodesFound": 0
+    },
+    {
+      "show": "Conviction",
+      "slug": "conviction",
+      "episodesFound": 0
+    },
+    {
+      "show": "Law & Order: UK",
+      "slug": "law-and-order-uk",
+      "episodesFound": 0
+    },
+    {
+      "show": "Law & Order: LA",
+      "slug": "law-and-order-la",
+      "episodesFound": 0
+    },
+    {
+      "show": "Law & Order True Crime",
+      "slug": "law-and-order-true-crime",
+      "episodesFound": 0
+    },
+    {
+      "show": "Law & Order: Organized Crime",
+      "slug": "law-and-order-organized-crime",
+      "episodesFound": 0
+    },
+    {
+      "show": "Criminal Intent: Toronto",
+      "slug": "criminal-intent-toronto",
+      "episodesFound": 0
+    },
+    {
+      "show": "Deadline",
+      "slug": "deadline",
+      "episodesFound": 0
+    },
+    {
+      "show": "New York Undercover",
+      "slug": "new-york-undercover",
+      "episodesFound": 0
+    },
+    {
+      "show": "In Plain Sight",
+      "slug": "in-plain-sight",
+      "episodesFound": 0
     }
   ],
-  "unmatchedRelevantShows": [],
-  "allLawRelatedTitlesSeen": [],
-  "totalMatchedLawOrderUniverseEpisodes": 0,
-  "account": {
-    "username": "costaskk",
-    "name": "costas grekas",
-    "accountFetchError": null
-  },
-  "workbookRowsChecked": 1727,
-  "workbookRowsMarkedWatched": 0,
-  "statusJsonPath": "law_order_tracker_app/data/watched_status.json",
+  "totalTraktEpisodeKeys": 0,
+  "importSources": [
+    {
+      "path": "law_order_tracker_app\\data\\watched_status.json",
+      "watchedKeys": 0
+    },
+    {
+      "path": "law_order_watch_status_from_trakt.json",
+      "watchedKeys": 0
+    },
+    {
+      "path": "law_order_watch_status.json",
+      "watchedKeys": 110
+    }
+  ],
+  "existingLocalWatchedKeys": 110,
+  "finalWatchedKeys": 110,
+  "workbookRowsChecked": 1796,
+  "workbookRowsMarkedWatched": 110,
+  "statusJsonPath": "law_order_tracker_app\\data\\watched_status.json",
   "outputWorkbookPath": "Law_Order_Professional_Watch_Tracker_Trakt_Synced.xlsx",
-  "sampleWatchedStatusRows": []
+  "sampleWatchedStatusRows": [
+    "Law & Order: SVU|1|1|393",
+    "Law & Order: SVU|1|2|395",
+    "Law & Order: SVU|1|3|397",
+    "Law & Order: SVU|1|4|399",
+    "Law & Order: SVU|1|5|401",
+    "Law & Order: SVU|1|6|402",
+    "Law & Order: SVU|1|7|404",
+    "Law & Order: SVU|1|8|406",
+    "Law & Order: SVU|1|9|408",
+    "Law & Order: SVU|1|10|412",
+    "Law & Order: SVU|1|11|413",
+    "Law & Order: SVU|1|12|414",
+    "Law & Order: SVU|1|13|416",
+    "Law & Order: SVU|1|14|418",
+    "Law & Order|10|14|420",
+    "Law & Order: SVU|1|15|421",
+    "Law & Order|10|15|422",
+    "Law & Order: SVU|1|16|423",
+    "Law & Order: SVU|1|17|426",
+    "Law & Order: SVU|1|18|428",
+    "Law & Order: SVU|1|19|430",
+    "Law & Order: SVU|1|20|432",
+    "Law & Order: SVU|1|21|434",
+    "Law & Order: SVU|1|22|436",
+    "Law & Order: SVU|2|1|443"
+  ]
 }
