@@ -1,5 +1,5 @@
 {
-  "fetchedAt": "2026-07-04T04:21:38Z",
+  "fetchedAt": "2026-07-04T04:24:46Z",
   "mode": "merge-preserve-local",
   "account": {
     "username": "costaskk",
@@ -133,49 +133,19 @@
   "totalTraktEpisodeKeys": 0,
   "importSources": [
     {
-      "path": "law_order_tracker_app\\data\\watched_status.json",
+      "path": "law_order_tracker_app/data/watched_status.json",
       "watchedKeys": 0
     },
     {
       "path": "law_order_watch_status_from_trakt.json",
       "watchedKeys": 0
-    },
-    {
-      "path": "law_order_watch_status.json",
-      "watchedKeys": 110
     }
   ],
-  "existingLocalWatchedKeys": 110,
-  "finalWatchedKeys": 110,
+  "existingLocalWatchedKeys": 0,
+  "finalWatchedKeys": 0,
   "workbookRowsChecked": 1796,
-  "workbookRowsMarkedWatched": 110,
-  "statusJsonPath": "law_order_tracker_app\\data\\watched_status.json",
+  "workbookRowsMarkedWatched": 0,
+  "statusJsonPath": "law_order_tracker_app/data/watched_status.json",
   "outputWorkbookPath": "Law_Order_Professional_Watch_Tracker_Trakt_Synced.xlsx",
-  "sampleWatchedStatusRows": [
-    "Law & Order: SVU|1|1|393",
-    "Law & Order: SVU|1|2|395",
-    "Law & Order: SVU|1|3|397",
-    "Law & Order: SVU|1|4|399",
-    "Law & Order: SVU|1|5|401",
-    "Law & Order: SVU|1|6|402",
-    "Law & Order: SVU|1|7|404",
-    "Law & Order: SVU|1|8|406",
-    "Law & Order: SVU|1|9|408",
-    "Law & Order: SVU|1|10|412",
-    "Law & Order: SVU|1|11|413",
-    "Law & Order: SVU|1|12|414",
-    "Law & Order: SVU|1|13|416",
-    "Law & Order: SVU|1|14|418",
-    "Law & Order|10|14|420",
-    "Law & Order: SVU|1|15|421",
-    "Law & Order|10|15|422",
-    "Law & Order: SVU|1|16|423",
-    "Law & Order: SVU|1|17|426",
-    "Law & Order: SVU|1|18|428",
-    "Law & Order: SVU|1|19|430",
-    "Law & Order: SVU|1|20|432",
-    "Law & Order: SVU|1|21|434",
-    "Law & Order: SVU|1|22|436",
-    "Law & Order: SVU|2|1|443"
-  ]
+  "sampleWatchedStatusRows": []
 }
