@@ -40,88 +40,32 @@ WORKBOOK_PATH = Path("Law_Order_Professional_Watch_Tracker.xlsx")
 OUTPUT_PATH = Path("Law_Order_Professional_Watch_Tracker_Trakt_Synced.xlsx")
 APP_STATUS_PATH = Path("law_order_tracker_app/data/watched_status.json")
 
-APP_DEBUG_PATH = Path("law_order_tracker_app/data/trakt_sync_debug.json")
-
-# Canonical show names in the guide plus known Trakt slug/title variants.
-# Trakt sometimes uses "and" where the guide uses "&", and some slugs omit "and".
-SHOW_MATCHERS = {
-    "Law & Order": {
-        "slugs": ["law-and-order", "law-order"],
-        "titles": ["Law & Order", "Law and Order"],
-    },
-    "Homicide: Life on the Street": {
-        "slugs": ["homicide-life-on-the-street"],
-        "titles": ["Homicide: Life on the Street"],
-    },
-    "Law & Order: Special Victims Unit": {
-        "slugs": ["law-and-order-special-victims-unit", "law-order-special-victims-unit", "law-and-order-svu", "law-order-svu"],
-        "titles": ["Law & Order: Special Victims Unit", "Law and Order: Special Victims Unit", "Law & Order: SVU", "Law and Order: SVU", "SVU"],
-    },
-    "Law & Order: Criminal Intent": {
-        "slugs": ["law-and-order-criminal-intent", "law-order-criminal-intent"],
-        "titles": ["Law & Order: Criminal Intent", "Law and Order: Criminal Intent", "Criminal Intent"],
-    },
-    "Law & Order: Trial by Jury": {
-        "slugs": ["law-and-order-trial-by-jury", "law-order-trial-by-jury"],
-        "titles": ["Law & Order: Trial by Jury", "Law and Order: Trial by Jury", "Trial by Jury"],
-    },
-    "Conviction": {
-        "slugs": ["conviction", "conviction-2006"],
-        "titles": ["Conviction"],
-    },
-    "Law & Order: UK": {
-        "slugs": ["law-and-order-uk", "law-order-uk"],
-        "titles": ["Law & Order: UK", "Law and Order: UK", "Law & Order UK", "Law and Order UK"],
-    },
-    "Law & Order: LA": {
-        "slugs": ["law-and-order-la", "law-order-la", "law-and-order-los-angeles", "law-order-los-angeles"],
-        "titles": ["Law & Order: LA", "Law and Order: LA", "Law & Order LA", "Law and Order LA", "Law & Order: Los Angeles", "Law and Order: Los Angeles"],
-    },
-    "Law & Order True Crime": {
-        "slugs": ["law-and-order-true-crime", "law-order-true-crime"],
-        "titles": ["Law & Order True Crime", "Law and Order True Crime", "Law & Order: True Crime", "Law and Order: True Crime"],
-    },
-    "Law & Order: Organized Crime": {
-        "slugs": ["law-and-order-organized-crime", "law-order-organized-crime"],
-        "titles": ["Law & Order: Organized Crime", "Law and Order: Organized Crime", "Organized Crime"],
-    },
-    "Criminal Intent: Toronto": {
-        "slugs": ["criminal-intent-toronto", "law-and-order-toronto-criminal-intent", "law-order-toronto-criminal-intent"],
-        "titles": ["Criminal Intent: Toronto", "Law & Order Toronto: Criminal Intent", "Law and Order Toronto: Criminal Intent", "Law & Order: Toronto Criminal Intent", "Law and Order: Toronto Criminal Intent"],
-    },
-    "Deadline": {
-        "slugs": ["deadline", "deadline-2000"],
-        "titles": ["Deadline"],
-    },
-    "New York Undercover": {
-        "slugs": ["new-york-undercover", "ny-undercover"],
-        "titles": ["New York Undercover", "NY Undercover"],
-    },
+SHOW_SLUGS = {
+    "Law & Order": "law-and-order",
+    "Homicide: Life on the Street": "homicide-life-on-the-street",
+    "Law & Order: Special Victims Unit": "law-and-order-special-victims-unit",
+    "Law & Order: Criminal Intent": "law-and-order-criminal-intent",
+    "Law & Order: Trial by Jury": "law-and-order-trial-by-jury",
+    "Conviction": "conviction",
+    "Law & Order: UK": "law-and-order-uk",
+    "Law & Order: LA": "law-and-order-la",
+    "Law & Order True Crime": "law-and-order-true-crime",
+    "Law & Order: Organized Crime": "law-and-order-organized-crime",
+    "Criminal Intent: Toronto": "criminal-intent-toronto",
+    "Deadline": "deadline",
+    "New York Undercover": "new-york-undercover",
 }
 
-SHOW_SLUGS = {show: data["slugs"][0] for show, data in SHOW_MATCHERS.items()}
-
-SHOW_ALIASES = {}
-for canonical, data in SHOW_MATCHERS.items():
-    for title in data["titles"]:
-        SHOW_ALIASES[title] = canonical
-
-
-def normalize_text(value: str) -> str:
-    return " ".join(
-        "".join(ch.lower() if ch.isalnum() else " " for ch in str(value or "").replace("&", " and "))
-        .split()
-    )
-
-
-SLUG_TO_SHOW = {}
-TITLE_TO_SHOW = {}
-for canonical, data in SHOW_MATCHERS.items():
-    for slug in data["slugs"]:
-        SLUG_TO_SHOW[slug] = canonical
-    for title in data["titles"]:
-        TITLE_TO_SHOW[normalize_text(title)] = canonical
-
+# A few aliases in case the workbook has shorter show names in some rows.
+SHOW_ALIASES = {
+    "SVU": "Law & Order: Special Victims Unit",
+    "Law & Order: SVU": "Law & Order: Special Victims Unit",
+    "Criminal Intent": "Law & Order: Criminal Intent",
+    "Organized Crime": "Law & Order: Organized Crime",
+    "Trial by Jury": "Law & Order: Trial by Jury",
+    "Law & Order UK": "Law & Order: UK",
+    "Law & Order LA": "Law & Order: LA",
+}
 
 
 def load_config() -> dict:
@@ -228,94 +172,41 @@ def trakt_get(cfg: dict, token: dict, path: str) -> requests.Response:
     return r
 
 
-def get_authenticated_user(cfg: dict, token: dict) -> dict:
-    """Return Trakt settings/user info for debugging token/account problems."""
-    try:
-        return trakt_get(cfg, token, "/users/settings").json()
-    except Exception as exc:
-        return {"error": str(exc)}
-
-
-def resolve_workbook_show(show_info: dict) -> str | None:
-    ids = show_info.get("ids", {}) or {}
-    slug = str(ids.get("slug") or "").strip().lower()
-    title = str(show_info.get("title") or "").strip()
-
-    if slug in SLUG_TO_SHOW:
-        return SLUG_TO_SHOW[slug]
-
-    title_key = normalize_text(title)
-    if title_key in TITLE_TO_SHOW:
-        return TITLE_TO_SHOW[title_key]
-
-    # Last fallback: compare normalized Trakt title with normalized canonical titles.
-    # This catches punctuation/ampersand differences without accidentally mapping unrelated shows.
-    for known_title, canonical in TITLE_TO_SHOW.items():
-        if title_key == known_title:
-            return canonical
-
-    return None
-
-
-def fetch_all_watched_shows(cfg: dict, token: dict) -> tuple[Dict[str, Set[Tuple[int, int]]], dict]:
+def fetch_all_watched_shows(cfg: dict, token: dict) -> Dict[str, Set[Tuple[int, int]]]:
     """
     Fetch watched episodes for all shows in one call.
 
-    Correct endpoint: /sync/watched/shows. We request extended=full because some
-    Trakt responses are sparse otherwise and may omit title/year details used for matching.
+    Trakt no longer supports /shows/{slug}/watched, which returns HTTP 405.
+    The correct authenticated endpoint is /sync/watched/shows.
+    It returns every watched show with seasons/episodes. We then map those
+    results back to the show names used in the workbook.
     """
-    r = trakt_get(cfg, token, "/sync/watched/shows?extended=full")
+    r = trakt_get(cfg, token, "/sync/watched/shows")
     data = r.json()
 
-    watched_by_show: Dict[str, Set[Tuple[int, int]]] = {show: set() for show in SHOW_MATCHERS}
-    debug = {
-        "fetchedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        "endpoint": "/sync/watched/shows?extended=full",
-        "traktWatchedShowCount": len(data) if isinstance(data, list) else None,
-        "matchedShows": {},
-        "candidateShowsSeen": [],
-        "unmatchedRelevantShows": [],
-        "allLawRelatedTitlesSeen": [],
-    }
+    watched_by_show: Dict[str, Set[Tuple[int, int]]] = {show: set() for show in SHOW_SLUGS}
+    slug_to_workbook_show = {slug: show for show, slug in SHOW_SLUGS.items()}
 
-    relevant_words = ("law", "order", "homicide", "criminal", "conviction", "deadline", "undercover", "svu")
+    # Extra fallback by normalized title in case a Trakt slug differs slightly.
+    title_to_workbook_show = {show.lower(): show for show in SHOW_SLUGS}
+    title_to_workbook_show.update({alias.lower(): canonical for alias, canonical in SHOW_ALIASES.items()})
 
-    for item in data if isinstance(data, list) else []:
+    for item in data:
         show_info = item.get("show", {}) or {}
         ids = show_info.get("ids", {}) or {}
-        trakt_slug = str(ids.get("slug") or "").strip()
+        trakt_slug = ids.get("slug")
         trakt_title = str(show_info.get("title") or "").strip()
-        year = show_info.get("year")
-        seasons = item.get("seasons", []) or []
-        episode_count = 0
-        for season in seasons:
-            for ep in season.get("episodes", []) or []:
-                if isinstance(ep.get("number"), int):
-                    episode_count += 1
 
-        title_norm = normalize_text(f"{trakt_title} {trakt_slug}")
-        is_relevant = any(word in title_norm for word in relevant_words)
-        if is_relevant:
-            debug["candidateShowsSeen"].append({
-                "title": trakt_title,
-                "slug": trakt_slug,
-                "year": year,
-                "watchedEpisodes": episode_count,
-            })
+        workbook_show = None
+        if trakt_slug in slug_to_workbook_show:
+            workbook_show = slug_to_workbook_show[trakt_slug]
+        elif trakt_title.lower() in title_to_workbook_show:
+            workbook_show = title_to_workbook_show[trakt_title.lower()]
 
-        workbook_show = resolve_workbook_show(show_info)
         if not workbook_show:
-            if is_relevant:
-                debug["unmatchedRelevantShows"].append({
-                    "title": trakt_title,
-                    "slug": trakt_slug,
-                    "year": year,
-                    "watchedEpisodes": episode_count,
-                    "ids": ids,
-                })
             continue
 
-        for season in seasons:
+        for season in item.get("seasons", []) or []:
             s_num = season.get("number")
             if not isinstance(s_num, int):
                 continue
@@ -324,11 +215,7 @@ def fetch_all_watched_shows(cfg: dict, token: dict) -> tuple[Dict[str, Set[Tuple
                 if isinstance(e_num, int):
                     watched_by_show[workbook_show].add((s_num, e_num))
 
-    for show, watched in watched_by_show.items():
-        debug["matchedShows"][show] = len(watched)
-
-    debug["totalMatchedLawOrderUniverseEpisodes"] = sum(len(v) for v in watched_by_show.values())
-    return watched_by_show, debug
+    return watched_by_show
 
 def normalize_show(show: str) -> str:
     show = str(show or "").strip()
@@ -343,27 +230,12 @@ def run_once() -> None:
         raise SystemExit(f"Workbook not found: {WORKBOOK_PATH}")
 
     print("Reading watched history from Trakt...")
-    debug = {}
     try:
-        account = get_authenticated_user(cfg, token)
-        watched_by_show, debug = fetch_all_watched_shows(cfg, token)
-        debug["account"] = {
-            "username": ((account.get("user") or {}).get("username") if isinstance(account, dict) else None),
-            "name": ((account.get("user") or {}).get("name") if isinstance(account, dict) else None),
-            "accountFetchError": account.get("error") if isinstance(account, dict) else None,
-        }
+        watched_by_show = fetch_all_watched_shows(cfg, token)
     except requests.HTTPError as exc:
-        debug = {
-            "fetchedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-            "error": f"Could not fetch Trakt watched history: {exc}",
-            "statusCode": getattr(exc.response, "status_code", None),
-            "responseText": getattr(exc.response, "text", "")[:2000] if getattr(exc, "response", None) is not None else "",
-        }
-        APP_DEBUG_PATH.parent.mkdir(parents=True, exist_ok=True)
-        APP_DEBUG_PATH.write_text(json.dumps(debug, indent=2), encoding="utf-8")
-        raise SystemExit(debug["error"])
+        raise SystemExit(f"Could not fetch Trakt watched history: {exc}")
 
-    for workbook_show in SHOW_MATCHERS:
+    for workbook_show in SHOW_SLUGS:
         print(f"  {workbook_show}: {len(watched_by_show.get(workbook_show, set()))} watched episodes")
 
     print("\nUpdating workbook...")
@@ -407,11 +279,8 @@ def run_once() -> None:
     # The array lets the website still match watched items even if the chronological
     # order number changed after catalog updates.
     app_status = {
-        "version": 6,
-        "source": "trakt",
+        "version": 5,
         "exportedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        "traktMatchedEpisodeCount": marked_watched,
-        "guideComparableRows": total,
         "statuses": {},
         "episodes": []
     }
@@ -438,18 +307,7 @@ def run_once() -> None:
     APP_STATUS_PATH.parent.mkdir(parents=True, exist_ok=True)
     APP_STATUS_PATH.write_text(json.dumps(app_status, indent=2), encoding="utf-8")
 
-    debug.update({
-        "workbookRowsChecked": total,
-        "workbookRowsMarkedWatched": marked_watched,
-        "statusJsonPath": str(APP_STATUS_PATH),
-        "outputWorkbookPath": str(OUTPUT_PATH),
-        "sampleWatchedStatusRows": [ep for ep in app_status["episodes"] if ep.get("status") == "Watched"][:25],
-    })
-    APP_DEBUG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    APP_DEBUG_PATH.write_text(json.dumps(debug, indent=2), encoding="utf-8")
-
     print(f"\nDone. Matched {marked_watched}/{total} guide rows as watched.")
-    print(f"Debug: {APP_DEBUG_PATH}")
     print(f"Saved: {OUTPUT_PATH}")
 
 

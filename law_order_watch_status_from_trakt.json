@@ -1,9 +1,6 @@
 {
-  "version": 6,
-  "source": "trakt",
-  "exportedAt": "2026-07-03T20:52:15Z",
-  "traktMatchedEpisodeCount": 0,
-  "guideComparableRows": 1727,
+  "version": 5,
+  "exportedAt": "2026-07-03T20:26:12Z",
   "statuses": {
     "Law & Order|1|1|1": "Not Started",
     "Law & Order|1|2|2": "Not Started",

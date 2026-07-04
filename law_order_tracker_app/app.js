@@ -1,9 +1,13 @@
 'use strict';
 
-const STORE_KEY = 'law_order_tracker_status_v4';
-const LEGACY_STORE_KEYS = ['law_order_tracker_status_v3', 'law_order_tracker_status_v2', 'law_order_tracker_status'];
+const STORE_KEY = 'law_order_tracker_status_v5';
+const LEGACY_STORE_KEYS = ['law_order_tracker_status_v4', 'law_order_tracker_status_v3', 'law_order_tracker_status_v2', 'law_order_tracker_status'];
+const COOKIE_PREFIX = 'lo_status_v5_';
+const COOKIE_CHUNKS = 'lo_status_v5_chunks';
 const THEME_KEY = 'law_order_tracker_theme';
 const AUTOSYNC_KEY = 'law_order_auto_sync';
+const ACCOUNT_ENABLED_KEY = 'law_order_account_enabled';
+const SUPABASE_CONFIG = window.LAW_ORDER_ACCOUNT_CONFIG || {};
 const PAGE_SIZE = 250;
 
 let episodes = Array.isArray(window.LAW_ORDER_EPISODES) ? window.LAW_ORDER_EPISODES : [];
@@ -13,6 +17,55 @@ let current = [];
 let renderedCount = 0;
 let deferredInstallPrompt = null;
 let autoTimer = null;
+let supabaseClient = null;
+let currentUser = null;
+let cloudSaveTimer = null;
+let accountLoadInProgress = false;
+let accountSaveInProgress = false;
+
+function getCookie(name) {
+  const found = document.cookie.split('; ').find(row => row.startsWith(`${name}=`));
+  return found ? decodeURIComponent(found.split('=').slice(1).join('=')) : '';
+}
+
+function setCookie(name, value, days = 3650) {
+  const expires = new Date(Date.now() + days * 864e5).toUTCString();
+  document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax`;
+}
+
+function deleteCookie(name) {
+  document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax`;
+}
+
+function readStatusCookieBackup() {
+  try {
+    const chunkCount = Number(getCookie(COOKIE_CHUNKS) || 0);
+    if (!chunkCount) return null;
+    let raw = '';
+    for (let i = 0; i < chunkCount; i++) raw += getCookie(`${COOKIE_PREFIX}${i}`);
+    return raw ? JSON.parse(raw) : null;
+  } catch (err) {
+    console.warn('Could not read cookie status backup:', err);
+    return null;
+  }
+}
+
+function writeStatusCookieBackup(map) {
+  try {
+    const raw = JSON.stringify(map || {});
+    const oldChunks = Number(getCookie(COOKIE_CHUNKS) || 0);
+    for (let i = 0; i < oldChunks; i++) deleteCookie(`${COOKIE_PREFIX}${i}`);
+
+    // Cookies are small, so split the status backup into chunks. This is a backup;
+    // localStorage remains the main storage for large libraries.
+    const chunkSize = 3000;
+    const chunks = Math.max(1, Math.ceil(raw.length / chunkSize));
+    for (let i = 0; i < chunks; i++) setCookie(`${COOKIE_PREFIX}${i}`, raw.slice(i * chunkSize, (i + 1) * chunkSize));
+    setCookie(COOKIE_CHUNKS, String(chunks));
+  } catch (err) {
+    console.warn('Could not write cookie status backup:', err);
+  }
+}
 
 function loadStatusMap() {
   try {
@@ -23,17 +76,192 @@ function loadStatusMap() {
       if (raw) {
         const parsed = JSON.parse(raw) || {};
         localStorage.setItem(STORE_KEY, JSON.stringify(parsed));
+        writeStatusCookieBackup(parsed);
         return parsed;
       }
     }
   } catch (err) {
     console.warn('Could not read local status storage:', err);
   }
+
+  const cookieBackup = readStatusCookieBackup();
+  if (cookieBackup && typeof cookieBackup === 'object') {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(cookieBackup)); } catch (_) {}
+    return cookieBackup;
+  }
   return {};
 }
 
 function save() {
-  localStorage.setItem(STORE_KEY, JSON.stringify(statusMap));
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify(statusMap));
+  } catch (err) {
+    console.warn('Could not write localStorage status:', err);
+  }
+  writeStatusCookieBackup(statusMap);
+}
+
+
+function isAccountConfigured() {
+  return Boolean(
+    SUPABASE_CONFIG &&
+    SUPABASE_CONFIG.url &&
+    SUPABASE_CONFIG.anonKey &&
+    !String(SUPABASE_CONFIG.url).includes('YOUR_SUPABASE') &&
+    !String(SUPABASE_CONFIG.anonKey).includes('YOUR_SUPABASE')
+  );
+}
+
+function mergeStatusMaps(base, incoming) {
+  const merged = { ...(base || {}) };
+  for (const [key, value] of Object.entries(incoming || {})) {
+    const status = normalizeStatus(value);
+    if (!status) continue;
+    // Do not let a remote/older Not Started erase a meaningful local status.
+    if (status === 'Not Started' && merged[key] && merged[key] !== 'Not Started') continue;
+    merged[key] = status;
+  }
+  return merged;
+}
+
+function setupSupabaseClient() {
+  if (supabaseClient || !isAccountConfigured() || !window.supabase) return supabaseClient;
+  supabaseClient = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey, {
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+  });
+  return supabaseClient;
+}
+
+function setAccountText(message) {
+  const el = document.getElementById('accountStatus');
+  if (el) el.textContent = message;
+}
+
+function renderAccountUi() {
+  const panel = document.getElementById('accountPanel');
+  if (!panel) return;
+  const configured = Boolean(setupSupabaseClient());
+  panel.style.display = configured ? '' : '';
+  const signedIn = Boolean(currentUser);
+  const authBox = document.getElementById('authBox');
+  const userBox = document.getElementById('userBox');
+  if (authBox) authBox.style.display = signedIn ? 'none' : '';
+  if (userBox) userBox.style.display = signedIn ? '' : 'none';
+  const email = document.getElementById('accountEmail');
+  if (email && currentUser) email.textContent = currentUser.email || currentUser.id;
+  if (!configured) {
+    setAccountText('Account sync is not configured yet. Add your Supabase URL and anon key in data/account_config.js. Local browser saving still works.');
+  } else if (signedIn) {
+    setAccountText('Signed in. Your watch status is saved to your account and restored on every device.');
+  } else {
+    setAccountText('Sign in to save your watch status to your account. Email magic-link and password sign-in are supported.');
+  }
+}
+
+async function loadAccountStatus() {
+  const client = setupSupabaseClient();
+  if (!client || !currentUser) return;
+  accountLoadInProgress = true;
+  try {
+    const { data, error } = await client
+      .from('watch_status')
+      .select('status, updated_at')
+      .eq('user_id', currentUser.id)
+      .maybeSingle();
+    if (error) throw error;
+    if (data && data.status) {
+      statusMap = mergeStatusMaps(statusMap, data.status);
+      localStorage.setItem(STORE_KEY, JSON.stringify(statusMap));
+      writeStatusCookieBackup(statusMap);
+      render();
+      showToast('Account loaded', 'Your saved account watch status was loaded.', 'success');
+    } else {
+      await saveAccountStatus(true);
+      showToast('Account initialized', 'Your current local status was saved to your account.', 'success');
+    }
+  } catch (err) {
+    showToast('Account load failed', err.message || String(err), 'error');
+    setAccountText('Account load failed: ' + (err.message || String(err)));
+  } finally {
+    accountLoadInProgress = false;
+  }
+}
+
+async function saveAccountStatus(force = false) {
+  const client = setupSupabaseClient();
+  if (!client || !currentUser || accountLoadInProgress) return;
+  if (accountSaveInProgress && !force) return;
+  accountSaveInProgress = true;
+  try {
+    const payload = {
+      user_id: currentUser.id,
+      status: statusMap || {},
+      updated_at: new Date().toISOString()
+    };
+    const { error } = await client.from('watch_status').upsert(payload, { onConflict: 'user_id' });
+    if (error) throw error;
+    setAccountText('Saved to account at ' + new Date().toLocaleTimeString());
+  } catch (err) {
+    console.warn('Account save failed:', err);
+    setAccountText('Account save failed: ' + (err.message || String(err)));
+    if (force) showToast('Account save failed', err.message || String(err), 'error');
+  } finally {
+    accountSaveInProgress = false;
+  }
+}
+
+function scheduleAccountSave() {
+  if (!currentUser || accountLoadInProgress) return;
+  clearTimeout(cloudSaveTimer);
+  cloudSaveTimer = setTimeout(() => saveAccountStatus(false), 900);
+}
+
+async function initAccount() {
+  const client = setupSupabaseClient();
+  renderAccountUi();
+  if (!client) return;
+  const { data } = await client.auth.getSession();
+  currentUser = data && data.session ? data.session.user : null;
+  renderAccountUi();
+  if (currentUser) await loadAccountStatus();
+  client.auth.onAuthStateChange(async (event, session) => {
+    currentUser = session ? session.user : null;
+    renderAccountUi();
+    if (currentUser && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) await loadAccountStatus();
+  });
+}
+
+async function signInOrSignUpAccount() {
+  const client = setupSupabaseClient();
+  if (!client) return showModal({ title: 'Account sync not configured', message: 'Add your Supabase project URL and anon key in data/account_config.js first.', type: 'warning', confirmText: 'OK' });
+  const email = document.getElementById('authEmail')?.value.trim();
+  const password = document.getElementById('authPassword')?.value;
+  if (!email) return showToast('Email required', 'Enter your email address first.', 'warning');
+  try {
+    let result;
+    if (password) {
+      result = await client.auth.signInWithPassword({ email, password });
+      if (result.error && /Invalid login credentials/i.test(result.error.message)) {
+        result = await client.auth.signUp({ email, password });
+      }
+    } else {
+      result = await client.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.href } });
+    }
+    if (result.error) throw result.error;
+    if (password) showToast('Signed in', 'Your account status will sync automatically.', 'success');
+    else showModal({ title: 'Check your email', message: 'Supabase sent you a magic sign-in link. Open it on this device to finish signing in.', type: 'success', confirmText: 'OK' });
+  } catch (err) {
+    showModal({ title: 'Sign-in failed', message: err.message || String(err), type: 'error', confirmText: 'OK' });
+  }
+}
+
+async function signOutAccount() {
+  const client = setupSupabaseClient();
+  if (!client) return;
+  await client.auth.signOut();
+  currentUser = null;
+  renderAccountUi();
+  showToast('Signed out', 'Local browser status remains saved on this device.', 'info');
 }
 
 function normText(value) {
@@ -416,8 +644,9 @@ async function markBulk(scope, status) {
   if (!ok) return;
   let changed = 0;
   targets.forEach(ep => {
-    if (statusMap[ep.id] !== status) changed++;
+    if (getStatus(ep) !== status) changed++;
     statusMap[ep.id] = status;
+    statusMap[episodeKey(ep)] = status;
   });
   save();
   render();
@@ -457,12 +686,25 @@ function downloadBlob(blob, name) {
 
 async function importStatusPayload(payload, source = 'import') {
   const incoming = payload.statuses || payload || {};
+  const remoteSource = /auto|hosted|trakt|sync/i.test(source);
   let changed = 0;
   let matched = 0;
+  let skippedDowngrades = 0;
+
+  function shouldApply(ep, status) {
+    // Cloud/Trakt status files should never erase statuses the user changed in
+    // the browser. This keeps watched marks persistent after refresh/redeploy.
+    if (remoteSource && status === 'Not Started' && getStatus(ep) !== 'Not Started') {
+      skippedDowngrades++;
+      return false;
+    }
+    return true;
+  }
 
   function applyToEpisode(ep, status) {
     if (!ep || !status) return;
     matched++;
+    if (!shouldApply(ep, status)) return;
     if (statusMap[ep.id] !== status) {
       statusMap[ep.id] = status;
       changed++;
@@ -471,10 +713,11 @@ async function importStatusPayload(payload, source = 'import') {
     if (statusMap[noOrder] !== status) statusMap[noOrder] = status;
   }
 
-  // Preferred new format: [{show, season, episode, status}]
+  // Preferred format: [{show, season, episode, status}]
   if (Array.isArray(payload.episodes)) {
     for (const item of payload.episodes) {
       const status = normalizeStatus(item.status);
+      if (!status) continue;
       const key = `${normShow(item.show)}|${normNum(item.season)}|${normNum(item.episode)}`;
       const eps = episodesByNoOrderKey.get(key) || [];
       eps.forEach(ep => applyToEpisode(ep, status));
@@ -503,16 +746,22 @@ async function importStatusPayload(payload, source = 'import') {
     }
 
     // Keep unknown statuses so an exported file does not lose data.
-    if (statusMap[rawId] !== status) {
-      statusMap[rawId] = status;
-      changed++;
+    // For hosted auto-sync, do not import unknown Not Started entries because
+    // they can bloat storage and cannot affect visible guide rows.
+    if (!(remoteSource && status === 'Not Started')) {
+      if (statusMap[rawId] !== status) {
+        statusMap[rawId] = status;
+        changed++;
+      }
     }
   }
 
-  if (changed) save();
+  save();
   render();
-  setText('syncStatus', `${source}: ${changed} status changes applied, ${matched} guide rows matched at ${new Date().toLocaleTimeString()}.`);
-  showToast(source, `${changed} changes applied. ${matched} guide rows matched.`, changed ? 'success' : 'info');
+  const extra = skippedDowngrades ? ` ${skippedDowngrades} local user changes protected.` : '';
+  setText('syncStatus', `${source}: ${changed} status changes applied, ${matched} guide rows matched at ${new Date().toLocaleTimeString()}.${extra}`);
+  showToast(source, `${changed} changes applied. ${matched} guide rows matched.${extra}`, changed ? 'success' : 'info');
+  if (currentUser) await saveAccountStatus(true);
 }
 
 async function fetchHostedStatus() {
@@ -572,11 +821,12 @@ async function triggerCloudSync() {
       throw new Error(payload.error || `HTTP ${response.status}`);
     }
     const urlText = payload.run_url ? ` Open the workflow run: ${payload.run_url}` : '';
-    setText('syncStatus', 'Cloud sync started. Wait 1–3 minutes, then refresh/pull status.' + urlText);
-    showToast('Cloud sync started', 'GitHub Actions is now syncing Trakt. Vercel will update after the workflow commits.', 'success');
+    setText('syncStatus', 'Cloud sync started. The site will pull the updated Trakt status in the background and save it to your account if you are signed in.' + urlText);
+    showToast('Cloud sync started', 'GitHub Actions is now syncing Trakt. This page will poll for updates automatically.', 'success');
     window.setTimeout(fetchHostedStatus, 15000);
     window.setTimeout(fetchHostedStatus, 60000);
     window.setTimeout(fetchHostedStatus, 150000);
+    window.setTimeout(fetchHostedStatus, 300000);
   } catch (err) {
     setText('syncStatus', `Cloud sync failed: ${err.message}`);
     showToast('Cloud sync failed', err.message, 'danger');
@@ -717,7 +967,17 @@ function bindEvents() {
   autoSync.checked = localStorage.getItem(AUTOSYNC_KEY) !== '0';
   autoSync.addEventListener('change', event => setAutoSync(event.target.checked));
   setAutoSync(autoSync.checked);
+
+  const signInBtn = document.getElementById('accountSignIn');
+  if (signInBtn) signInBtn.addEventListener('click', signInOrSignUpAccount);
+  const signOutBtn = document.getElementById('accountSignOut');
+  if (signOutBtn) signOutBtn.addEventListener('click', signOutAccount);
+  const saveCloudBtn = document.getElementById('accountSaveNow');
+  if (saveCloudBtn) saveCloudBtn.addEventListener('click', () => saveAccountStatus(true));
+  const loadCloudBtn = document.getElementById('accountLoadNow');
+  if (loadCloudBtn) loadCloudBtn.addEventListener('click', loadAccountStatus);
 }
+
 
 window.addEventListener('beforeinstallprompt', event => {
   event.preventDefault();
@@ -732,4 +992,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initOptions();
   bindEvents();
   render();
+  initAccount();
+  const savedCount = Object.keys(statusMap || {}).length;
+  if (savedCount) setText('syncStatus', `Loaded ${savedCount} saved local status entries from this browser.`);
 });
