@@ -1,181 +1,643 @@
 {
-  "fetchedAt": "2026-07-04T04:29:09Z",
-  "mode": "merge-preserve-local",
-  "account": {
-    "username": "costaskk",
-    "private": false,
-    "deleted": false,
-    "name": "costas grekas",
-    "vip": false,
-    "vip_ep": false,
-    "director": false,
-    "ids": {
-      "slug": "costaskk",
-      "uuid": "c393fd85dad71a4fd4baa30fc1ee4d0b5e39d944"
-    },
-    "joined_at": "2015-07-04T14:55:14.000Z",
-    "location": null,
-    "about": null,
-    "gender": null,
-    "age": null,
-    "images": {
-      "avatar": {
-        "full": "https://secure.gravatar.com/avatar/8ff038bed74ef516cc246ab831118c75?d=https%3A%2F%2Fmedia.trakt.tv%2Fhotlink-ok%2Fplaceholders%2Fmedium%2Fzoidberg.png&r=pg&s=256"
-      }
-    },
-    "vip_og": false,
-    "vip_years": 0,
-    "vip_cover_image": null
-  },
-  "traktWatchedShowCount": 100,
-  "candidateShowsSeen": [
-    {
-      "title": "Law & Order",
-      "slug": "law-order",
-      "matchedAs": "Law & Order",
-      "watchedEpisodes": 0
-    },
-    {
-      "title": "Law & Order: Special Victims Unit",
-      "slug": "law-order-special-victims-unit",
-      "matchedAs": "Law & Order: Special Victims Unit",
-      "watchedEpisodes": 0
-    }
-  ],
+  "exportedAt": "2026-07-04T05:05:54Z",
   "matchedShows": {
-    "Law & Order": 0,
-    "Homicide: Life on the Street": 0,
-    "Law & Order: Special Victims Unit": 0,
-    "Law & Order: Criminal Intent": 0,
-    "Law & Order: Trial by Jury": 0,
-    "Conviction": 0,
-    "Law & Order: UK": 0,
-    "Law & Order: LA": 0,
-    "Law & Order True Crime": 0,
-    "Law & Order: Organized Crime": 0,
-    "Criminal Intent: Toronto": 0,
-    "Deadline": 0,
-    "New York Undercover": 0,
-    "In Plain Sight": 0
+    "Law & Order": {
+      "watchedEndpoint": 0,
+      "historyEndpoint": 3
+    },
+    "Law & Order: SVU": {
+      "watchedEndpoint": 0,
+      "historyEndpoint": 108
+    }
   },
-  "fallbackHistoryChecks": [
+  "unmatchedTraktShows": [
     {
-      "show": "Law & Order",
-      "slug": "law-and-order",
-      "episodesFound": 0
+      "title": "The Summer I Turned Pretty",
+      "slug": "the-summer-i-turned-pretty",
+      "source": "watched"
     },
     {
-      "show": "Homicide: Life on the Street",
-      "slug": "homicide-life-on-the-street",
-      "episodesFound": 0
+      "title": "FROM",
+      "slug": "from",
+      "source": "watched"
     },
     {
-      "show": "Law & Order: Special Victims Unit",
-      "slug": "law-and-order-special-victims-unit",
-      "episodesFound": 0
+      "title": "Cebollitas",
+      "slug": "cebollitas",
+      "source": "watched"
     },
     {
-      "show": "Law & Order: Criminal Intent",
-      "slug": "law-and-order-criminal-intent",
-      "episodesFound": 0
+      "title": "Hacks",
+      "slug": "hacks-2021",
+      "source": "watched"
     },
     {
-      "show": "Law & Order: Trial by Jury",
-      "slug": "law-and-order-trial-by-jury",
-      "episodesFound": 0
+      "title": "Spider-Noir",
+      "slug": "spider-noir",
+      "source": "watched"
     },
     {
-      "show": "Conviction",
-      "slug": "conviction",
-      "episodesFound": 0
+      "title": "Peep Show",
+      "slug": "peep-show",
+      "source": "watched"
     },
     {
-      "show": "Law & Order: UK",
-      "slug": "law-and-order-uk",
-      "episodesFound": 0
+      "title": "AEW: Collision",
+      "slug": "aew-collision",
+      "source": "watched"
     },
     {
-      "show": "Law & Order: LA",
-      "slug": "law-and-order-la",
-      "episodesFound": 0
+      "title": "The O.C.",
+      "slug": "the-o-c",
+      "source": "watched"
     },
     {
-      "show": "Law & Order True Crime",
-      "slug": "law-and-order-true-crime",
-      "episodesFound": 0
+      "title": "Married... with Children",
+      "slug": "married-with-children",
+      "source": "watched"
     },
     {
-      "show": "Law & Order: Organized Crime",
-      "slug": "law-and-order-organized-crime",
-      "episodesFound": 0
+      "title": "Sex and the City",
+      "slug": "sex-and-the-city",
+      "source": "watched"
     },
     {
-      "show": "Criminal Intent: Toronto",
-      "slug": "criminal-intent-toronto",
-      "episodesFound": 0
+      "title": "The White Lotus",
+      "slug": "the-white-lotus",
+      "source": "watched"
     },
     {
-      "show": "Deadline",
-      "slug": "deadline",
-      "episodesFound": 0
+      "title": "Rooster",
+      "slug": "rooster",
+      "source": "watched"
     },
     {
-      "show": "New York Undercover",
-      "slug": "new-york-undercover",
-      "episodesFound": 0
+      "title": "Doctor Who",
+      "slug": "doctor-who",
+      "source": "watched"
     },
     {
-      "show": "In Plain Sight",
-      "slug": "in-plain-sight",
-      "episodesFound": 0
+      "title": "AEW: Dynamite",
+      "slug": "aew-dynamite",
+      "source": "watched"
+    },
+    {
+      "title": "Lois & Clark: The New Adventures of Superman",
+      "slug": "lois-clark-the-new-adventures-of-superman",
+      "source": "watched"
+    },
+    {
+      "title": "Danger Mouse",
+      "slug": "danger-mouse",
+      "source": "watched"
+    },
+    {
+      "title": "House of Mouse",
+      "slug": "house-of-mouse",
+      "source": "watched"
+    },
+    {
+      "title": "Beast Wars: Transformers",
+      "slug": "beast-wars-transformers",
+      "source": "watched"
+    },
+    {
+      "title": "Extreme Dinosaurs",
+      "slug": "extreme-dinosaurs",
+      "source": "watched"
+    },
+    {
+      "title": "The Mystic Knights of Tir Na Nog",
+      "slug": "the-mystic-knights-of-tir-na-nog",
+      "source": "watched"
+    },
+    {
+      "title": "Bananas In Pyjamas",
+      "slug": "bananas-in-pyjamas",
+      "source": "watched"
+    },
+    {
+      "title": "Digimon: Digital Monsters",
+      "slug": "digimon-digital-monsters",
+      "source": "watched"
+    },
+    {
+      "title": "VR Troopers",
+      "slug": "vr-troopers",
+      "source": "watched"
+    },
+    {
+      "title": "Disney's Hercules",
+      "slug": "disney-s-hercules",
+      "source": "watched"
+    },
+    {
+      "title": "Squid Game",
+      "slug": "squid-game",
+      "source": "watched"
+    },
+    {
+      "title": "The Twilight Zone",
+      "slug": "the-twilight-zone-1959",
+      "source": "watched"
+    },
+    {
+      "title": "WCW WorldWide",
+      "slug": "wcw-worldwide",
+      "source": "watched"
+    },
+    {
+      "title": "WCW Saturday Night",
+      "slug": "wcw-saturday-night",
+      "source": "watched"
+    },
+    {
+      "title": "AWA All-Star Wrestling",
+      "slug": "awa-all-star-wrestling",
+      "source": "watched"
+    },
+    {
+      "title": "WWF All-Star Wrestling",
+      "slug": "wwf-all-star-wrestling",
+      "source": "watched"
+    },
+    {
+      "title": "90 Day Fianc\u00e9: The Other Way",
+      "slug": "90-day-fiance-the-other-way",
+      "source": "watched"
+    },
+    {
+      "title": "It's Always Sunny in Philadelphia",
+      "slug": "it-s-always-sunny-in-philadelphia",
+      "source": "watched"
+    },
+    {
+      "title": "Mr. Mercedes",
+      "slug": "mr-mercedes",
+      "source": "watched"
+    },
+    {
+      "title": "What We Do in the Shadows",
+      "slug": "what-we-do-in-the-shadows",
+      "source": "watched"
+    },
+    {
+      "title": "A Knight of the Seven Kingdoms",
+      "slug": "a-knight-of-the-seven-kingdoms",
+      "source": "watched"
+    },
+    {
+      "title": "11.22.63",
+      "slug": "11-22-63",
+      "source": "watched"
+    },
+    {
+      "title": "Beyblade X",
+      "slug": "beyblade-x",
+      "source": "watched"
+    },
+    {
+      "title": "Friends",
+      "slug": "friends",
+      "source": "watched"
+    },
+    {
+      "title": "WWE SmackDown",
+      "slug": "wwe-smackdown",
+      "source": "watched"
+    },
+    {
+      "title": "90 Day Fianc\u00e9",
+      "slug": "90-day-fiance",
+      "source": "watched"
+    },
+    {
+      "title": "90 Day Fianc\u00e9 UK",
+      "slug": "90-day-fiance-uk",
+      "source": "watched"
+    },
+    {
+      "title": "Gossip Girl",
+      "slug": "gossip-girl",
+      "source": "watched"
+    },
+    {
+      "title": "Gilmore Girls",
+      "slug": "gilmore-girls",
+      "source": "watched"
+    },
+    {
+      "title": "90 Day: Hunt for Love",
+      "slug": "90-day-hunt-for-love",
+      "source": "watched"
+    },
+    {
+      "title": "Monty Python's Flying Circus",
+      "slug": "monty-python-s-flying-circus",
+      "source": "watched"
+    },
+    {
+      "title": "Police Squad!",
+      "slug": "police-squad",
+      "source": "watched"
+    },
+    {
+      "title": "Wednesday",
+      "slug": "wednesday",
+      "source": "watched"
+    },
+    {
+      "title": "Suits",
+      "slug": "suits",
+      "source": "watched"
+    },
+    {
+      "title": "And Just Like That\u2026",
+      "slug": "and-just-like-that",
+      "source": "watched"
+    },
+    {
+      "title": "MILF Manor",
+      "slug": "milf-manor",
+      "source": "watched"
+    },
+    {
+      "title": "Your Friends & Neighbors",
+      "slug": "your-friends-neighbors",
+      "source": "watched"
+    },
+    {
+      "title": "90 Day: The Last Resort",
+      "slug": "90-day-the-last-resort",
+      "source": "watched"
+    },
+    {
+      "title": "90 Day: Hunt For Love Between the Sheets",
+      "slug": "90-day-hunt-for-love-between-the-sheets",
+      "source": "watched"
+    },
+    {
+      "title": "90 Day Fianc\u00e9: Pillow Talk",
+      "slug": "90-day-fiance-pillow-talk",
+      "source": "watched"
+    },
+    {
+      "title": "90 Day Fianc\u00e9: Before The 90 Days",
+      "slug": "90-day-fiance-before-the-90-days",
+      "source": "watched"
+    },
+    {
+      "title": "Gordon Ramsay on Cocaine",
+      "slug": "gordon-ramsay-on-cocaine",
+      "source": "watched"
+    },
+    {
+      "title": "90 Day Diaries",
+      "slug": "90-day-diaries",
+      "source": "watched"
+    },
+    {
+      "title": "David & Annie: After the 90 Days",
+      "slug": "david-annie-after-the-90-days",
+      "source": "watched"
+    },
+    {
+      "title": "90 Day Fianc\u00e9: What Now?",
+      "slug": "90-day-fiance-what-now",
+      "source": "watched"
+    },
+    {
+      "title": "Dark Side of the Ring",
+      "slug": "dark-side-of-the-ring",
+      "source": "watched"
+    },
+    {
+      "title": "Kaiji",
+      "slug": "kaiji",
+      "source": "watched"
+    },
+    {
+      "title": "90 Day: The Last Resort Between the Sheets",
+      "slug": "90-day-the-last-resort-between-the-sheets",
+      "source": "watched"
+    },
+    {
+      "title": "Silo",
+      "slug": "silo",
+      "source": "watched"
+    },
+    {
+      "title": "New Girl",
+      "slug": "new-girl",
+      "source": "watched"
+    },
+    {
+      "title": "Wayward Pines",
+      "slug": "wayward-pines",
+      "source": "watched"
+    },
+    {
+      "title": "Attack on Titan",
+      "slug": "attack-on-titan",
+      "source": "watched"
+    },
+    {
+      "title": "The X-Files",
+      "slug": "the-x-files",
+      "source": "watched"
+    },
+    {
+      "title": "Evil",
+      "slug": "evil",
+      "source": "watched"
+    },
+    {
+      "title": "Yellowjackets",
+      "slug": "yellowjackets",
+      "source": "watched"
+    },
+    {
+      "title": "Utopia",
+      "slug": "utopia",
+      "source": "watched"
+    },
+    {
+      "title": "Power Rangers",
+      "slug": "power-rangers",
+      "source": "watched"
+    },
+    {
+      "title": "Agatha Christie's Poirot",
+      "slug": "agatha-christie-s-poirot",
+      "source": "watched"
+    },
+    {
+      "title": "Batman: Caped Crusader",
+      "slug": "batman-caped-crusader",
+      "source": "watched"
+    },
+    {
+      "title": "Dragon Ball Super",
+      "slug": "dragon-ball-super",
+      "source": "watched"
+    },
+    {
+      "title": "Love Off the Grid",
+      "slug": "love-off-the-grid",
+      "source": "watched"
+    },
+    {
+      "title": "House of the Dragon",
+      "slug": "house-of-the-dragon",
+      "source": "watched"
+    },
+    {
+      "title": "Jury Duty",
+      "slug": "jury-duty",
+      "source": "watched"
+    },
+    {
+      "title": "Demon Slayer: Kimetsu no Yaiba",
+      "slug": "demon-slayer-kimetsu-no-yaiba",
+      "source": "watched"
+    },
+    {
+      "title": "Sh\u014dgun",
+      "slug": "shogun-2024",
+      "source": "watched"
+    },
+    {
+      "title": "Quiet on Set: The Dark Side of Kids TV",
+      "slug": "quiet-on-set-the-dark-side-of-kids-tv",
+      "source": "watched"
+    },
+    {
+      "title": "The Crown",
+      "slug": "the-crown",
+      "source": "watched"
+    },
+    {
+      "title": "The Lone Gunmen",
+      "slug": "the-lone-gunmen",
+      "source": "watched"
+    },
+    {
+      "title": "The Family Chantel",
+      "slug": "the-family-chantel",
+      "source": "watched"
+    },
+    {
+      "title": "Slam Dunk",
+      "slug": "slam-dunk",
+      "source": "watched"
+    },
+    {
+      "title": "Loren & Alexei: After the 90 Days",
+      "slug": "loren-alexei-after-the-90-days",
+      "source": "watched"
+    },
+    {
+      "title": "Love in Paradise: The Caribbean",
+      "slug": "love-in-paradise-the-caribbean",
+      "source": "watched"
+    },
+    {
+      "title": "Mysterious Ways",
+      "slug": "mysterious-ways",
+      "source": "watched"
+    },
+    {
+      "title": "Ted Lasso",
+      "slug": "ted-lasso",
+      "source": "watched"
+    },
+    {
+      "title": "Darcey & Stacey",
+      "slug": "darcey-stacey",
+      "source": "watched"
+    },
+    {
+      "title": "WWE Raw",
+      "slug": "wwe-raw",
+      "source": "watched"
+    },
+    {
+      "title": "The Last of Us",
+      "slug": "the-last-of-us",
+      "source": "watched"
+    },
+    {
+      "title": "90 Day Fianc\u00e9: Happily Ever After?",
+      "slug": "90-day-fiance-happily-ever-after",
+      "source": "watched"
+    },
+    {
+      "title": "90 Day: The Single Life",
+      "slug": "90-day-the-single-life",
+      "source": "watched"
+    },
+    {
+      "title": "Kamen Rider",
+      "slug": "kamen-rider",
+      "source": "watched"
+    },
+    {
+      "title": "SPY x FAMILY",
+      "slug": "spy-x-family",
+      "source": "watched"
+    },
+    {
+      "title": "90 Day Bares All",
+      "slug": "90-day-bares-all",
+      "source": "watched"
+    },
+    {
+      "title": "Rick and Morty",
+      "slug": "rick-and-morty",
+      "source": "watched"
+    },
+    {
+      "title": "Walk the Prank",
+      "slug": "walk-the-prank",
+      "source": "watched"
+    },
+    {
+      "title": "Criminal Minds",
+      "slug": "criminal-minds",
+      "source": "history"
+    },
+    {
+      "title": "Criminal Minds",
+      "slug": "criminal-minds",
+      "source": "history"
+    },
+    {
+      "title": "Criminal Minds",
+      "slug": "criminal-minds",
+      "source": "history"
+    },
+    {
+      "title": "Criminal Minds",
+      "slug": "criminal-minds",
+      "source": "history"
+    },
+    {
+      "title": "Criminal Minds",
+      "slug": "criminal-minds",
+      "source": "history"
+    },
+    {
+      "title": "Criminal Minds",
+      "slug": "criminal-minds",
+      "source": "history"
+    },
+    {
+      "title": "Criminal Minds",
+      "slug": "criminal-minds",
+      "source": "history"
+    },
+    {
+      "title": "Criminal Minds",
+      "slug": "criminal-minds",
+      "source": "history"
+    },
+    {
+      "title": "Criminal Minds",
+      "slug": "criminal-minds",
+      "source": "history"
+    },
+    {
+      "title": "Criminal Minds",
+      "slug": "criminal-minds",
+      "source": "history"
+    },
+    {
+      "title": "Criminal Minds",
+      "slug": "criminal-minds",
+      "source": "history"
+    },
+    {
+      "title": "Criminal Minds",
+      "slug": "criminal-minds",
+      "source": "history"
+    },
+    {
+      "title": "Criminal Minds",
+      "slug": "criminal-minds",
+      "source": "history"
+    },
+    {
+      "title": "Criminal Minds",
+      "slug": "criminal-minds",
+      "source": "history"
+    },
+    {
+      "title": "Criminal Minds",
+      "slug": "criminal-minds",
+      "source": "history"
+    },
+    {
+      "title": "Criminal Minds",
+      "slug": "criminal-minds",
+      "source": "history"
+    },
+    {
+      "title": "Criminal Minds",
+      "slug": "criminal-minds",
+      "source": "history"
+    },
+    {
+      "title": "Criminal Minds",
+      "slug": "criminal-minds",
+      "source": "history"
+    },
+    {
+      "title": "Criminal Minds",
+      "slug": "criminal-minds",
+      "source": "history"
+    },
+    {
+      "title": "Criminal Minds",
+      "slug": "criminal-minds",
+      "source": "history"
+    },
+    {
+      "title": "Criminal Minds",
+      "slug": "criminal-minds",
+      "source": "history"
+    },
+    {
+      "title": "Criminal Minds",
+      "slug": "criminal-minds",
+      "source": "history"
     }
   ],
-  "totalTraktEpisodeKeys": 0,
-  "importSources": [
-    {
-      "path": "law_order_tracker_app/data/watched_status.json",
-      "watchedKeys": 0
-    },
-    {
-      "path": "law_order_watch_status_from_trakt.json",
-      "watchedKeys": 0
-    },
-    {
-      "path": "law_order_watch_status.json",
-      "watchedKeys": 110
+  "sources": {
+    "/sync/watched/shows": 100,
+    "/sync/history/shows": 9593
+  },
+  "finalCounts": {
+    "Law & Order": 3,
+    "Law & Order: SVU": 108
+  },
+  "appStatusSummary": {
+    "guideRowsScanned": 1796,
+    "guideRowsMarkedWatched": 111,
+    "traktWatchedCountsByShow": {
+      "Law & Order": 3,
+      "Homicide: Life on the Street": 0,
+      "Law & Order: SVU": 108,
+      "Criminal Intent": 0,
+      "Trial by Jury": 0,
+      "Conviction": 0,
+      "Law & Order: UK": 0,
+      "Law & Order: LA": 0,
+      "True Crime": 0,
+      "Law & Order: Organized Crime": 0,
+      "Law & Order Toronto: Criminal Intent": 0,
+      "Deadline": 0,
+      "NY Undercover": 0,
+      "In Plain Sight": 0
     }
-  ],
-  "existingLocalWatchedKeys": 110,
-  "finalWatchedKeys": 110,
-  "workbookRowsChecked": 1796,
-  "workbookRowsMarkedWatched": 110,
-  "statusJsonPath": "law_order_tracker_app/data/watched_status.json",
-  "outputWorkbookPath": "Law_Order_Professional_Watch_Tracker_Trakt_Synced.xlsx",
-  "sampleWatchedStatusRows": [
-    "Law & Order: SVU|1|1|393",
-    "Law & Order: SVU|1|2|395",
-    "Law & Order: SVU|1|3|397",
-    "Law & Order: SVU|1|4|399",
-    "Law & Order: SVU|1|5|401",
-    "Law & Order: SVU|1|6|402",
-    "Law & Order: SVU|1|7|404",
-    "Law & Order: SVU|1|8|406",
-    "Law & Order: SVU|1|9|408",
-    "Law & Order: SVU|1|10|412",
-    "Law & Order: SVU|1|11|413",
-    "Law & Order: SVU|1|12|414",
-    "Law & Order: SVU|1|13|416",
-    "Law & Order: SVU|1|14|418",
-    "Law & Order|10|14|420",
-    "Law & Order: SVU|1|15|421",
-    "Law & Order|10|15|422",
-    "Law & Order: SVU|1|16|423",
-    "Law & Order: SVU|1|17|426",
-    "Law & Order: SVU|1|18|428",
-    "Law & Order: SVU|1|19|430",
-    "Law & Order: SVU|1|20|432",
-    "Law & Order: SVU|1|21|434",
-    "Law & Order: SVU|1|22|436",
-    "Law & Order: SVU|2|1|443"
-  ]
+  }
 }
