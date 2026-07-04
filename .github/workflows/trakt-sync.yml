@@ -57,8 +57,13 @@ jobs:
           TRAKT_CLIENT_SECRET: ${{ secrets.TRAKT_CLIENT_SECRET }}
           TRAKT_TOKEN_JSON: ${{ secrets.TRAKT_TOKEN_JSON }}
 
-      - name: Sync Trakt and update app data
-        run: python sync_trakt_and_excel.py
+      - name: Sync Trakt, preserve local watched status, and update app data
+        run: |
+          if [ -f law_order_watch_status.json ]; then
+            python sync_trakt_and_excel.py --import-status law_order_watch_status.json
+          else
+            python sync_trakt_and_excel.py
+          fi
 
       - name: Remove private temp files
         if: always()
@@ -73,6 +78,7 @@ jobs:
           git add law_order_tracker_app/data/watched_status.json || true
           git add law_order_watch_status_from_trakt.json || true
           git add law_order_tracker_app/data/trakt_sync_debug.json || true
+          git add Law_Order_Professional_Watch_Tracker_Trakt_Synced.xlsx || true
 
           if git diff --cached --quiet; then
             echo "No Trakt status changes to commit."
