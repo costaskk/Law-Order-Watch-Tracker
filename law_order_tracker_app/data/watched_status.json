@@ -1,4 +1,5 @@
 {
+<<<<<<< HEAD
   "version": 6,
   "source": "trakt+local-merge",
   "exportedAt": "2026-07-04T04:29:16Z",
@@ -1799,2100 +1800,822 @@
     "Law & Order: SVU|27|20|1794": "Not Started",
     "Law & Order|25|21|1795": "Not Started",
     "Law & Order: SVU|27|21|1796": "Not Started"
+=======
+  "version": 7,
+  "source": "trakt",
+  "exportedAt": "2026-07-04T04:55:27Z",
+  "summary": {
+    "guideRowsScanned": 1796,
+    "guideRowsMarkedWatched": 111,
+    "traktWatchedCountsByShow": {
+      "Law & Order": 3,
+      "Homicide: Life on the Street": 0,
+      "Law & Order: SVU": 108,
+      "Criminal Intent": 0,
+      "Trial by Jury": 0,
+      "Conviction": 0,
+      "Law & Order: UK": 0,
+      "Law & Order: LA": 0,
+      "True Crime": 0,
+      "Law & Order: Organized Crime": 0,
+      "Law & Order Toronto: Criminal Intent": 0,
+      "Deadline": 0,
+      "NY Undercover": 0,
+      "In Plain Sight": 0
+    }
+  },
+  "statuses": {
+    "Law & Order|1|1|1": "Watched",
+    "Law & Order|1|1": "Watched",
+    "Law & Order: SVU|1|1|393": "Watched",
+    "Law & Order: SVU|1|1": "Watched",
+    "Law & Order: SVU|1|2|395": "Watched",
+    "Law & Order: SVU|1|2": "Watched",
+    "Law & Order: SVU|1|3|397": "Watched",
+    "Law & Order: SVU|1|3": "Watched",
+    "Law & Order: SVU|1|4|399": "Watched",
+    "Law & Order: SVU|1|4": "Watched",
+    "Law & Order: SVU|1|5|401": "Watched",
+    "Law & Order: SVU|1|5": "Watched",
+    "Law & Order: SVU|1|6|402": "Watched",
+    "Law & Order: SVU|1|6": "Watched",
+    "Law & Order: SVU|1|7|404": "Watched",
+    "Law & Order: SVU|1|7": "Watched",
+    "Law & Order: SVU|1|8|406": "Watched",
+    "Law & Order: SVU|1|8": "Watched",
+    "Law & Order: SVU|1|9|408": "Watched",
+    "Law & Order: SVU|1|9": "Watched",
+    "Law & Order: SVU|1|10|412": "Watched",
+    "Law & Order: SVU|1|10": "Watched",
+    "Law & Order: SVU|1|11|413": "Watched",
+    "Law & Order: SVU|1|11": "Watched",
+    "Law & Order: SVU|1|12|414": "Watched",
+    "Law & Order: SVU|1|12": "Watched",
+    "Law & Order: SVU|1|13|416": "Watched",
+    "Law & Order: SVU|1|13": "Watched",
+    "Law & Order: SVU|1|14|418": "Watched",
+    "Law & Order: SVU|1|14": "Watched",
+    "Law & Order|10|14|420": "Watched",
+    "Law & Order|10|14": "Watched",
+    "Law & Order: SVU|1|15|421": "Watched",
+    "Law & Order: SVU|1|15": "Watched",
+    "Law & Order|10|15|422": "Watched",
+    "Law & Order|10|15": "Watched",
+    "Law & Order: SVU|1|16|423": "Watched",
+    "Law & Order: SVU|1|16": "Watched",
+    "Law & Order: SVU|1|17|426": "Watched",
+    "Law & Order: SVU|1|17": "Watched",
+    "Law & Order: SVU|1|18|428": "Watched",
+    "Law & Order: SVU|1|18": "Watched",
+    "Law & Order: SVU|1|19|430": "Watched",
+    "Law & Order: SVU|1|19": "Watched",
+    "Law & Order: SVU|1|20|432": "Watched",
+    "Law & Order: SVU|1|20": "Watched",
+    "Law & Order: SVU|1|21|434": "Watched",
+    "Law & Order: SVU|1|21": "Watched",
+    "Law & Order: SVU|1|22|436": "Watched",
+    "Law & Order: SVU|1|22": "Watched",
+    "Law & Order: SVU|2|1|443": "Watched",
+    "Law & Order: SVU|2|1": "Watched",
+    "Law & Order: SVU|2|2|446": "Watched",
+    "Law & Order: SVU|2|2": "Watched",
+    "Law & Order: SVU|2|3|449": "Watched",
+    "Law & Order: SVU|2|3": "Watched",
+    "Law & Order: SVU|2|4|451": "Watched",
+    "Law & Order: SVU|2|4": "Watched",
+    "Law & Order: SVU|2|5|453": "Watched",
+    "Law & Order: SVU|2|5": "Watched",
+    "Law & Order: SVU|2|6|455": "Watched",
+    "Law & Order: SVU|2|6": "Watched",
+    "Law & Order: SVU|2|7|457": "Watched",
+    "Law & Order: SVU|2|7": "Watched",
+    "Law & Order: SVU|2|8|458": "Watched",
+    "Law & Order: SVU|2|8": "Watched",
+    "Law & Order: SVU|2|9|461": "Watched",
+    "Law & Order: SVU|2|9": "Watched",
+    "Law & Order: SVU|2|10|463": "Watched",
+    "Law & Order: SVU|2|10": "Watched",
+    "Law & Order: SVU|2|11|465": "Watched",
+    "Law & Order: SVU|2|11": "Watched",
+    "Law & Order: SVU|2|12|466": "Watched",
+    "Law & Order: SVU|2|12": "Watched",
+    "Law & Order: SVU|2|13|468": "Watched",
+    "Law & Order: SVU|2|13": "Watched",
+    "Law & Order: SVU|2|14|470": "Watched",
+    "Law & Order: SVU|2|14": "Watched",
+    "Law & Order: SVU|2|15|472": "Watched",
+    "Law & Order: SVU|2|15": "Watched",
+    "Law & Order: SVU|2|16|474": "Watched",
+    "Law & Order: SVU|2|16": "Watched",
+    "Law & Order: SVU|2|17|479": "Watched",
+    "Law & Order: SVU|2|17": "Watched",
+    "Law & Order: SVU|2|18|488": "Watched",
+    "Law & Order: SVU|2|18": "Watched",
+    "Law & Order: SVU|2|19|489": "Watched",
+    "Law & Order: SVU|2|19": "Watched",
+    "Law & Order: SVU|2|20|491": "Watched",
+    "Law & Order: SVU|2|20": "Watched",
+    "Law & Order: SVU|2|21|493": "Watched",
+    "Law & Order: SVU|2|21": "Watched",
+    "Law & Order: SVU|3|1|498": "Watched",
+    "Law & Order: SVU|3|1": "Watched",
+    "Law & Order: SVU|3|2|501": "Watched",
+    "Law & Order: SVU|3|2": "Watched",
+    "Law & Order: SVU|3|3|504": "Watched",
+    "Law & Order: SVU|3|3": "Watched",
+    "Law & Order: SVU|3|4|507": "Watched",
+    "Law & Order: SVU|3|4": "Watched",
+    "Law & Order: SVU|3|5|510": "Watched",
+    "Law & Order: SVU|3|5": "Watched",
+    "Law & Order: SVU|3|6|513": "Watched",
+    "Law & Order: SVU|3|6": "Watched",
+    "Law & Order: SVU|3|7|515": "Watched",
+    "Law & Order: SVU|3|7": "Watched",
+    "Law & Order: SVU|3|8|518": "Watched",
+    "Law & Order: SVU|3|8": "Watched",
+    "Law & Order: SVU|3|9|521": "Watched",
+    "Law & Order: SVU|3|9": "Watched",
+    "Law & Order: SVU|3|10|526": "Watched",
+    "Law & Order: SVU|3|10": "Watched",
+    "Law & Order: SVU|3|11|527": "Watched",
+    "Law & Order: SVU|3|11": "Watched",
+    "Law & Order: SVU|3|12|530": "Watched",
+    "Law & Order: SVU|3|12": "Watched",
+    "Law & Order: SVU|3|13|533": "Watched",
+    "Law & Order: SVU|3|13": "Watched",
+    "Law & Order: SVU|3|14|534": "Watched",
+    "Law & Order: SVU|3|14": "Watched",
+    "Law & Order: SVU|3|15|537": "Watched",
+    "Law & Order: SVU|3|15": "Watched",
+    "Law & Order: SVU|3|16|540": "Watched",
+    "Law & Order: SVU|3|16": "Watched",
+    "Law & Order: SVU|3|17|543": "Watched",
+    "Law & Order: SVU|3|17": "Watched",
+    "Law & Order: SVU|3|18|547": "Watched",
+    "Law & Order: SVU|3|18": "Watched",
+    "Law & Order: SVU|3|19|550": "Watched",
+    "Law & Order: SVU|3|19": "Watched",
+    "Law & Order: SVU|3|20|555": "Watched",
+    "Law & Order: SVU|3|20": "Watched",
+    "Law & Order: SVU|3|21|559": "Watched",
+    "Law & Order: SVU|3|21": "Watched",
+    "Law & Order: SVU|3|22|562": "Watched",
+    "Law & Order: SVU|3|22": "Watched",
+    "Law & Order: SVU|3|23|564": "Watched",
+    "Law & Order: SVU|3|23": "Watched",
+    "Law & Order: SVU|4|1|566": "Watched",
+    "Law & Order: SVU|4|1": "Watched",
+    "Law & Order: SVU|4|2|569": "Watched",
+    "Law & Order: SVU|4|2": "Watched",
+    "Law & Order: SVU|4|3|572": "Watched",
+    "Law & Order: SVU|4|3": "Watched",
+    "Law & Order: SVU|4|4|575": "Watched",
+    "Law & Order: SVU|4|4": "Watched",
+    "Law & Order: SVU|4|5|577": "Watched",
+    "Law & Order: SVU|4|5": "Watched",
+    "Law & Order: SVU|4|6|580": "Watched",
+    "Law & Order: SVU|4|6": "Watched",
+    "Law & Order: SVU|4|7|583": "Watched",
+    "Law & Order: SVU|4|7": "Watched",
+    "Law & Order: SVU|4|8|586": "Watched",
+    "Law & Order: SVU|4|8": "Watched",
+    "Law & Order: SVU|4|9|589": "Watched",
+    "Law & Order: SVU|4|9": "Watched",
+    "Law & Order: SVU|4|10|592": "Watched",
+    "Law & Order: SVU|4|10": "Watched",
+    "Law & Order: SVU|4|11|596": "Watched",
+    "Law & Order: SVU|4|11": "Watched",
+    "Law & Order: SVU|4|12|599": "Watched",
+    "Law & Order: SVU|4|12": "Watched",
+    "Law & Order: SVU|4|13|600": "Watched",
+    "Law & Order: SVU|4|13": "Watched",
+    "Law & Order: SVU|4|14|601": "Watched",
+    "Law & Order: SVU|4|14": "Watched",
+    "Law & Order: SVU|4|15|604": "Watched",
+    "Law & Order: SVU|4|15": "Watched",
+    "Law & Order: SVU|4|16|607": "Watched",
+    "Law & Order: SVU|4|16": "Watched",
+    "Law & Order: SVU|4|17|610": "Watched",
+    "Law & Order: SVU|4|17": "Watched",
+    "Law & Order: SVU|4|18|614": "Watched",
+    "Law & Order: SVU|4|18": "Watched",
+    "Law & Order: SVU|4|19|616": "Watched",
+    "Law & Order: SVU|4|19": "Watched",
+    "Law & Order: SVU|4|20|619": "Watched",
+    "Law & Order: SVU|4|20": "Watched",
+    "Law & Order: SVU|4|21|622": "Watched",
+    "Law & Order: SVU|4|21": "Watched",
+    "Law & Order: SVU|4|22|624": "Watched",
+    "Law & Order: SVU|4|22": "Watched",
+    "Law & Order: SVU|4|23|627": "Watched",
+    "Law & Order: SVU|4|23": "Watched",
+    "Law & Order: SVU|4|24|630": "Watched",
+    "Law & Order: SVU|4|24": "Watched",
+    "Law & Order: SVU|4|25|633": "Watched",
+    "Law & Order: SVU|4|25": "Watched",
+    "Law & Order: SVU|5|1|638": "Watched",
+    "Law & Order: SVU|5|1": "Watched",
+    "Law & Order: SVU|5|2|641": "Watched",
+    "Law & Order: SVU|5|2": "Watched",
+    "Law & Order: SVU|5|3|644": "Watched",
+    "Law & Order: SVU|5|3": "Watched",
+    "Law & Order: SVU|5|4|647": "Watched",
+    "Law & Order: SVU|5|4": "Watched",
+    "Law & Order: SVU|5|5|649": "Watched",
+    "Law & Order: SVU|5|5": "Watched",
+    "Law & Order: SVU|5|6|652": "Watched",
+    "Law & Order: SVU|5|6": "Watched",
+    "Law & Order: SVU|5|7|655": "Watched",
+    "Law & Order: SVU|5|7": "Watched",
+    "Law & Order: SVU|5|8|658": "Watched",
+    "Law & Order: SVU|5|8": "Watched",
+    "Law & Order: SVU|5|9|661": "Watched",
+    "Law & Order: SVU|5|9": "Watched",
+    "Law & Order: SVU|5|10|664": "Watched",
+    "Law & Order: SVU|5|10": "Watched",
+    "Law & Order: SVU|5|11|666": "Watched",
+    "Law & Order: SVU|5|11": "Watched",
+    "Law & Order: SVU|5|12|669": "Watched",
+    "Law & Order: SVU|5|12": "Watched",
+    "Law & Order: SVU|5|13|672": "Watched",
+    "Law & Order: SVU|5|13": "Watched",
+    "Law & Order: SVU|5|14|675": "Watched",
+    "Law & Order: SVU|5|14": "Watched",
+    "Law & Order: SVU|5|15|677": "Watched",
+    "Law & Order: SVU|5|15": "Watched",
+    "Law & Order: SVU|5|16|680": "Watched",
+    "Law & Order: SVU|5|16": "Watched",
+    "Law & Order: SVU|5|17|683": "Watched",
+    "Law & Order: SVU|5|17": "Watched"
+>>>>>>> e266030 (Restore working Trakt episode sync)
   },
   "episodes": [
     {
       "show": "Law & Order",
+      "guideShow": "Law & Order",
       "season": 1,
       "episode": 1,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
+      "season": 1,
+      "episode": 1,
+      "status": "Watched"
+    },
+    {
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 1,
       "episode": 2,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
-      "season": 1,
-      "episode": 9,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 1,
       "episode": 3,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 1,
       "episode": 4,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 1,
       "episode": 5,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 1,
       "episode": 6,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 1,
       "episode": 7,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 1,
       "episode": 8,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
+      "season": 1,
+      "episode": 9,
+      "status": "Watched"
+    },
+    {
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 1,
       "episode": 10,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 1,
       "episode": 11,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 1,
       "episode": 12,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 1,
       "episode": 13,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 1,
       "episode": 14,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
       "show": "Law & Order",
+      "guideShow": "Law & Order",
+      "season": 10,
+      "episode": 14,
+      "status": "Watched"
+    },
+    {
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 1,
       "episode": 15,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
       "show": "Law & Order",
+      "guideShow": "Law & Order",
+      "season": 10,
+      "episode": 15,
+      "status": "Watched"
+    },
+    {
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 1,
       "episode": 16,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 1,
       "episode": 17,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 1,
       "episode": 18,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 1,
       "episode": 19,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 1,
       "episode": 20,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 1,
       "episode": 21,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 1,
       "episode": 22,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 2,
       "episode": 1,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 2,
       "episode": 2,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 2,
       "episode": 3,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 2,
       "episode": 4,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 2,
       "episode": 5,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 2,
       "episode": 6,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 2,
       "episode": 7,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 2,
       "episode": 8,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 2,
       "episode": 9,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 2,
       "episode": 10,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 2,
       "episode": 11,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 2,
       "episode": 12,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 2,
       "episode": 13,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 2,
       "episode": 14,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 2,
       "episode": 15,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 2,
       "episode": 16,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 2,
       "episode": 17,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 2,
       "episode": 18,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 2,
       "episode": 19,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 2,
       "episode": 20,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 2,
       "episode": 21,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
-      "season": 2,
-      "episode": 22,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 3,
       "episode": 1,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 3,
       "episode": 2,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 3,
       "episode": 3,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 3,
       "episode": 4,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 3,
       "episode": 5,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 3,
       "episode": 6,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 3,
       "episode": 7,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 3,
       "episode": 8,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 3,
       "episode": 9,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 3,
       "episode": 10,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 3,
       "episode": 11,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 3,
       "episode": 12,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Homicide: Life on the Street",
-      "season": 1,
-      "episode": 1,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 1,
-      "episode": 2,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 3,
       "episode": 13,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Homicide: Life on the Street",
-      "season": 1,
-      "episode": 3,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 3,
       "episode": 14,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Homicide: Life on the Street",
-      "season": 1,
-      "episode": 4,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 3,
       "episode": 15,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Homicide: Life on the Street",
-      "season": 1,
-      "episode": 5,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 3,
       "episode": 16,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Homicide: Life on the Street",
-      "season": 1,
-      "episode": 6,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 3,
       "episode": 17,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Homicide: Life on the Street",
-      "season": 1,
-      "episode": 7,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 3,
       "episode": 18,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Homicide: Life on the Street",
-      "season": 1,
-      "episode": 8,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 1,
-      "episode": 9,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 3,
       "episode": 19,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 3,
       "episode": 20,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 3,
       "episode": 21,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 3,
       "episode": 22,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
-      "season": 4,
-      "episode": 1,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 4,
-      "episode": 2,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 4,
-      "episode": 3,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 4,
-      "episode": 4,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 4,
-      "episode": 5,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 4,
-      "episode": 6,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 4,
-      "episode": 7,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 4,
-      "episode": 8,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 4,
-      "episode": 9,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 4,
-      "episode": 10,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 4,
-      "episode": 11,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 4,
-      "episode": 12,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 2,
-      "episode": 1,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 4,
-      "episode": 13,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 2,
-      "episode": 2,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 2,
-      "episode": 3,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 4,
-      "episode": 14,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 4,
-      "episode": 15,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 4,
-      "episode": 16,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 4,
-      "episode": 17,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 4,
-      "episode": 18,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 4,
-      "episode": 19,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 4,
-      "episode": 20,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 4,
-      "episode": 21,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 4,
-      "episode": 22,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 1,
-      "episode": 1,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 1,
-      "episode": 2,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 5,
-      "episode": 1,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 1,
-      "episode": 3,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 5,
-      "episode": 2,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 1,
-      "episode": 4,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 5,
-      "episode": 3,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 1,
-      "episode": 5,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 5,
-      "episode": 4,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 1,
-      "episode": 6,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 3,
-      "episode": 1,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 5,
-      "episode": 5,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 3,
-      "episode": 2,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 1,
-      "episode": 7,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 3,
-      "episode": 3,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 5,
-      "episode": 6,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 1,
-      "episode": 8,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 5,
-      "episode": 7,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 1,
-      "episode": 9,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 1,
-      "episode": 10,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 5,
-      "episode": 8,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 1,
-      "episode": 11,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 5,
-      "episode": 9,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 3,
-      "episode": 4,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 1,
-      "episode": 12,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 3,
-      "episode": 5,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 1,
-      "episode": 13,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 3,
-      "episode": 8,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 5,
-      "episode": 10,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 1,
-      "episode": 14,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 3,
-      "episode": 10,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 5,
-      "episode": 11,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 3,
-      "episode": 11,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 1,
-      "episode": 15,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 3,
-      "episode": 12,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 5,
-      "episode": 12,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 3,
-      "episode": 13,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 5,
-      "episode": 13,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 1,
-      "episode": 16,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 3,
-      "episode": 14,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 5,
-      "episode": 14,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 1,
-      "episode": 17,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 3,
-      "episode": 15,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 5,
-      "episode": 15,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 1,
-      "episode": 18,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 1,
-      "episode": 19,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 3,
-      "episode": 16,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 3,
-      "episode": 17,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 5,
-      "episode": 16,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 1,
-      "episode": 20,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 5,
-      "episode": 17,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 1,
-      "episode": 21,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 5,
-      "episode": 18,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 1,
-      "episode": 22,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 1,
-      "episode": 23,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 3,
-      "episode": 18,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 5,
-      "episode": 19,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 5,
-      "episode": 20,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 1,
-      "episode": 24,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 3,
-      "episode": 19,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 5,
-      "episode": 21,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 1,
-      "episode": 25,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 3,
-      "episode": 20,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 1,
-      "episode": 26,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 5,
-      "episode": 22,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 5,
-      "episode": 23,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 2,
-      "episode": 1,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 2,
-      "episode": 2,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 2,
-      "episode": 3,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 6,
-      "episode": 1,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 2,
-      "episode": 4,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 6,
-      "episode": 2,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 2,
-      "episode": 5,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 2,
-      "episode": 6,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 2,
-      "episode": 7,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 6,
-      "episode": 3,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 2,
-      "episode": 8,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 4,
-      "episode": 1,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 4,
-      "episode": 2,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 6,
-      "episode": 4,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 2,
-      "episode": 9,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 4,
-      "episode": 3,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 6,
-      "episode": 5,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 2,
-      "episode": 10,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 6,
-      "episode": 6,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 2,
-      "episode": 11,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 6,
-      "episode": 7,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 6,
-      "episode": 8,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 2,
-      "episode": 12,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 2,
-      "episode": 13,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 6,
-      "episode": 9,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 2,
-      "episode": 14,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 4,
-      "episode": 8,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 6,
-      "episode": 10,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 4,
-      "episode": 9,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 6,
-      "episode": 11,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 2,
-      "episode": 15,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 6,
-      "episode": 12,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 2,
-      "episode": 16,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 6,
-      "episode": 13,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 2,
-      "episode": 17,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 2,
-      "episode": 18,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 4,
-      "episode": 14,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 6,
-      "episode": 14,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 2,
-      "episode": 19,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 4,
-      "episode": 15,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 6,
-      "episode": 15,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 2,
-      "episode": 20,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 6,
-      "episode": 16,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 2,
-      "episode": 21,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 4,
-      "episode": 16,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 6,
-      "episode": 17,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 2,
-      "episode": 22,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 6,
-      "episode": 18,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 2,
-      "episode": 23,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 6,
-      "episode": 19,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 2,
-      "episode": 24,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 6,
-      "episode": 20,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 2,
-      "episode": 25,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 6,
-      "episode": 21,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 2,
-      "episode": 26,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 6,
-      "episode": 22,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 4,
-      "episode": 22,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 6,
-      "episode": 23,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 3,
-      "episode": 1,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 3,
-      "episode": 2,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 3,
-      "episode": 3,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 7,
-      "episode": 1,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 3,
-      "episode": 4,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 5,
-      "episode": 1,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 7,
-      "episode": 2,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 3,
-      "episode": 5,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 5,
-      "episode": 2,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 7,
-      "episode": 3,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 5,
-      "episode": 3,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 7,
-      "episode": 4,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 5,
-      "episode": 4,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 7,
-      "episode": 5,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 3,
-      "episode": 6,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 5,
-      "episode": 5,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 7,
-      "episode": 6,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 3,
-      "episode": 7,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 5,
-      "episode": 6,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 7,
-      "episode": 7,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 3,
-      "episode": 8,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 5,
-      "episode": 7,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 7,
-      "episode": 8,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 3,
-      "episode": 9,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 5,
-      "episode": 8,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 3,
-      "episode": 10,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 5,
-      "episode": 9,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 5,
-      "episode": 10,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 3,
-      "episode": 11,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 5,
-      "episode": 11,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 7,
-      "episode": 9,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 3,
-      "episode": 12,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 5,
-      "episode": 12,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 7,
-      "episode": 10,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 3,
-      "episode": 13,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 5,
-      "episode": 13,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 3,
-      "episode": 14,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 5,
-      "episode": 14,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 7,
-      "episode": 11,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 3,
-      "episode": 15,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 5,
-      "episode": 15,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 7,
-      "episode": 12,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 3,
-      "episode": 16,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 5,
-      "episode": 16,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 7,
-      "episode": 13,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 3,
-      "episode": 17,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 5,
-      "episode": 17,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 7,
-      "episode": 14,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 7,
-      "episode": 15,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 3,
-      "episode": 18,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 7,
-      "episode": 16,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 7,
-      "episode": 17,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 3,
-      "episode": 19,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 7,
-      "episode": 18,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 5,
-      "episode": 18,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 7,
-      "episode": 19,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 3,
-      "episode": 20,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 3,
-      "episode": 21,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 5,
-      "episode": 19,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 7,
-      "episode": 20,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 3,
-      "episode": 22,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 5,
-      "episode": 20,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 7,
-      "episode": 21,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 3,
       "episode": 23,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Homicide: Life on the Street",
-      "season": 5,
-      "episode": 21,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 7,
-      "episode": 22,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
-      "season": 3,
-      "episode": 24,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 5,
-      "episode": 22,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 7,
-      "episode": 23,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 8,
-      "episode": 1,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 8,
-      "episode": 2,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 8,
-      "episode": 3,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 6,
-      "episode": 1,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 6,
-      "episode": 2,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 8,
-      "episode": 4,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 6,
-      "episode": 3,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 8,
-      "episode": 5,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 8,
-      "episode": 6,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 6,
-      "episode": 5,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 8,
-      "episode": 7,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 8,
-      "episode": 8,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 8,
-      "episode": 9,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 6,
-      "episode": 8,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 8,
-      "episode": 10,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 6,
-      "episode": 9,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 8,
-      "episode": 11,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 4,
       "episode": 1,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Homicide: Life on the Street",
-      "season": 6,
-      "episode": 10,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 4,
       "episode": 2,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Homicide: Life on the Street",
-      "season": 6,
-      "episode": 11,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 8,
-      "episode": 12,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 4,
       "episode": 3,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
-      "season": 8,
-      "episode": 13,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 4,
       "episode": 4,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Homicide: Life on the Street",
-      "season": 6,
-      "episode": 12,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 6,
-      "episode": 13,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 8,
-      "episode": 14,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 4,
       "episode": 5,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Law & Order",
-      "season": 8,
-      "episode": 15,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 8,
-      "episode": 16,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 6,
-      "episode": 14,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 4,
       "episode": 6,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Homicide: Life on the Street",
-      "season": 6,
-      "episode": 15,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 4,
       "episode": 7,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Homicide: Life on the Street",
-      "season": 6,
-      "episode": 16,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 4,
       "episode": 8,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "Homicide: Life on the Street",
-      "season": 6,
-      "episode": 17,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 8,
-      "episode": 17,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 6,
-      "episode": 18,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 6,
-      "episode": 19,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 8,
-      "episode": 18,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 6,
-      "episode": 20,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 8,
-      "episode": 19,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 6,
-      "episode": 21,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 8,
-      "episode": 20,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 8,
-      "episode": 21,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 6,
-      "episode": 22,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 8,
-      "episode": 22,
-      "status": "Not Started"
-    },
-    {
-      "show": "Homicide: Life on the Street",
-      "season": 6,
-      "episode": 23,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 8,
-      "episode": 23,
-      "status": "Not Started"
-    },
-    {
-      "show": "Law & Order",
-      "season": 8,
-      "episode": 24,
-      "status": "Not Started"
-    },
-    {
-      "show": "NY Undercover",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 4,
       "episode": 9,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "NY Undercover",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 4,
       "episode": 10,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "NY Undercover",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 4,
       "episode": 11,
-      "status": "Not Started"
+      "status": "Watched"
     },
     {
-      "show": "NY Undercover",
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 4,
       "episode": 12,
+<<<<<<< HEAD
       "status": "Not Started"
     },
     {
@@ -5393,19 +4116,24 @@
       "show": "Law & Order: SVU",
       "season": 4,
       "episode": 12,
+=======
+>>>>>>> e266030 (Restore working Trakt episode sync)
       "status": "Watched"
     },
     {
       "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 4,
       "episode": 13,
       "status": "Watched"
     },
     {
       "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 4,
       "episode": 14,
       "status": "Watched"
+<<<<<<< HEAD
     },
     {
       "show": "Criminal Intent",
@@ -5418,12 +4146,16 @@
       "season": 13,
       "episode": 12,
       "status": "Not Started"
+=======
+>>>>>>> e266030 (Restore working Trakt episode sync)
     },
     {
       "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 4,
       "episode": 15,
       "status": "Watched"
+<<<<<<< HEAD
     },
     {
       "show": "Criminal Intent",
@@ -5436,12 +4168,16 @@
       "season": 13,
       "episode": 13,
       "status": "Not Started"
+=======
+>>>>>>> e266030 (Restore working Trakt episode sync)
     },
     {
       "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 4,
       "episode": 16,
       "status": "Watched"
+<<<<<<< HEAD
     },
     {
       "show": "Criminal Intent",
@@ -5454,12 +4190,16 @@
       "season": 13,
       "episode": 14,
       "status": "Not Started"
+=======
+>>>>>>> e266030 (Restore working Trakt episode sync)
     },
     {
       "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 4,
       "episode": 17,
       "status": "Watched"
+<<<<<<< HEAD
     },
     {
       "show": "Law & Order",
@@ -5478,24 +4218,32 @@
       "season": 2,
       "episode": 16,
       "status": "Not Started"
+=======
+>>>>>>> e266030 (Restore working Trakt episode sync)
     },
     {
       "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 4,
       "episode": 18,
       "status": "Watched"
+<<<<<<< HEAD
     },
     {
       "show": "Law & Order",
       "season": 13,
       "episode": 16,
       "status": "Not Started"
+=======
+>>>>>>> e266030 (Restore working Trakt episode sync)
     },
     {
       "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 4,
       "episode": 19,
       "status": "Watched"
+<<<<<<< HEAD
     },
     {
       "show": "Criminal Intent",
@@ -5508,12 +4256,16 @@
       "season": 13,
       "episode": 17,
       "status": "Not Started"
+=======
+>>>>>>> e266030 (Restore working Trakt episode sync)
     },
     {
       "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 4,
       "episode": 20,
       "status": "Watched"
+<<<<<<< HEAD
     },
     {
       "show": "Criminal Intent",
@@ -5526,24 +4278,32 @@
       "season": 13,
       "episode": 18,
       "status": "Not Started"
+=======
+>>>>>>> e266030 (Restore working Trakt episode sync)
     },
     {
       "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 4,
       "episode": 21,
       "status": "Watched"
+<<<<<<< HEAD
     },
     {
       "show": "Law & Order",
       "season": 13,
       "episode": 19,
       "status": "Not Started"
+=======
+>>>>>>> e266030 (Restore working Trakt episode sync)
     },
     {
       "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 4,
       "episode": 22,
       "status": "Watched"
+<<<<<<< HEAD
     },
     {
       "show": "Criminal Intent",
@@ -5556,12 +4316,16 @@
       "season": 13,
       "episode": 20,
       "status": "Not Started"
+=======
+>>>>>>> e266030 (Restore working Trakt episode sync)
     },
     {
       "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 4,
       "episode": 23,
       "status": "Watched"
+<<<<<<< HEAD
     },
     {
       "show": "Criminal Intent",
@@ -5574,12 +4338,16 @@
       "season": 13,
       "episode": 21,
       "status": "Not Started"
+=======
+>>>>>>> e266030 (Restore working Trakt episode sync)
     },
     {
       "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 4,
       "episode": 24,
       "status": "Watched"
+<<<<<<< HEAD
     },
     {
       "show": "Criminal Intent",
@@ -5592,12 +4360,16 @@
       "season": 13,
       "episode": 22,
       "status": "Not Started"
+=======
+>>>>>>> e266030 (Restore working Trakt episode sync)
     },
     {
       "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 4,
       "episode": 25,
       "status": "Watched"
+<<<<<<< HEAD
     },
     {
       "show": "Criminal Intent",
@@ -5622,12 +4394,16 @@
       "season": 13,
       "episode": 24,
       "status": "Not Started"
+=======
+>>>>>>> e266030 (Restore working Trakt episode sync)
     },
     {
       "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 5,
       "episode": 1,
       "status": "Watched"
+<<<<<<< HEAD
     },
     {
       "show": "Law & Order",
@@ -5640,12 +4416,16 @@
       "season": 3,
       "episode": 1,
       "status": "Not Started"
+=======
+>>>>>>> e266030 (Restore working Trakt episode sync)
     },
     {
       "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 5,
       "episode": 2,
       "status": "Watched"
+<<<<<<< HEAD
     },
     {
       "show": "Law & Order",
@@ -5658,12 +4438,16 @@
       "season": 3,
       "episode": 2,
       "status": "Not Started"
+=======
+>>>>>>> e266030 (Restore working Trakt episode sync)
     },
     {
       "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 5,
       "episode": 3,
       "status": "Watched"
+<<<<<<< HEAD
     },
     {
       "show": "Law & Order",
@@ -5676,24 +4460,32 @@
       "season": 3,
       "episode": 3,
       "status": "Not Started"
+=======
+>>>>>>> e266030 (Restore working Trakt episode sync)
     },
     {
       "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 5,
       "episode": 4,
       "status": "Watched"
+<<<<<<< HEAD
     },
     {
       "show": "Criminal Intent",
       "season": 3,
       "episode": 4,
       "status": "Not Started"
+=======
+>>>>>>> e266030 (Restore working Trakt episode sync)
     },
     {
       "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 5,
       "episode": 5,
       "status": "Watched"
+<<<<<<< HEAD
     },
     {
       "show": "Law & Order",
@@ -5706,12 +4498,16 @@
       "season": 3,
       "episode": 5,
       "status": "Not Started"
+=======
+>>>>>>> e266030 (Restore working Trakt episode sync)
     },
     {
       "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 5,
       "episode": 6,
       "status": "Watched"
+<<<<<<< HEAD
     },
     {
       "show": "Law & Order",
@@ -5724,12 +4520,16 @@
       "season": 3,
       "episode": 6,
       "status": "Not Started"
+=======
+>>>>>>> e266030 (Restore working Trakt episode sync)
     },
     {
       "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 5,
       "episode": 7,
       "status": "Watched"
+<<<<<<< HEAD
     },
     {
       "show": "Law & Order",
@@ -5742,12 +4542,16 @@
       "season": 3,
       "episode": 7,
       "status": "Not Started"
+=======
+>>>>>>> e266030 (Restore working Trakt episode sync)
     },
     {
       "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 5,
       "episode": 8,
       "status": "Watched"
+<<<<<<< HEAD
     },
     {
       "show": "Law & Order",
@@ -5760,12 +4564,16 @@
       "season": 3,
       "episode": 8,
       "status": "Not Started"
+=======
+>>>>>>> e266030 (Restore working Trakt episode sync)
     },
     {
       "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 5,
       "episode": 9,
       "status": "Watched"
+<<<<<<< HEAD
     },
     {
       "show": "Law & Order",
@@ -5778,24 +4586,32 @@
       "season": 3,
       "episode": 9,
       "status": "Not Started"
+=======
+>>>>>>> e266030 (Restore working Trakt episode sync)
     },
     {
       "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 5,
       "episode": 10,
       "status": "Watched"
+<<<<<<< HEAD
     },
     {
       "show": "Law & Order",
       "season": 14,
       "episode": 9,
       "status": "Not Started"
+=======
+>>>>>>> e266030 (Restore working Trakt episode sync)
     },
     {
       "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 5,
       "episode": 11,
       "status": "Watched"
+<<<<<<< HEAD
     },
     {
       "show": "Law & Order",
@@ -5808,12 +4624,16 @@
       "season": 3,
       "episode": 10,
       "status": "Not Started"
+=======
+>>>>>>> e266030 (Restore working Trakt episode sync)
     },
     {
       "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 5,
       "episode": 12,
       "status": "Watched"
+<<<<<<< HEAD
     },
     {
       "show": "Law & Order",
@@ -5826,12 +4646,16 @@
       "season": 3,
       "episode": 11,
       "status": "Not Started"
+=======
+>>>>>>> e266030 (Restore working Trakt episode sync)
     },
     {
       "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 5,
       "episode": 13,
       "status": "Watched"
+<<<<<<< HEAD
     },
     {
       "show": "Law & Order",
@@ -5844,24 +4668,32 @@
       "season": 3,
       "episode": 12,
       "status": "Not Started"
+=======
+>>>>>>> e266030 (Restore working Trakt episode sync)
     },
     {
       "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 5,
       "episode": 14,
       "status": "Watched"
+<<<<<<< HEAD
     },
     {
       "show": "Law & Order",
       "season": 14,
       "episode": 13,
       "status": "Not Started"
+=======
+>>>>>>> e266030 (Restore working Trakt episode sync)
     },
     {
       "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 5,
       "episode": 15,
       "status": "Watched"
+<<<<<<< HEAD
     },
     {
       "show": "Law & Order",
@@ -5874,12 +4706,16 @@
       "season": 3,
       "episode": 13,
       "status": "Not Started"
+=======
+>>>>>>> e266030 (Restore working Trakt episode sync)
     },
     {
       "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 5,
       "episode": 16,
       "status": "Watched"
+<<<<<<< HEAD
     },
     {
       "show": "Law & Order",
@@ -5892,12 +4728,16 @@
       "season": 3,
       "episode": 14,
       "status": "Not Started"
+=======
+>>>>>>> e266030 (Restore working Trakt episode sync)
     },
     {
       "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
       "season": 5,
       "episode": 17,
       "status": "Watched"
+<<<<<<< HEAD
     },
     {
       "show": "Law & Order",
@@ -12576,6 +11416,8 @@
       "season": 27,
       "episode": 21,
       "status": "Not Started"
+=======
+>>>>>>> e266030 (Restore working Trakt episode sync)
     }
   ]
 }
