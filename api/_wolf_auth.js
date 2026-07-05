@@ -1,22 +1,70 @@
 import crypto from 'crypto';
 
 const COOKIE_NAME = 'wolf_session';
+const OAUTH_STATE_COOKIE = 'wolf_oauth_state';
+const OAUTH_REDIRECT_COOKIE = 'wolf_oauth_redirect';
 const SESSION_DAYS = 30;
 
 function requiredEnv(name) {
   const value = process.env[name];
-  if (!value) throw new Error(`Missing environment variable ${name}`);
-  return value;
+  if (!value || !String(value).trim()) throw new Error(`Missing environment variable ${name}`);
+  return String(value).trim();
+}
+
+function trimTrailingSlash(value) {
+  return String(value || '').trim().replace(/\/+$/, '');
 }
 
 export function getPublicBaseUrl(req) {
-  const proto = req.headers['x-forwarded-proto'] || 'https';
-  const host = req.headers['x-forwarded-host'] || req.headers.host;
-  return process.env.PUBLIC_BASE_URL || `${proto}://${host}`;
+  const configured = process.env.PUBLIC_BASE_URL;
+  if (configured && configured.trim()) return trimTrailingSlash(configured);
+  const proto = req?.headers?.['x-forwarded-proto'] || 'https';
+  const host = req?.headers?.['x-forwarded-host'] || req?.headers?.host;
+  return trimTrailingSlash(`${proto}://${host}`);
 }
 
 export function getRedirectUri(req) {
-  return process.env.TRAKT_REDIRECT_URI || `${getPublicBaseUrl(req)}/api/auth/trakt/callback`;
+  const configured = process.env.TRAKT_REDIRECT_URI;
+  if (configured && configured.trim()) return trimTrailingSlash(configured);
+  return `${getPublicBaseUrl(req)}/api/auth/trakt/callback`;
+}
+
+export function readCookie(req, name) {
+  const raw = req?.headers?.cookie || '';
+  const parts = raw.split(';').map(v => v.trim()).filter(Boolean);
+  for (const part of parts) {
+    const idx = part.indexOf('=');
+    if (idx === -1) continue;
+    if (part.slice(0, idx) === name) {
+      try { return decodeURIComponent(part.slice(idx + 1)); }
+      catch (_) { return part.slice(idx + 1); }
+    }
+  }
+  return '';
+}
+
+function cookie(name, value, options = {}) {
+  const parts = [`${name}=${encodeURIComponent(value || '')}`, 'Path=/', 'HttpOnly', 'SameSite=Lax', 'Secure'];
+  if (Number.isFinite(options.maxAge)) parts.push(`Max-Age=${options.maxAge}`);
+  return parts.join('; ');
+}
+
+export function oauthCookies(state, redirectUri) {
+  return [
+    cookie(OAUTH_STATE_COOKIE, state, { maxAge: 600 }),
+    cookie(OAUTH_REDIRECT_COOKIE, redirectUri, { maxAge: 600 })
+  ];
+}
+
+export function clearOAuthCookies() {
+  return [
+    cookie(OAUTH_STATE_COOKIE, '', { maxAge: 0 }),
+    cookie(OAUTH_REDIRECT_COOKIE, '', { maxAge: 0 })
+  ];
+}
+
+export function getOauthRedirectFromCookie(req) {
+  return readCookie(req, OAUTH_REDIRECT_COOKIE) || '';
 }
 
 export function createSessionId() {
@@ -44,43 +92,30 @@ export function verifyCookieValue(value = '') {
   return sessionId;
 }
 
-export function readCookie(req, name) {
-  const raw = req.headers.cookie || '';
-  const parts = raw.split(';').map(v => v.trim());
-  for (const part of parts) {
-    const idx = part.indexOf('=');
-    if (idx === -1) continue;
-    if (part.slice(0, idx) === name) return decodeURIComponent(part.slice(idx + 1));
-  }
-  return '';
-}
-
 export function getSessionId(req) {
   return verifyCookieValue(readCookie(req, COOKIE_NAME));
 }
 
 export function setSessionCookie(res, sessionId) {
   const maxAge = SESSION_DAYS * 24 * 60 * 60;
-  res.setHeader('Set-Cookie', `${COOKIE_NAME}=${encodeURIComponent(encodeCookieValue(sessionId))}; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=${maxAge}`);
+  res.setHeader('Set-Cookie', cookie(COOKIE_NAME, encodeCookieValue(sessionId), { maxAge }));
 }
 
 export function clearSessionCookie(res) {
-  res.setHeader('Set-Cookie', `${COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=0`);
+  res.setHeader('Set-Cookie', cookie(COOKIE_NAME, '', { maxAge: 0 }));
 }
 
 export async function supabaseFetch(path, options = {}) {
-  const url = requiredEnv('SUPABASE_URL').replace(/\/$/, '');
+  const url = trimTrailingSlash(requiredEnv('SUPABASE_URL'));
   const key = requiredEnv('SUPABASE_SERVICE_ROLE_KEY');
-  const response = await fetch(`${url}/rest/v1${path}`, {
-    ...options,
-    headers: {
-      apikey: key,
-      Authorization: `Bearer ${key}`,
-      'Content-Type': 'application/json',
-      Prefer: options.prefer || options.headers?.Prefer || '',
-      ...(options.headers || {})
-    }
-  });
+  const headers = {
+    apikey: key,
+    Authorization: `Bearer ${key}`,
+    'Content-Type': 'application/json',
+    ...(options.prefer ? { Prefer: options.prefer } : {}),
+    ...(options.headers || {})
+  };
+  const response = await fetch(`${url}/rest/v1${path}`, { ...options, headers });
   const text = await response.text();
   let data = null;
   if (text) {
@@ -104,20 +139,63 @@ export async function createSession(userId) {
   return sessionId;
 }
 
+export async function deleteSession(req) {
+  const sessionId = getSessionId(req);
+  if (!sessionId) return;
+  await supabaseFetch(`/app_sessions?session_id=eq.${encodeURIComponent(sessionId)}`, {
+    method: 'DELETE',
+    prefer: 'return=minimal'
+  });
+}
+
 export async function getSessionUser(req) {
   const sessionId = getSessionId(req);
   if (!sessionId) return null;
-  const sessions = await supabaseFetch(`/app_sessions?session_id=eq.${encodeURIComponent(sessionId)}&expires_at=gt.${encodeURIComponent(new Date().toISOString())}&select=user_id`, { method: 'GET' });
+  const now = encodeURIComponent(new Date().toISOString());
+  const sessions = await supabaseFetch(`/app_sessions?session_id=eq.${encodeURIComponent(sessionId)}&expires_at=gt.${now}&select=user_id`, { method: 'GET' });
   const session = Array.isArray(sessions) ? sessions[0] : null;
   if (!session?.user_id) return null;
   const users = await supabaseFetch(`/trakt_users?id=eq.${encodeURIComponent(session.user_id)}&select=*`, { method: 'GET' });
   return Array.isArray(users) ? users[0] : null;
 }
 
-export async function deleteSession(req) {
-  const sessionId = getSessionId(req);
-  if (!sessionId) return;
-  await supabaseFetch(`/app_sessions?session_id=eq.${encodeURIComponent(sessionId)}`, { method: 'DELETE', prefer: 'return=minimal' });
+export async function exchangeTraktCode({ code, redirectUri }) {
+  const body = {
+    code,
+    client_id: requiredEnv('TRAKT_CLIENT_ID'),
+    client_secret: requiredEnv('TRAKT_CLIENT_SECRET'),
+    redirect_uri: trimTrailingSlash(redirectUri),
+    grant_type: 'authorization_code'
+  };
+  const response = await fetch('https://api.trakt.tv/oauth/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  const text = await response.text();
+  let data = {};
+  try { data = text ? JSON.parse(text) : {}; } catch (_) { data = { raw: text }; }
+  if (!response.ok) {
+    const details = data.error_description || data.error || data.message || data.raw || `HTTP ${response.status}`;
+    throw new Error(`Trakt token exchange failed: HTTP ${response.status}. ${details}. Redirect used: ${body.redirect_uri}`);
+  }
+  return data;
+}
+
+export async function getTraktSettings(accessToken) {
+  const response = await fetch('https://api.trakt.tv/users/settings', {
+    headers: {
+      'Content-Type': 'application/json',
+      'trakt-api-version': '2',
+      'trakt-api-key': requiredEnv('TRAKT_CLIENT_ID'),
+      Authorization: `Bearer ${accessToken}`
+    }
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data?.error_description || data?.error || `Could not read Trakt user: HTTP ${response.status}`);
+  }
+  return data;
 }
 
 export async function refreshTraktTokenIfNeeded(user) {
@@ -125,17 +203,17 @@ export async function refreshTraktTokenIfNeeded(user) {
   if (expiresAt && expiresAt - Date.now() > 10 * 60 * 1000) return user;
   if (!user?.trakt_refresh_token) return user;
 
-  const body = {
-    refresh_token: user.trakt_refresh_token,
-    client_id: requiredEnv('TRAKT_CLIENT_ID'),
-    client_secret: requiredEnv('TRAKT_CLIENT_SECRET'),
-    redirect_uri: process.env.TRAKT_REDIRECT_URI || 'urn:ietf:wg:oauth:2.0:oob',
-    grant_type: 'refresh_token'
-  };
+  const redirectUri = getRedirectUri();
   const response = await fetch('https://api.trakt.tv/oauth/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
+    body: JSON.stringify({
+      refresh_token: user.trakt_refresh_token,
+      client_id: requiredEnv('TRAKT_CLIENT_ID'),
+      client_secret: requiredEnv('TRAKT_CLIENT_SECRET'),
+      redirect_uri: redirectUri,
+      grant_type: 'refresh_token'
+    })
   });
   const token = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(token.error_description || token.error || `Trakt token refresh failed: HTTP ${response.status}`);
@@ -143,7 +221,8 @@ export async function refreshTraktTokenIfNeeded(user) {
   const updated = {
     trakt_access_token: token.access_token,
     trakt_refresh_token: token.refresh_token || user.trakt_refresh_token,
-    token_expires_at: new Date(Date.now() + Number(token.expires_in || 7776000) * 1000).toISOString()
+    token_expires_at: new Date(Date.now() + Number(token.expires_in || 7776000) * 1000).toISOString(),
+    updated_at: new Date().toISOString()
   };
   await supabaseFetch(`/trakt_users?id=eq.${encodeURIComponent(user.id)}`, {
     method: 'PATCH',
@@ -183,4 +262,11 @@ export function buildWatchedStatusesFromTrakt(watchedShows = []) {
     }
   }
   return statuses;
+}
+
+export function requireMethod(req, res, method) {
+  if (req.method === method) return true;
+  res.setHeader('Allow', method);
+  res.status(405).json({ ok: false, error: 'Method not allowed' });
+  return false;
 }
