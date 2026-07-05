@@ -30,14 +30,7 @@ let renderedCount = 0;
 let deferredInstallPrompt = null;
 let autoTimer = null;
 let actorIndex = new Map();
-let actorDetailShowCache = new Map();
 let renderQueued = false;
-let syncPollTimer = null;
-let syncPollDeadline = 0;
-let syncPollStartedAt = 0;
-let syncBaselineSignature = '';
-let lastHostedStatusSignature = '';
-let lastHostedStatusFetchedAt = 0;
 
 const GUIDE_SCOPES = {
   core: 'Core Wolf Universe',
@@ -397,36 +390,8 @@ function getEpisodeCast(ep) {
   return out;
 }
 
-function episodeCastKeys(ep) {
-  return getEpisodeCast(ep).map(actor => normText(actor.name)).filter(Boolean);
-}
-
-function actorHasExactCreditsInShow(actorKey, show) {
-  if (!actorKey || !show) return false;
-  const cacheKey = `${actorKey}|${show}`;
-  if (actorDetailShowCache.has(cacheKey)) return actorDetailShowCache.get(cacheKey);
-  const found = episodes.some(ep => ep.show === show && episodeCastKeys(ep).includes(actorKey));
-  actorDetailShowCache.set(cacheKey, found);
-  return found;
-}
-
-function actorMatchesEpisode(ep, actorKey) {
-  if (!actorKey) return true;
-  const castKeys = episodeCastKeys(ep);
-  if (castKeys.includes(actorKey)) return true;
-
-  const rec = actorIndex.get(actorKey);
-  if (!rec || !rec.shows || !rec.shows.has(ep.show)) return false;
-
-  // Fallback for aggregate-only actor data: if this actor has no exact episode
-  // credits loaded for this show yet, show that show's rows instead of an empty view.
-  if (!actorHasExactCreditsInShow(actorKey, ep.show)) return true;
-  return false;
-}
-
 function rebuildActorIndex() {
   actorIndex = new Map();
-  actorDetailShowCache = new Map();
 
   // Preferred source: generated aggregate TMDB cast index. This makes the actor
   // dropdown useful even before every single episode credit has been fetched.
@@ -528,7 +493,6 @@ function showArtworkGallery(ep) {
 function openEpisodeDetail(ep) {
   const overlay = document.getElementById('episodeModalOverlay');
   if (!overlay) return;
-  const values = getFilterValues();
   if (values.actor) {
     const castKeys = getEpisodeCast(ep).map(actor => normText(actor.name));
     if (!castKeys.includes(values.actor)) {
@@ -652,7 +616,6 @@ function getFilterValues() {
 function matchesNonShowFilters(ep, values = getFilterValues()) {
   if (values.franchise && String(ep.franchise || ep.era) !== values.franchise) return false;
   if (values.season && String(ep.season) !== String(values.season)) return false;
-  if (values.actor && !actorMatchesEpisode(ep, values.actor)) return false;
   if (values.search) {
     const haystack = `${ep.title} ${ep.show} ${ep.notes} ${ep.code} ${ep.airDate} ${ep.overview} ${ep.connection}`.toLowerCase();
     if (!haystack.includes(values.search)) return false;
@@ -824,7 +787,10 @@ function renderShowStrip(values = getFilterValues()) {
   const railSource = scopedEpisodes.filter(ep => {
     if (railValues.franchise && String(ep.franchise || ep.era) !== railValues.franchise) return false;
     if (railValues.season && String(ep.season) !== String(railValues.season)) return false;
-    if (railValues.actor && !actorMatchesEpisode(ep, railValues.actor)) return false;
+    if (railValues.actor) {
+      const castKeys = getEpisodeCast(ep).map(actor => normText(actor.name));
+      if (!castKeys.includes(railValues.actor)) return false;
+    }
     if (railValues.search) {
       const haystack = `${ep.title} ${ep.show} ${ep.notes} ${ep.code} ${ep.airDate} ${ep.overview} ${ep.connection}`.toLowerCase();
       if (!haystack.includes(railValues.search)) return false;
@@ -868,20 +834,8 @@ function renderScopeSummary() {
   if (!el) return;
 
   const scope = getGuideScope();
-  const values = getFilterValues();
-  const summaryValues = { ...values, show: '', status: 'all', hideWatched: false };
-  const summarySource = scopedEpisodes.filter(ep => {
-    if (summaryValues.franchise && String(ep.franchise || ep.era) !== summaryValues.franchise) return false;
-    if (summaryValues.season && String(ep.season) !== String(summaryValues.season)) return false;
-    if (summaryValues.actor && !actorMatchesEpisode(ep, summaryValues.actor)) return false;
-    if (summaryValues.search) {
-      const haystack = `${ep.title} ${ep.show} ${ep.notes} ${ep.code} ${ep.airDate} ${ep.overview} ${ep.connection}`.toLowerCase();
-      if (!haystack.includes(summaryValues.search)) return false;
-    }
-    return true;
-  });
   const byShow = new Map();
-  for (const ep of summarySource) {
+  for (const ep of scopedEpisodes) {
     if (!byShow.has(ep.show)) byShow.set(ep.show, { total: 0, watched: 0, color: theme(ep.show).primary });
     const rec = byShow.get(ep.show);
     rec.total += 1;
@@ -891,7 +845,7 @@ function renderScopeSummary() {
   const entries = showSortEntries([...byShow.entries()], scopedEpisodes);
   el.innerHTML = `
     <div class="scopeHeader">
-      <div><strong>${esc(GUIDE_SCOPES[scope])}</strong><span>${summarySource.length}/${episodes.length} entries</span></div>
+      <div><strong>${esc(GUIDE_SCOPES[scope])}</strong><span>${scopedEpisodes.length}/${episodes.length} entries</span></div>
     </div>
     <div class="scopeMiniRail">
       ${entries.map(([show, rec]) => `
@@ -1023,83 +977,8 @@ function downloadBlob(blob, name) {
   URL.revokeObjectURL(url);
 }
 
-function getWatchedCountFromMap(map = statusMap) {
-  return episodes.reduce((total, ep) => total + ((map[ep.id] || map[episodeKey(ep)] || ep.status) === 'Watched' ? 1 : 0), 0);
-}
-
-function statusSignatureFromPayload(payload) {
-  const incoming = payload?.statuses || payload || {};
-  const pieces = [];
-  if (Array.isArray(payload?.episodes)) {
-    for (const item of payload.episodes) {
-      const status = normalizeStatus(item.status);
-      if (!status) continue;
-      pieces.push(`${normShow(item.show)}|${normNum(item.season)}|${normNum(item.episode)}=${status}`);
-    }
-  }
-  for (const [key, value] of Object.entries(incoming)) {
-    const status = normalizeStatus(value);
-    if (!status) continue;
-    pieces.push(`${key}=${status}`);
-  }
-  pieces.sort();
-  return `${pieces.length}:${pieces.join('¦')}`;
-}
-
-function getCurrentStatusSignature() {
-  const pieces = [];
-  for (const [key, value] of Object.entries(statusMap)) {
-    const status = normalizeStatus(value);
-    if (!status) continue;
-    pieces.push(`${key}=${status}`);
-  }
-  pieces.sort();
-  return `${pieces.length}:${pieces.join('¦')}`;
-}
-
-function stopSyncPolling(message = '') {
-  if (syncPollTimer) clearInterval(syncPollTimer);
-  syncPollTimer = null;
-  syncPollDeadline = 0;
-  syncPollStartedAt = 0;
-  syncBaselineSignature = '';
-  if (message) setText('syncStatus', message);
-}
-
-function startStatusPolling({ reason = 'Trakt sync', intervalMs = 20000, maxMs = 6 * 60 * 1000 } = {}) {
-  stopSyncPolling();
-  syncPollStartedAt = Date.now();
-  syncPollDeadline = syncPollStartedAt + maxMs;
-  syncBaselineSignature = lastHostedStatusSignature || getCurrentStatusSignature();
-  let attempt = 0;
-
-  const tick = async () => {
-    attempt += 1;
-    const elapsed = Math.max(1, Math.round((Date.now() - syncPollStartedAt) / 1000));
-    setText('syncStatus', `${reason} is running. Waiting for the updated watched_status.json… checked ${attempt} time${attempt === 1 ? '' : 's'} (${elapsed}s).`);
-    const result = await fetchHostedStatus({ source: 'Sync polling', silentNoChange: true, suppressToast: true, expectedChange: true });
-
-    if (result?.updated) {
-      const watched = getWatchedCountFromMap();
-      stopSyncPolling(`Sync complete. Updated watched status loaded: ${watched} watched entries at ${new Date().toLocaleTimeString()}.`);
-      showToast('Sync complete', `Updated watched status loaded: ${watched} watched entries.`, 'success');
-      return;
-    }
-
-    if (Date.now() >= syncPollDeadline) {
-      stopSyncPolling(`${reason} was triggered, but the hosted status file did not change yet. If GitHub Actions just finished, wait for the redeploy/cache and press Pull latest.`);
-      showToast('Still waiting for update', 'The sync may still be deploying. Try Pull latest in a minute.', 'warning');
-    }
-  };
-
-  tick();
-  syncPollTimer = setInterval(tick, intervalMs);
-}
-
-async function importStatusPayload(payload, source = 'import', options = {}) {
+async function importStatusPayload(payload, source = 'import') {
   const incoming = payload.statuses || payload || {};
-  const beforeSignature = getCurrentStatusSignature();
-  const incomingSignature = statusSignatureFromPayload(payload);
   let changed = 0;
   let matched = 0;
 
@@ -1149,72 +1028,43 @@ async function importStatusPayload(payload, source = 'import', options = {}) {
     }
   }
 
-  const afterSignature = getCurrentStatusSignature();
-  const hostedChanged = incomingSignature && incomingSignature !== lastHostedStatusSignature;
-  const localChanged = afterSignature !== beforeSignature || changed > 0;
-  const updatedForPolling = Boolean(options.expectedChange && syncBaselineSignature && incomingSignature && incomingSignature !== syncBaselineSignature);
-
-  if (localChanged) save();
-  lastHostedStatusSignature = incomingSignature || lastHostedStatusSignature;
-  lastHostedStatusFetchedAt = Date.now();
+  if (changed) save();
   render();
-
-  const watched = getWatchedCountFromMap();
-  const time = new Date().toLocaleTimeString();
-
-  if (changed > 0) {
-    setText('syncStatus', `${source}: ${changed} status changes applied, ${matched} guide rows matched, ${watched} watched entries loaded at ${time}.`);
-    if (!options.suppressToast) showToast(source, `${changed} changes applied. ${matched} guide rows matched.`, 'success');
-  } else if (options.expectedChange) {
-    setText('syncStatus', `${source}: no updated status file yet. Sync may still be running or waiting for Vercel/GitHub Pages to redeploy. Last check ${time}.`);
-    if (!options.suppressToast && !options.silentNoChange) showToast(source, 'No updated status file yet. Try again after the workflow/deploy finishes.', 'info');
-  } else {
-    setText('syncStatus', `${source}: already current. ${matched} guide rows matched, ${watched} watched entries loaded at ${time}.`);
-    if (!options.suppressToast && !options.silentNoChange) showToast(source, `Already current. ${watched} watched entries loaded.`, 'info');
-  }
-
-  return { changed, matched, watched, incomingSignature, hostedChanged, localChanged, updated: updatedForPolling || (options.expectedChange && changed > 0) };
+  setText('syncStatus', `${source}: ${changed} status changes applied, ${matched} guide rows matched at ${new Date().toLocaleTimeString()}.`);
+  showToast(source, `${changed} changes applied. ${matched} guide rows matched.`, changed ? 'success' : 'info');
 }
 
-async function fetchHostedStatus(options = {}) {
+async function fetchHostedStatus() {
   if (window.location.protocol === 'file:') {
-    const message = 'Auto-sync needs a server. For local use, start local_tracker_server.py and open http://localhost:8080/law_order_tracker_app/';
-    setText('syncStatus', message);
-    if (!options.suppressToast) showToast('Sync unavailable in file mode', 'Use local_tracker_server.py or Vercel/GitHub Pages.', 'warning');
-    return { ok: false, error: 'file-mode' };
+    setText('syncStatus', 'Auto-sync needs a local server, GitHub Pages, or Vercel. For local testing run the local server and use Pull latest.');
+    return;
   }
 
   try {
     const statusUrl = new URL('data/watched_status.json?ts=' + Date.now(), window.location.href);
     const response = await fetch(statusUrl, { cache: 'no-store' });
     if (!response.ok) throw new Error(`status file returned HTTP ${response.status}`);
-    const payload = await response.json();
-    return await importStatusPayload(payload, options.source || 'Pull latest', options);
+    await importStatusPayload(await response.json(), 'Auto-sync');
   } catch (err) {
-    const message = `Status refresh failed: ${err.message}. If you just triggered sync, wait for the workflow/deploy and try Pull latest again.`;
-    setText('syncStatus', message);
-    if (!options.suppressToast) showToast('Sync warning', err.message, 'warning');
-    return { ok: false, error: err.message };
+    setText('syncStatus', `Auto-sync checked: ${err.message}. Run the Python sync script or upload watched_status.json to data/.`);
+    showToast('Sync warning', err.message, 'warning');
   }
 }
 
 async function triggerCloudSync() {
   if (window.location.protocol === 'file:') {
     await showModal({
-      title: 'Sync unavailable in file mode',
-      message: 'Open this app through local_tracker_server.py or Vercel. Static file mode cannot run /api/trigger-sync.',
+      title: 'Cloud sync unavailable locally',
+      message: 'Open this through local_tracker_server.py or Vercel. The static file view cannot run sync.',
       type: 'warning',
       confirmText: 'OK'
     });
     return;
   }
 
-  const isLocalHost = ['localhost', '127.0.0.1', '0.0.0.0'].includes(window.location.hostname) || window.location.hostname.endsWith('.local');
   const ok = await showModal({
     title: 'Sync with Trakt now?',
-    message: isLocalHost
-      ? 'This will run your local sync endpoint. Keep the local_tracker_server.py window open until it finishes.'
-      : 'This will trigger the online GitHub/Vercel sync. The watched status updates only after GitHub Actions finishes and the site receives the new watched_status.json.',
+    message: 'This starts the local/Vercel sync endpoint. Wait for it to finish, then Pull latest if needed.',
     type: 'info',
     confirmText: 'Start sync',
     cancelText: 'Cancel'
@@ -1225,9 +1075,9 @@ async function triggerCloudSync() {
   const previousText = btn ? btn.textContent : '';
   if (btn) {
     btn.disabled = true;
-    btn.textContent = isLocalHost ? 'Running local sync…' : 'Starting online sync…';
+    btn.textContent = 'Syncing…';
   }
-  setText('syncStatus', isLocalHost ? 'Running local Trakt sync…' : 'Starting online Trakt sync. Waiting for GitHub Actions/Vercel to publish the updated status…');
+  setText('syncStatus', 'Starting Trakt sync…');
 
   try {
     const response = await fetch('/api/trigger-sync', {
@@ -1240,24 +1090,17 @@ async function triggerCloudSync() {
     if (!response.ok || payload.ok === false) {
       throw new Error(payload.error || `HTTP ${response.status}`);
     }
-
-    if (payload.completed || payload.finished || payload.local || isLocalHost) {
-      setText('syncStatus', payload.message || 'Local sync finished. Loading updated watched_status.json…');
-      showToast('Sync finished', payload.message || 'Loading updated status now.', 'success');
-      await fetchHostedStatus({ source: 'Local sync result', expectedChange: false });
-    } else {
-      const workflowText = payload.run_url ? ` Workflow: ${payload.run_url}` : '';
-      setText('syncStatus', `Online sync started. Waiting for the updated watched_status.json to be published…${workflowText}`);
-      showToast('Online sync started', 'Polling until the updated status file is available.', 'success');
-      startStatusPolling({ reason: 'Online Trakt sync', intervalMs: 20000, maxMs: 6 * 60 * 1000 });
-    }
+    setText('syncStatus', payload.message || 'Sync started. Pull latest after it finishes.');
+    showToast('Sync started', payload.message || 'Trakt sync is running.', 'success');
+    window.setTimeout(fetchHostedStatus, 5000);
+    window.setTimeout(fetchHostedStatus, 20000);
+    window.setTimeout(fetchHostedStatus, 60000);
   } catch (err) {
-    stopSyncPolling();
-    setText('syncStatus', `Sync failed: ${err.message}`);
-    showToast('Sync failed', err.message, 'danger');
+    setText('syncStatus', `Cloud sync failed: ${err.message}`);
+    showToast('Cloud sync failed', err.message, 'danger');
     await showModal({
       title: 'Could not start sync',
-      message: `${err.message}\n\nLocal: make sure local_tracker_server.py is running. Online: make sure Vercel has GITHUB_PAT, GITHUB_REPO, and GITHUB_WORKFLOW set.`,
+      message: `${err.message}`,
       type: 'danger',
       confirmText: 'OK'
     });

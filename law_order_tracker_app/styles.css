@@ -72,3 +72,309 @@ button,input,select,.fileBtn{background:linear-gradient(180deg,rgba(255,255,255,
 @media(max-width:980px){.controls{grid-template-columns:1fr 1fr}.episodeDetailHero,.detailGrid{grid-template-columns:1fr}.episodeDetailBackdrop{min-height:220px}.detailArtGrid{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:760px){.controls{grid-template-columns:1fr}.ep{grid-template-columns:54px 96px minmax(0,1fr)}.epArt{display:block!important;width:96px;height:64px}.statusBtns{grid-column:1/-1}.showChip small{display:block!important}.episodeDetailHero,.detailGrid{padding:14px}.detailArtGrid{grid-template-columns:1fr 1fr}.episodeDetailClose{width:48px;height:48px;font-size:32px}.episodeDetailBackdrop{min-height:190px}.scopeMiniChip,.showChip{min-width:150px}}
 @media(max-width:480px){.ep{grid-template-columns:48px 82px minmax(0,1fr);gap:10px}.epArt{width:82px;height:58px}.ep h3{font-size:15px}.meta{font-size:12px}.detailArtGrid{grid-template-columns:1fr}.castPill{width:100%}}
+
+
+/* =========================================================
+   Wolf Universe v3.4 compatibility overrides
+   Works with merged sync + actor-filter app.js
+   Purpose:
+   - prevent filter row overflow on desktop/mobile
+   - keep actor/show/scope filters readable
+   - align chronological show chips cleanly
+   - keep lightbox above episode detail modal
+   - hide legacy Season Manager card
+   ========================================================= */
+
+/* Safer global sizing for all form controls */
+.controls,
+.actions,
+.syncPanel,
+.scopeSummary,
+.showStrip,
+.episodeList,
+.dashboard {
+  min-width: 0;
+}
+
+.controls > *,
+.actions > *,
+.seasonControls > * {
+  min-width: 0;
+}
+
+/* Robust filter bar: wraps naturally instead of overflowing off-screen */
+.controls {
+  display: grid !important;
+  grid-template-columns:
+    minmax(210px, 1.25fr)
+    minmax(150px, .85fr)
+    minmax(150px, .85fr)
+    minmax(145px, .75fr)
+    minmax(185px, .95fr)
+    minmax(210px, 1.05fr)
+    minmax(145px, .75fr)
+    minmax(130px, auto) !important;
+  align-items: center !important;
+  gap: 10px !important;
+  overflow: visible !important;
+}
+
+.controls input,
+.controls select {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  text-overflow: ellipsis;
+}
+
+/* Hide the old season manager panel; actor/show chips now handle navigation better */
+.seasonPanel {
+  display: none !important;
+}
+
+/* Actor dropdown can contain long names like Mariska Hargitay, Christopher Meloni, etc. */
+#actorFilter,
+#scopeFilter,
+#showFilter,
+#franchiseFilter,
+#seasonFilter,
+#statusFilter {
+  white-space: nowrap;
+}
+
+/* Cleaner show rails */
+.showStrip,
+.scopeMiniRail {
+  scroll-snap-type: x proximity;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.showChip,
+.scopeMiniChip {
+  scroll-snap-align: start;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  text-align: center !important;
+  min-width: 172px;
+  max-width: 230px;
+  overflow: hidden;
+}
+
+.showChip {
+  padding-left: 30px !important;
+}
+
+.showChipTitle,
+.showChip span:not(.dot),
+.scopeMiniChip span {
+  display: block;
+  width: 100%;
+  max-width: 168px;
+  margin: 0 auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.showChip small,
+.scopeMiniChip small {
+  display: block;
+  width: 100%;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* When actor filter is selected, show chips should still show watched/total clearly */
+.showChip small b,
+.scopeMiniChip small b {
+  font-weight: 800;
+  color: color-mix(in srgb, var(--text) 82%, var(--muted));
+}
+
+/* Episode cards: keep image visible on mobile and prevent text overflow */
+.ep {
+  min-width: 0;
+}
+
+.epMain {
+  min-width: 0;
+}
+
+.ep h3,
+.meta,
+.overview,
+.crossover {
+  overflow-wrap: anywhere;
+}
+
+.statusBtns {
+  min-width: 0;
+}
+
+/* Better click affordance for episode detail cards */
+.ep:not(.watched):hover {
+  filter: brightness(1.035);
+}
+
+/* Episode detail and image lightbox stacking order */
+.episodeModalOverlay {
+  z-index: 100 !important;
+}
+
+.episodeDetail {
+  z-index: 101 !important;
+}
+
+.lightboxOverlay {
+  z-index: 250 !important;
+}
+
+.lightboxDialog {
+  z-index: 251 !important;
+}
+
+.lightboxClose,
+.episodeDetailClose {
+  cursor: pointer;
+}
+
+/* Larger, easier close controls */
+.lightboxClose {
+  width: 62px !important;
+  height: 62px !important;
+  font-size: 40px !important;
+}
+
+.episodeDetailClose {
+  width: 56px !important;
+  height: 56px !important;
+  font-size: 36px !important;
+}
+
+/* Cast pills/readability */
+.castGrid {
+  align-items: stretch;
+}
+
+.castPill {
+  max-width: 100%;
+}
+
+.castPill strong,
+.castPill small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Keep desktop dashboard from producing huge empty-feeling stat cards on medium screens */
+@media (max-width: 1400px) {
+  .dashboard {
+    grid-template-columns: minmax(360px, 2fr) repeat(4, minmax(135px, 1fr));
+  }
+}
+
+/* Filter card becomes 4/3/2 columns depending on available width */
+@media (max-width: 1280px) {
+  .controls {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 980px) {
+  .controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  .actions {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .actions button,
+  .actions .fileBtn {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+@media (max-width: 760px) {
+  .controls {
+    grid-template-columns: 1fr !important;
+  }
+
+  .showChip,
+  .scopeMiniChip {
+    min-width: 155px;
+    max-width: 190px;
+  }
+
+  .showChipTitle,
+  .showChip span:not(.dot),
+  .scopeMiniChip span {
+    max-width: 130px;
+  }
+
+  .ep {
+    grid-template-columns: 48px 88px minmax(0, 1fr) !important;
+  }
+
+  .epArt {
+    display: block !important;
+    width: 88px !important;
+    height: 60px !important;
+  }
+
+  .epMain {
+    grid-column: 3 / -1 !important;
+  }
+
+  .statusBtns {
+    grid-column: 1 / -1 !important;
+  }
+}
+
+@media (max-width: 520px) {
+  .actions {
+    grid-template-columns: 1fr;
+  }
+
+  .topbar {
+    gap: 10px;
+  }
+
+  .topActions {
+    width: 100%;
+    align-items: stretch;
+  }
+
+  .topActions button {
+    width: 100%;
+  }
+
+  .showChip,
+  .scopeMiniChip {
+    min-width: 142px;
+    max-width: 170px;
+  }
+
+  .showChip small,
+  .scopeMiniChip small {
+    font-size: 11px;
+  }
+
+  .ep {
+    grid-template-columns: 42px 72px minmax(0, 1fr) !important;
+    gap: 9px !important;
+  }
+
+  .epArt {
+    width: 72px !important;
+    height: 50px !important;
+  }
+
+  .lightboxClose {
+    width: 52px !important;
+    height: 52px !important;
+    font-size: 34px !important;
+  }
+}
