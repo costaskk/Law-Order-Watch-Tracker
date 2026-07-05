@@ -13,12 +13,28 @@ function requiredEnv(name) {
   return String(value).trim();
 }
 
+function optionalEnv(name, fallback = '') {
+  const value = process.env[name];
+  return value && String(value).trim() ? String(value).trim() : fallback;
+}
+
 function trimTrailingSlash(value) {
   return String(value || '').trim().replace(/\/+$/, '');
 }
 
-export function getTraktUserAgent() {
-  return process.env.TRAKT_USER_AGENT || 'Wolf-Universe-Watch-Tracker/1.0 (+https://law-and-order-watch-tracker1.vercel.app)';
+function traktUserAgent() {
+  return optionalEnv('TRAKT_USER_AGENT', 'Wolf-Universe-Watch-Tracker/1.0 (+https://law-and-order-watch-tracker1.vercel.app)');
+}
+
+function traktBaseHeaders(accessToken = '') {
+  const headers = {
+    'Content-Type': 'application/json',
+    'User-Agent': traktUserAgent(),
+    'trakt-api-version': '2',
+    'trakt-api-key': requiredEnv('TRAKT_CLIENT_ID')
+  };
+  if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+  return headers;
 }
 
 export function getPublicBaseUrl(req) {
@@ -111,7 +127,7 @@ export function clearSessionCookie(res) {
   res.setHeader('Set-Cookie', cookie(COOKIE_NAME, '', { maxAge: 0 }));
 }
 
-export async function supabaseFetch(path, options = {}) {
+export async function supabaseFetch(pathPart, options = {}) {
   const url = trimTrailingSlash(requiredEnv('SUPABASE_URL'));
   const key = requiredEnv('SUPABASE_SERVICE_ROLE_KEY');
   const headers = {
@@ -121,7 +137,7 @@ export async function supabaseFetch(path, options = {}) {
     ...(options.prefer ? { Prefer: options.prefer } : {}),
     ...(options.headers || {})
   };
-  const response = await fetch(`${url}/rest/v1${path}`, { ...options, headers });
+  const response = await fetch(`${url}/rest/v1${pathPart}`, { ...options, headers });
   const text = await response.text();
   let data = null;
   if (text) {
@@ -165,6 +181,12 @@ export async function getSessionUser(req) {
   return Array.isArray(users) ? users[0] : null;
 }
 
+async function parseJsonResponse(response) {
+  const text = await response.text();
+  try { return text ? JSON.parse(text) : {}; }
+  catch (_) { return { raw: text }; }
+}
+
 export async function exchangeTraktCode({ code, redirectUri }) {
   const body = {
     code,
@@ -175,12 +197,13 @@ export async function exchangeTraktCode({ code, redirectUri }) {
   };
   const response = await fetch('https://api.trakt.tv/oauth/token', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'User-Agent': getTraktUserAgent() },
+    headers: {
+      'Content-Type': 'application/json',
+      'User-Agent': traktUserAgent()
+    },
     body: JSON.stringify(body)
   });
-  const text = await response.text();
-  let data = {};
-  try { data = text ? JSON.parse(text) : {}; } catch (_) { data = { raw: text }; }
+  const data = await parseJsonResponse(response);
   if (!response.ok) {
     const details = data.error_description || data.error || data.message || data.raw || `HTTP ${response.status}`;
     throw new Error(`Trakt token exchange failed: HTTP ${response.status}. ${details}. Redirect used: ${body.redirect_uri}`);
@@ -190,17 +213,11 @@ export async function exchangeTraktCode({ code, redirectUri }) {
 
 export async function getTraktSettings(accessToken) {
   const response = await fetch('https://api.trakt.tv/users/settings', {
-    headers: {
-      'Content-Type': 'application/json',
-      'User-Agent': getTraktUserAgent(),
-      'trakt-api-version': '2',
-      'trakt-api-key': requiredEnv('TRAKT_CLIENT_ID'),
-      Authorization: `Bearer ${accessToken}`
-    }
+    headers: traktBaseHeaders(accessToken)
   });
-  const data = await response.json().catch(() => ({}));
+  const data = await parseJsonResponse(response);
   if (!response.ok) {
-    throw new Error(data?.error_description || data?.error || `Could not read Trakt user: HTTP ${response.status}`);
+    throw new Error(data?.error_description || data?.error || data?.raw || `Could not read Trakt user: HTTP ${response.status}`);
   }
   return data;
 }
@@ -210,20 +227,22 @@ export async function refreshTraktTokenIfNeeded(user) {
   if (expiresAt && expiresAt - Date.now() > 10 * 60 * 1000) return user;
   if (!user?.trakt_refresh_token) return user;
 
-  const redirectUri = getRedirectUri();
   const response = await fetch('https://api.trakt.tv/oauth/token', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'User-Agent': getTraktUserAgent() },
+    headers: {
+      'Content-Type': 'application/json',
+      'User-Agent': traktUserAgent()
+    },
     body: JSON.stringify({
       refresh_token: user.trakt_refresh_token,
       client_id: requiredEnv('TRAKT_CLIENT_ID'),
       client_secret: requiredEnv('TRAKT_CLIENT_SECRET'),
-      redirect_uri: redirectUri,
+      redirect_uri: getRedirectUri(),
       grant_type: 'refresh_token'
     })
   });
-  const token = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(token.error_description || token.error || `Trakt token refresh failed: HTTP ${response.status}`);
+  const token = await parseJsonResponse(response);
+  if (!response.ok) throw new Error(token.error_description || token.error || token.raw || `Trakt token refresh failed: HTTP ${response.status}`);
 
   const updated = {
     trakt_access_token: token.access_token,
@@ -239,23 +258,16 @@ export async function refreshTraktTokenIfNeeded(user) {
   return { ...user, ...updated };
 }
 
-export async function traktFetch(path, accessToken) {
-  const response = await fetch(`https://api.trakt.tv${path}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      'User-Agent': getTraktUserAgent(),
-      'trakt-api-version': '2',
-      'trakt-api-key': requiredEnv('TRAKT_CLIENT_ID'),
-      Authorization: `Bearer ${accessToken}`
-    }
+export async function traktFetch(pathPart, accessToken) {
+  const response = await fetch(`https://api.trakt.tv${pathPart}`, {
+    headers: traktBaseHeaders(accessToken)
   });
-  const data = await response.json().catch(() => null);
-  if (!response.ok) throw new Error(data?.error_description || data?.error || `Trakt HTTP ${response.status}`);
+  const data = await parseJsonResponse(response);
+  if (!response.ok) throw new Error(data?.error_description || data?.error || data?.raw || `Trakt HTTP ${response.status}`);
   return data;
 }
 
-
-function serverNormText(value) {
+export function normText(value) {
   return String(value ?? '')
     .toLowerCase()
     .replace(/&/g, 'and')
@@ -263,220 +275,203 @@ function serverNormText(value) {
     .trim();
 }
 
-const SERVER_SHOW_ALIASES = new Map([
-  [serverNormText('Law & Order: SVU'), serverNormText('Law & Order: Special Victims Unit')],
-  [serverNormText('Law Order SVU'), serverNormText('Law & Order: Special Victims Unit')],
-  [serverNormText('SVU'), serverNormText('Law & Order: Special Victims Unit')],
-  [serverNormText('Criminal Intent'), serverNormText('Law & Order: Criminal Intent')],
-  [serverNormText('Law Order Criminal Intent'), serverNormText('Law & Order: Criminal Intent')],
-  [serverNormText('Organized Crime'), serverNormText('Law & Order: Organized Crime')],
-  [serverNormText('Trial by Jury'), serverNormText('Law & Order: Trial by Jury')],
-  [serverNormText('Law Order UK'), serverNormText('Law & Order: UK')],
-  [serverNormText('Law Order LA'), serverNormText('Law & Order: LA')],
-  [serverNormText('Law & Order: Los Angeles'), serverNormText('Law & Order: LA')],
-  [serverNormText('Law & Order: True Crime'), serverNormText('Law & Order True Crime')],
-  [serverNormText('True Crime'), serverNormText('Law & Order True Crime')],
-  [serverNormText('NY Undercover'), serverNormText('New York Undercover')],
-  [serverNormText('Chicago PD'), serverNormText('Chicago P.D.')],
-  [serverNormText('Chicago P D'), serverNormText('Chicago P.D.')]
-]);
-
-function serverNormShow(value) {
-  const n = serverNormText(value);
-  return SERVER_SHOW_ALIASES.get(n) || n;
-}
-
-function serverNormNum(value) {
+export function normNum(value) {
   const n = Number(value);
   return Number.isFinite(n) ? String(Math.trunc(n)) : String(value ?? '').trim();
 }
 
-function addIndex(map, key, ep) {
-  if (!key) return;
-  if (!map.has(key)) map.set(key, []);
-  map.get(key).push(ep);
+const SHOW_NAME_ALIASES = {
+  [normText('Law & Order: SVU')]: normText('Law & Order: Special Victims Unit'),
+  [normText('Law Order SVU')]: normText('Law & Order: Special Victims Unit'),
+  [normText('SVU')]: normText('Law & Order: Special Victims Unit'),
+  [normText('Criminal Intent')]: normText('Law & Order: Criminal Intent'),
+  [normText('Law Order Criminal Intent')]: normText('Law & Order: Criminal Intent'),
+  [normText('Organized Crime')]: normText('Law & Order: Organized Crime'),
+  [normText('Trial by Jury')]: normText('Law & Order: Trial by Jury'),
+  [normText('Law Order UK')]: normText('Law & Order: UK'),
+  [normText('Law Order LA')]: normText('Law & Order: LA'),
+  [normText('True Crime')]: normText('Law & Order True Crime'),
+  [normText('NY Undercover')]: normText('New York Undercover'),
+  [normText('Chicago PD')]: normText('Chicago P.D.'),
+  [normText('Chicago P D')]: normText('Chicago P.D.')
+};
+
+export function normShow(value) {
+  const n = normText(value);
+  return SHOW_NAME_ALIASES[n] || n;
 }
 
-let cachedGuideIndex = null;
+export function episodeKeyFromParts(show, season, episode) {
+  return `${normShow(show)}|${normNum(season)}|${normNum(episode)}`;
+}
 
-export function loadGuideEpisodeIndex() {
-  if (cachedGuideIndex) return cachedGuideIndex;
+export function episodeKey(ep) {
+  return episodeKeyFromParts(ep.show, ep.season, ep.episode);
+}
+
+export function loadGuideEpisodes() {
   const candidates = [
     path.join(process.cwd(), 'law_order_tracker_app', 'data', 'episodes.js'),
     path.join(process.cwd(), 'data', 'episodes.js')
   ];
-  const file = candidates.find(candidate => fs.existsSync(candidate));
-  const episodes = [];
-  if (file) {
-    const raw = fs.readFileSync(file, 'utf8');
-    const match = raw.match(/window\.LAW_ORDER_EPISODES\s*=\s*(\[[\s\S]*\])\s*;?\s*$/);
-    if (match) {
-      try { episodes.push(...JSON.parse(match[1])); } catch (_) {}
-    }
-  }
-
-  const byShowSeasonEpisode = new Map();
-  const bySlugSeasonEpisode = new Map();
-  const byShowTraktSeasonEpisode = new Map();
-  const byEpisodeTraktId = new Map();
-  const byEpisodeTvdbId = new Map();
-  const byEpisodeTmdbId = new Map();
-
-  for (const ep of episodes) {
-    const season = serverNormNum(ep.season);
-    const episode = serverNormNum(ep.episode);
-    addIndex(byShowSeasonEpisode, `${serverNormShow(ep.show)}|${season}|${episode}`, ep);
-    if (ep.traktSlug) addIndex(bySlugSeasonEpisode, `${String(ep.traktSlug)}|${season}|${episode}`, ep);
-    const showIds = ep.showTraktIds || {};
-    if (showIds.slug) addIndex(bySlugSeasonEpisode, `${String(showIds.slug)}|${season}|${episode}`, ep);
-    if (showIds.trakt != null) addIndex(byShowTraktSeasonEpisode, `${showIds.trakt}|${season}|${episode}`, ep);
-    const ids = ep.traktIds || {};
-    if (ids.trakt != null) addIndex(byEpisodeTraktId, String(ids.trakt), ep);
-    if (ids.tvdb != null) addIndex(byEpisodeTvdbId, String(ids.tvdb), ep);
-    if (ids.tmdb != null) addIndex(byEpisodeTmdbId, String(ids.tmdb), ep);
-  }
-
-  cachedGuideIndex = {
-    episodes,
-    byShowSeasonEpisode,
-    bySlugSeasonEpisode,
-    byShowTraktSeasonEpisode,
-    byEpisodeTraktId,
-    byEpisodeTvdbId,
-    byEpisodeTmdbId
-  };
-  return cachedGuideIndex;
+  const file = candidates.find(p => fs.existsSync(p));
+  if (!file) return [];
+  const source = fs.readFileSync(file, 'utf8');
+  const match = source.match(/window\.LAW_ORDER_EPISODES\s*=\s*(\[[\s\S]*?\])\s*;?\s*$/);
+  if (!match) return [];
+  try { return JSON.parse(match[1]); }
+  catch (_) { return []; }
 }
 
-function uniqEpisodes(list) {
-  const seen = new Set();
+function idValues(ids = {}) {
   const out = [];
-  for (const ep of list || []) {
-    const key = ep?.id || `${ep?.show}|${ep?.season}|${ep?.episode}`;
-    if (!key || seen.has(key)) continue;
-    seen.add(key);
-    out.push(ep);
+  for (const key of ['trakt', 'tmdb', 'tvdb', 'imdb', 'slug']) {
+    if (ids[key] !== undefined && ids[key] !== null && ids[key] !== '') out.push(`${key}:${ids[key]}`);
   }
   return out;
 }
 
-function guideMatchesForTraktItem(show, seasonNumber, episodeNumber, episode = {}) {
-  const idx = loadGuideEpisodeIndex();
-  const matches = [];
-  const ids = episode?.ids || {};
-  if (ids.trakt != null) matches.push(...(idx.byEpisodeTraktId.get(String(ids.trakt)) || []));
-  if (ids.tvdb != null) matches.push(...(idx.byEpisodeTvdbId.get(String(ids.tvdb)) || []));
-  if (ids.tmdb != null) matches.push(...(idx.byEpisodeTmdbId.get(String(ids.tmdb)) || []));
-
-  const season = serverNormNum(episode?.season ?? seasonNumber);
-  const epNo = serverNormNum(episode?.number ?? episodeNumber);
-  const showIds = show?.ids || {};
-  if (showIds.trakt != null) matches.push(...(idx.byShowTraktSeasonEpisode.get(`${showIds.trakt}|${season}|${epNo}`) || []));
-  if (showIds.slug) matches.push(...(idx.bySlugSeasonEpisode.get(`${showIds.slug}|${season}|${epNo}`) || []));
-  if (show?.title) matches.push(...(idx.byShowSeasonEpisode.get(`${serverNormShow(show.title)}|${season}|${epNo}`) || []));
-  return uniqEpisodes(matches);
+function addWatchedMatch(statuses, ep) {
+  statuses[String(ep.id)] = 'Watched';
+  statuses[episodeKey(ep)] = 'Watched';
 }
 
-function addWatched(statuses, episodeRows, show, seasonNumber, episodeNumber, episode = {}) {
-  const matches = guideMatchesForTraktItem(show, seasonNumber, episodeNumber, episode);
-  const season = Number(episode?.season ?? seasonNumber);
-  const epNo = Number(episode?.number ?? episodeNumber);
-  if (matches.length) {
-    for (const guideEp of matches) {
-      statuses[guideEp.id] = 'Watched';
-      statuses[`${guideEp.show}|${guideEp.season}|${guideEp.episode}`] = 'Watched';
-      episodeRows.push({ show: guideEp.show, season: guideEp.season, episode: guideEp.episode, status: 'Watched', id: guideEp.id });
+function buildGuideIndexes(guideEpisodes = []) {
+  const byShowSeasonEpisode = new Map();
+  const byShowIdSeasonEpisode = new Map();
+  const byEpisodeTraktId = new Map();
+
+  for (const ep of guideEpisodes || []) {
+    const season = normNum(ep.season);
+    const episode = normNum(ep.episode);
+    const showNames = new Set([ep.show, ep.titleShow].filter(Boolean).map(normShow));
+    for (const name of showNames) {
+      const key = `${name}|${season}|${episode}`;
+      if (!byShowSeasonEpisode.has(key)) byShowSeasonEpisode.set(key, []);
+      byShowSeasonEpisode.get(key).push(ep);
     }
-  } else if (show?.title && Number.isFinite(season) && Number.isFinite(epNo)) {
-    statuses[`${show.title}|${season}|${epNo}`] = 'Watched';
-    episodeRows.push({ show: show.title, season, episode: epNo, status: 'Watched' });
+
+    const showIds = [
+      ...idValues(ep.showTraktIds || {}),
+      ep.traktSlug ? `slug:${ep.traktSlug}` : '',
+      ep.showSlug ? `slug:${ep.showSlug}` : ''
+    ].filter(Boolean);
+    for (const sid of showIds) {
+      const key = `${sid}|${season}|${episode}`;
+      if (!byShowIdSeasonEpisode.has(key)) byShowIdSeasonEpisode.set(key, []);
+      byShowIdSeasonEpisode.get(key).push(ep);
+    }
+
+    const episodeIds = idValues(ep.traktIds || {});
+    for (const eid of episodeIds) {
+      if (!byEpisodeTraktId.has(eid)) byEpisodeTraktId.set(eid, []);
+      byEpisodeTraktId.get(eid).push(ep);
+    }
   }
-  return matches.length;
+  return { byShowSeasonEpisode, byShowIdSeasonEpisode, byEpisodeTraktId };
 }
 
-export function buildWatchedStatusPayloadFromTrakt(watchedShows = []) {
+function matchGuideEpisode(indexes, { showTitle, showIds, season, episode, episodeIds }) {
+  const matched = new Set();
+  for (const eid of idValues(episodeIds || {})) {
+    const eps = indexes.byEpisodeTraktId.get(eid) || [];
+    eps.forEach(ep => matched.add(ep));
+  }
+  for (const sid of idValues(showIds || {})) {
+    const eps = indexes.byShowIdSeasonEpisode.get(`${sid}|${normNum(season)}|${normNum(episode)}`) || [];
+    eps.forEach(ep => matched.add(ep));
+  }
+  const titleKey = `${normShow(showTitle)}|${normNum(season)}|${normNum(episode)}`;
+  const eps = indexes.byShowSeasonEpisode.get(titleKey) || [];
+  eps.forEach(ep => matched.add(ep));
+  return [...matched];
+}
+
+export function buildWatchedStatusesFromTrakt(watchedShows = [], guideEpisodes = []) {
   const statuses = {};
-  const episodeRows = [];
-  let traktWatchedEpisodes = 0;
-  let guideMatchedEpisodes = 0;
+  const indexes = buildGuideIndexes(guideEpisodes);
+  let traktItems = 0;
+  let guideMatches = 0;
 
   for (const item of watchedShows || []) {
-    const show = item?.show || {};
+    const showTitle = item?.show?.title;
+    const showIds = item?.show?.ids || {};
+    if (!showTitle && !Object.keys(showIds).length) continue;
     for (const season of item.seasons || []) {
       const seasonNo = Number(season.number);
       if (!Number.isFinite(seasonNo)) continue;
       for (const episode of season.episodes || []) {
         const episodeNo = Number(episode.number);
         if (!Number.isFinite(episodeNo)) continue;
-        traktWatchedEpisodes += 1;
-        guideMatchedEpisodes += addWatched(statuses, episodeRows, show, seasonNo, episodeNo, episode);
+        traktItems += 1;
+        statuses[episodeKeyFromParts(showTitle, seasonNo, episodeNo)] = 'Watched';
+        const matches = matchGuideEpisode(indexes, {
+          showTitle,
+          showIds,
+          season: seasonNo,
+          episode: episodeNo,
+          episodeIds: episode.ids || {}
+        });
+        matches.forEach(ep => addWatchedMatch(statuses, ep));
+        guideMatches += matches.length;
       }
     }
   }
+  return { statuses, debug: { source: 'watched-shows', traktItems, guideMatches, statusKeys: Object.keys(statuses).length } };
+}
 
+export function buildWatchedStatusesFromHistory(historyItems = [], guideEpisodes = []) {
+  const statuses = {};
+  const indexes = buildGuideIndexes(guideEpisodes);
+  let traktItems = 0;
+  let guideMatches = 0;
+
+  for (const item of historyItems || []) {
+    const showTitle = item?.show?.title;
+    const showIds = item?.show?.ids || {};
+    const epObj = item?.episode || item;
+    const seasonNo = Number(epObj?.season ?? item?.season);
+    const episodeNo = Number(epObj?.number ?? item?.number ?? item?.episode);
+    if ((!showTitle && !Object.keys(showIds).length) || !Number.isFinite(seasonNo) || !Number.isFinite(episodeNo)) continue;
+    traktItems += 1;
+    statuses[episodeKeyFromParts(showTitle, seasonNo, episodeNo)] = 'Watched';
+    const matches = matchGuideEpisode(indexes, {
+      showTitle,
+      showIds,
+      season: seasonNo,
+      episode: episodeNo,
+      episodeIds: epObj?.ids || {}
+    });
+    matches.forEach(ep => addWatchedMatch(statuses, ep));
+    guideMatches += matches.length;
+  }
+  return { statuses, debug: { source: 'history', traktItems, guideMatches, statusKeys: Object.keys(statuses).length } };
+}
+
+export async function buildWatchedStatusesForGuide(accessToken) {
+  const guideEpisodes = loadGuideEpisodes();
+  const watchedShows = await traktFetch('/sync/watched/shows?extended=full', accessToken);
+  const primary = buildWatchedStatusesFromTrakt(watchedShows, guideEpisodes);
+
+  // History fallback helps when Trakt watched-shows is incomplete, or when a title/ID mismatch
+  // prevents the aggregate endpoint from matching the local guide.
+  let history = { statuses: {}, debug: { source: 'history', traktItems: 0, guideMatches: 0, statusKeys: 0, skipped: true } };
+  try {
+    const historyItems = await traktFetch('/sync/history/episodes?limit=10000&extended=full', accessToken);
+    history = buildWatchedStatusesFromHistory(historyItems, guideEpisodes);
+  } catch (err) {
+    history.debug = { ...history.debug, error: err.message || String(err) };
+  }
+
+  const statuses = { ...primary.statuses, ...history.statuses };
   return {
     statuses,
-    episodes: episodeRows,
-    watched_keys: Object.keys(statuses).length,
-    trakt_watched_episodes: traktWatchedEpisodes,
-    matched_guide_rows: guideMatchedEpisodes,
-    guide_catalog_rows: loadGuideEpisodeIndex().episodes.length
-  };
-}
-
-export function buildWatchedStatusesFromTrakt(watchedShows = []) {
-  return buildWatchedStatusPayloadFromTrakt(watchedShows).statuses;
-}
-
-export async function buildWatchedStatusPayloadWithHistory(watchedShows = [], accessToken) {
-  const payload = buildWatchedStatusPayloadFromTrakt(watchedShows);
-  const needsHistoryFallback = payload.trakt_watched_episodes === 0 || payload.matched_guide_rows === 0;
-  if (!needsHistoryFallback || !accessToken) return payload;
-
-  const statuses = { ...payload.statuses };
-  const episodeRows = [...payload.episodes];
-  let historyItems = 0;
-  let historyMatchedRows = 0;
-  const shows = (watchedShows || []).map(item => item?.show).filter(Boolean);
-
-  for (const show of shows) {
-    const showId = show?.ids?.trakt || show?.ids?.slug || show?.ids?.tmdb || show?.title;
-    if (!showId) continue;
-    try {
-      const encoded = encodeURIComponent(String(showId));
-      const history = await traktFetch(`/sync/history/shows/${encoded}?limit=10000`, accessToken);
-      for (const item of history || []) {
-        const ep = item?.episode || {};
-        const seasonNo = Number(ep.season);
-        const episodeNo = Number(ep.number);
-        if (!Number.isFinite(seasonNo) || !Number.isFinite(episodeNo)) continue;
-        historyItems += 1;
-        historyMatchedRows += addWatched(statuses, episodeRows, item?.show || show, seasonNo, episodeNo, ep);
-      }
-    } catch (err) {
-      // Keep the main sync usable even if one history endpoint is blocked or unavailable.
+    debug: {
+      guideEpisodes: guideEpisodes.length,
+      watchedShows: primary.debug,
+      history: history.debug,
+      finalStatusKeys: Object.keys(statuses).length
     }
-  }
-
-  const dedupRows = [];
-  const seen = new Set();
-  for (const row of episodeRows) {
-    const key = row.id || `${serverNormShow(row.show)}|${serverNormNum(row.season)}|${serverNormNum(row.episode)}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    dedupRows.push(row);
-  }
-
-  return {
-    statuses,
-    episodes: dedupRows,
-    watched_keys: Object.keys(statuses).length,
-    trakt_watched_episodes: payload.trakt_watched_episodes,
-    matched_guide_rows: payload.matched_guide_rows + historyMatchedRows,
-    guide_catalog_rows: loadGuideEpisodeIndex().episodes.length,
-    history_items_checked: historyItems,
-    history_matched_rows: historyMatchedRows,
-    used_history_fallback: true
   };
 }
 

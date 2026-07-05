@@ -1131,7 +1131,7 @@ async function loadTraktUser({ pullStatus = true, quiet = false } = {}) {
     return traktUser;
   }
   try {
-    const response = await fetch('/api/me/status?ts=' + Date.now(), { cache: 'no-store' });
+    const response = await fetch('/api/me/status?ts=' + Date.now(), { cache: 'no-store', credentials: 'include' });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload.error || `HTTP ${response.status}`);
     traktUser = payload.authenticated ? payload : { authenticated: false };
@@ -1189,7 +1189,7 @@ async function resetLoggedOutProgress(ask = true) {
 
 async function logoutTraktUser() {
   try {
-    await fetch('/api/auth/logout', { method: 'POST' });
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
   } catch (_) {}
   traktUser = { authenticated: false };
   updateTraktAccountPanel();
@@ -1202,7 +1202,7 @@ async function fetchPersonalSupabaseStatus(options = {}) {
   if (traktStatusLoadInProgress) return { ok: false, error: 'already-loading' };
   traktStatusLoadInProgress = true;
   try {
-    const response = await fetch('/api/me/status?ts=' + Date.now(), { cache: 'no-store' });
+    const response = await fetch('/api/me/status?ts=' + Date.now(), { cache: 'no-store', credentials: 'include' });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload.error || `HTTP ${response.status}`);
     traktUser = payload.authenticated ? payload : { authenticated: false };
@@ -1221,23 +1221,33 @@ async function fetchPersonalSupabaseStatus(options = {}) {
 async function syncPersonalTrakt() {
   const response = await fetch('/api/sync/trakt', {
     method: 'POST',
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ source: 'wolf-universe-tracker', ts: Date.now() })
   });
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok || payload.ok === false) throw new Error(payload.error || `HTTP ${response.status}`);
+
+  const syncPayload = await response.json().catch(() => ({}));
+  if (!response.ok || syncPayload.ok === false) {
+    throw new Error(syncPayload.error || `HTTP ${response.status}`);
+  }
+
   traktUser = {
     authenticated: true,
-    username: payload.username || traktUser?.username || '',
-    updated_at: payload.updated_at || new Date().toISOString()
+    username: syncPayload.username || traktUser?.username || '',
+    updated_at: syncPayload.updated_at || new Date().toISOString()
   };
   updateTraktAccountPanel();
-  const result = await importStatusPayload(payload, 'Personal Trakt sync', { suppressToast: true });
-  const serverMatched = Number(payload.matched_guide_rows || 0);
-  const matchedText = result.matched || serverMatched;
-  const extra = payload.used_history_fallback ? ` History fallback checked ${payload.history_items_checked || 0} items.` : '';
-  setText('syncStatus', `Personal Trakt sync complete: ${result.watched} watched entries loaded, ${matchedText} guide rows matched at ${new Date().toLocaleTimeString()}.${extra}`);
-  showToast('Personal Trakt sync complete', `${result.watched} watched entries loaded. ${matchedText} guide rows matched.`, matchedText ? 'success' : 'warning');
+
+  const result = await importStatusPayload(
+    { statuses: syncPayload.statuses || {} },
+    'Personal Trakt sync',
+    { suppressToast: true }
+  );
+
+  const apiMatched = syncPayload.debug?.watchedShows?.guideMatches || syncPayload.debug?.history?.guideMatches || 0;
+  const debugTail = apiMatched ? ` Server matched ${apiMatched} guide rows.` : '';
+  setText('syncStatus', `Personal Trakt sync complete: ${result.watched} watched entries loaded, ${result.matched} browser guide rows matched at ${new Date().toLocaleTimeString()}.${debugTail}`);
+  showToast('Personal Trakt sync complete', `${result.watched} watched entries loaded.`, 'success');
   return result;
 }
 
