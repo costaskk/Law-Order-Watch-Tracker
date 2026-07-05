@@ -1232,9 +1232,12 @@ async function syncPersonalTrakt() {
     updated_at: payload.updated_at || new Date().toISOString()
   };
   updateTraktAccountPanel();
-  const result = await importStatusPayload({ statuses: payload.statuses || {} }, 'Personal Trakt sync', { suppressToast: true });
-  setText('syncStatus', `Personal Trakt sync complete: ${result.watched} watched entries loaded, ${result.matched} guide rows matched at ${new Date().toLocaleTimeString()}.`);
-  showToast('Personal Trakt sync complete', `${result.watched} watched entries loaded.`, 'success');
+  const result = await importStatusPayload(payload, 'Personal Trakt sync', { suppressToast: true });
+  const serverMatched = Number(payload.matched_guide_rows || 0);
+  const matchedText = result.matched || serverMatched;
+  const extra = payload.used_history_fallback ? ` History fallback checked ${payload.history_items_checked || 0} items.` : '';
+  setText('syncStatus', `Personal Trakt sync complete: ${result.watched} watched entries loaded, ${matchedText} guide rows matched at ${new Date().toLocaleTimeString()}.${extra}`);
+  showToast('Personal Trakt sync complete', `${result.watched} watched entries loaded. ${matchedText} guide rows matched.`, matchedText ? 'success' : 'warning');
   return result;
 }
 

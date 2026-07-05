@@ -1,0 +1,12 @@
+Supabase personal Trakt sync zero-matches fix
+
+This fixes the case where Trakt sync succeeds but the app reports 0 guide matches.
+
+What changed:
+- api/_wolf_auth.js now reads law_order_tracker_app/data/episodes.js on the server.
+- watched Trakt episodes are matched back to the guide using stable guide IDs, Trakt episode IDs, TVDB/TMDB episode IDs, show Trakt IDs/slugs, and title/season/episode fallback.
+- api/sync/trakt.js returns both statuses and episode rows so the browser can match reliably.
+- if /sync/watched/shows returns no season/episode details, the API falls back to /sync/history/shows/{show}.
+- law_order_tracker_app/app.js now imports the full sync payload instead of only the raw status object.
+
+After replacing the files, redeploy Vercel and try Sync with Trakt again.
