@@ -1083,10 +1083,12 @@ function ensureTraktAccountPanel() {
     </div>
     <div class="traktAccountActions">
       <button id="traktLoginBtn" type="button">Login with Trakt</button>
+      <button id="traktResetLocalBtn" type="button" class="ghost">Reset local progress</button>
       <button id="traktLogoutBtn" type="button" class="ghost" hidden>Logout</button>
     </div>`;
   syncPanel.insertAdjacentElement('afterend', panel);
   document.getElementById('traktLoginBtn')?.addEventListener('click', loginWithTrakt);
+  document.getElementById('traktResetLocalBtn')?.addEventListener('click', () => resetLoggedOutProgress(true));
   document.getElementById('traktLogoutBtn')?.addEventListener('click', logoutTraktUser);
 }
 
@@ -1095,6 +1097,7 @@ function updateTraktAccountPanel() {
   const title = document.getElementById('traktAccountTitle');
   const text = document.getElementById('traktAccountText');
   const login = document.getElementById('traktLoginBtn');
+  const reset = document.getElementById('traktResetLocalBtn');
   const logout = document.getElementById('traktLogoutBtn');
   if (!title || !text || !login || !logout) return;
   if (traktUser?.authenticated) {
@@ -1103,16 +1106,19 @@ function updateTraktAccountPanel() {
       ? `Personal Supabase sync active. Last saved ${new Date(traktUser.updated_at).toLocaleString()}.`
       : 'Personal Supabase sync active. Press Sync with Trakt to import progress.';
     login.textContent = 'Reconnect Trakt';
+    if (reset) reset.hidden = true;
     logout.hidden = false;
   } else if (!isServerMode()) {
     title.textContent = 'Local file mode';
     text.textContent = 'Open through local_tracker_server.py or Vercel to use Trakt login. Manual/local sync still works.';
     login.textContent = 'Login with Trakt';
+    if (reset) reset.hidden = false;
     logout.hidden = true;
   } else {
     title.textContent = 'Trakt account';
     text.textContent = 'Login with Trakt to sync this app with your own watched progress without GitHub commits/deployments.';
     login.textContent = 'Login with Trakt';
+    if (reset) reset.hidden = false;
     logout.hidden = true;
   }
 }
@@ -1155,13 +1161,40 @@ function loginWithTrakt() {
   window.location.href = '/api/auth/trakt/start';
 }
 
+async function resetLoggedOutProgress(ask = true) {
+  if (traktUser?.authenticated) {
+    showToast('Logout first', 'Local reset is only available when no Trakt account is connected.', 'warning');
+    return false;
+  }
+  if (ask) {
+    const ok = await showModal({
+      title: 'Reset local progress?',
+      message: 'This clears watched status stored in this browser only. It will not delete any Trakt or Supabase account data.',
+      type: 'warning',
+      confirmText: 'Reset local progress',
+      cancelText: 'Cancel',
+      danger: true
+    });
+    if (!ok) return false;
+  }
+  [STORE_KEY, ...LEGACY_STORE_KEYS].forEach(key => {
+    try { localStorage.removeItem(key); } catch (_) {}
+  });
+  statusMap = {};
+  render();
+  setText('syncStatus', 'Logged-out local progress was reset. Login with Trakt to load personal progress.');
+  showToast('Progress reset', 'Local logged-out progress cleared.', 'success');
+  return true;
+}
+
 async function logoutTraktUser() {
   try {
     await fetch('/api/auth/logout', { method: 'POST' });
   } catch (_) {}
   traktUser = { authenticated: false };
   updateTraktAccountPanel();
-  showToast('Logged out', 'Personal Trakt session removed from this browser.', 'info');
+  await resetLoggedOutProgress(false);
+  showToast('Logged out', 'Personal Trakt session removed and local progress cleared from this browser.', 'info');
 }
 
 async function fetchPersonalSupabaseStatus(options = {}) {
@@ -1225,7 +1258,7 @@ function startStatusPolling({ reason = 'Trakt sync', intervalMs = 20000, maxMs =
     attempt += 1;
     const elapsed = Math.max(1, Math.round((Date.now() - syncPollStartedAt) / 1000));
     setText('syncStatus', `${reason} is running. Waiting for the updated watched_status.json… checked ${attempt} time${attempt === 1 ? '' : 's'} (${elapsed}s).`);
-    const result = await fetchHostedStatus({ source: 'Sync polling', silentNoChange: true, suppressToast: true, expectedChange: true });
+    const result = await fetchHostedStatus({ source: 'Sync polling', silentNoChange: true, suppressToast: true, expectedChange: true, allowSharedHosted: true, skipPersonal: true });
 
     if (result?.updated) {
       const watched = getWatchedCountFromMap();
@@ -1330,6 +1363,13 @@ async function fetchHostedStatus(options = {}) {
     if (personal?.ok !== false || personal?.authenticated !== false) return personal;
   }
 
+  if (!traktUser?.authenticated && isServerMode() && !isLocalHost() && !options.allowSharedHosted) {
+    const message = 'No Trakt account connected. Login with Trakt to load personal progress. Logged-out progress stays local to this browser.';
+    setText('syncStatus', message);
+    updateTraktAccountPanel();
+    return { ok: false, authenticated: false, error: 'not-authenticated' };
+  }
+
   if (window.location.protocol === 'file:') {
     const message = 'Auto-sync needs a server. For local use, start local_tracker_server.py and open http://localhost:8080/law_order_tracker_app/';
     setText('syncStatus', message);
@@ -1364,13 +1404,22 @@ async function triggerCloudSync() {
 
   const local = isLocalHost();
   const hasPersonal = Boolean(traktUser?.authenticated);
+  if (!hasPersonal && !local) {
+    const login = await showModal({
+      title: 'Login with Trakt first?',
+      message: 'Personal sync uses Supabase and does not trigger GitHub commits or Vercel deployments. Login once, then Sync with Trakt will update only your account.',
+      type: 'info',
+      confirmText: 'Login with Trakt',
+      cancelText: 'Cancel'
+    });
+    if (login) loginWithTrakt();
+    return;
+  }
   const ok = await showModal({
     title: hasPersonal ? 'Sync your Trakt account now?' : 'Sync with Trakt now?',
     message: hasPersonal
       ? 'This syncs your own Trakt watched history into Supabase. It does not commit files to GitHub and does not trigger a Vercel deployment.'
-      : (local
-        ? 'This will run your local sync endpoint. Keep the local_tracker_server.py window open until it finishes.'
-        : 'No personal Trakt login is active. This will use the old shared GitHub Actions sync, which commits watched_status.json and can cause deployments.'),
+      : 'This will run your local sync endpoint. Keep the local_tracker_server.py window open until it finishes.',
     type: 'info',
     confirmText: 'Start sync',
     cancelText: 'Cancel'
@@ -1405,7 +1454,7 @@ async function triggerCloudSync() {
     if (payload.completed || payload.finished || payload.local || local) {
       setText('syncStatus', payload.message || 'Local sync finished. Loading updated watched_status.json…');
       showToast('Sync finished', payload.message || 'Loading updated status now.', 'success');
-      await fetchHostedStatus({ source: 'Local sync result', expectedChange: false, skipPersonal: true });
+      await fetchHostedStatus({ source: 'Local sync result', expectedChange: false, skipPersonal: true, allowSharedHosted: true });
     } else {
       const workflowText = payload.run_url ? ` Workflow: ${payload.run_url}` : '';
       setText('syncStatus', `Shared online sync started. Waiting for the updated watched_status.json to be published…${workflowText}`);

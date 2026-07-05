@@ -1,12 +1,15 @@
-import { readCookie, getRedirectUri, supabaseFetch, createSession, setSessionCookie, getPublicBaseUrl } from '../../../_wolf_auth.js';
+import { readCookie, getRedirectUri, supabaseFetch, createSession, setSessionCookie, getPublicBaseUrl } from '../../_wolf_auth.js';
 
 export default async function handler(req, res) {
   try {
     const { code, state, error } = req.query || {};
     if (error) throw new Error(String(error));
     if (!code) throw new Error('Missing Trakt OAuth code');
+
     const expectedState = readCookie(req, 'wolf_oauth_state');
-    if (!state || !expectedState || state !== expectedState) throw new Error('Invalid OAuth state. Please try logging in again.');
+    if (!state || !expectedState || state !== expectedState) {
+      throw new Error('Invalid OAuth state. Please try logging in again.');
+    }
 
     const tokenResponse = await fetch('https://api.trakt.tv/oauth/token', {
       method: 'POST',
@@ -20,7 +23,9 @@ export default async function handler(req, res) {
       })
     });
     const token = await tokenResponse.json().catch(() => ({}));
-    if (!tokenResponse.ok) throw new Error(token.error_description || token.error || `Trakt token exchange failed: HTTP ${tokenResponse.status}`);
+    if (!tokenResponse.ok) {
+      throw new Error(token.error_description || token.error || `Trakt token exchange failed: HTTP ${tokenResponse.status}`);
+    }
 
     const settingsResponse = await fetch('https://api.trakt.tv/users/settings', {
       headers: {
@@ -31,7 +36,9 @@ export default async function handler(req, res) {
       }
     });
     const settings = await settingsResponse.json().catch(() => ({}));
-    if (!settingsResponse.ok) throw new Error(settings.error_description || settings.error || `Could not read Trakt user: HTTP ${settingsResponse.status}`);
+    if (!settingsResponse.ok) {
+      throw new Error(settings.error_description || settings.error || `Could not read Trakt user: HTTP ${settingsResponse.status}`);
+    }
 
     const username = settings?.user?.username || settings?.user?.ids?.slug || 'trakt-user';
     const payload = {
@@ -57,7 +64,8 @@ export default async function handler(req, res) {
       res.getHeader('Set-Cookie'),
       'wolf_oauth_state=; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=0'
     ].filter(Boolean));
-    return res.redirect(`${getPublicBaseUrl(req)}/law_order_tracker_app/?trakt=connected`);
+
+    return res.redirect(302, `${getPublicBaseUrl(req)}/law_order_tracker_app/?trakt=connected`);
   } catch (err) {
     return res.status(500).send(`Trakt login failed: ${err.message || String(err)}`);
   }
