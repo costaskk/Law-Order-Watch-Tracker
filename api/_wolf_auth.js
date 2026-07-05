@@ -4,6 +4,53 @@ const COOKIE_NAME = 'wolf_session';
 const OAUTH_STATE_COOKIE = 'wolf_oauth_state';
 const OAUTH_REDIRECT_COOKIE = 'wolf_oauth_redirect';
 const SESSION_DAYS = 30;
+const DEFAULT_TRAKT_USER_AGENT = 'Wolf-Universe-Watch-Tracker/1.0 (+https://law-and-order-watch-tracker1.vercel.app)';
+
+export function getTraktUserAgent() {
+  return (process.env.TRAKT_USER_AGENT || DEFAULT_TRAKT_USER_AGENT).trim();
+}
+
+export function traktBaseHeaders(extra = {}) {
+  return {
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
+    'User-Agent': getTraktUserAgent(),
+    ...extra
+  };
+}
+
+export function traktApiHeaders(accessToken = '', extra = {}) {
+  return traktBaseHeaders({
+    'trakt-api-version': '2',
+    'trakt-api-key': requiredEnv('TRAKT_CLIENT_ID'),
+    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+    ...extra
+  });
+}
+
+async function parseResponseBody(response) {
+  const text = await response.text();
+  if (!text) return {};
+  try { return JSON.parse(text); }
+  catch (_) { return { raw: text }; }
+}
+
+function cloudflareHint(data) {
+  const raw = typeof data === 'string' ? data : (data?.raw || '');
+  if (!raw) return '';
+  const compact = raw.replace(/\s+/g, ' ').trim();
+  const ray = compact.match(/Cloudflare Ray ID:\s*([a-zA-Z0-9]+)/i)?.[1];
+  const blocked = /cloudflare|you have been blocked|security service|enable cookies|error 1015/i.test(compact);
+  if (!blocked && !ray) return '';
+  return ` Cloudflare blocked the Trakt API request${ray ? ` (Ray ID: ${ray})` : ''}. Make sure TRAKT_USER_AGENT is set in Vercel or retry later if Trakt firewall rules are aggressive.`;
+}
+
+function traktError(prefix, response, data, extra = '') {
+  const detail = data?.error_description || data?.error || data?.message || data?.raw || `HTTP ${response.status}`;
+  const rawDetail = String(detail).replace(/\s+/g, ' ').trim();
+  return new Error(`${prefix}: HTTP ${response.status}. ${rawDetail}${cloudflareHint(data)}${extra}`);
+}
+
 
 function requiredEnv(name) {
   const value = process.env[name];
@@ -169,31 +216,23 @@ export async function exchangeTraktCode({ code, redirectUri }) {
   };
   const response = await fetch('https://api.trakt.tv/oauth/token', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: traktBaseHeaders(),
     body: JSON.stringify(body)
   });
-  const text = await response.text();
-  let data = {};
-  try { data = text ? JSON.parse(text) : {}; } catch (_) { data = { raw: text }; }
+  const data = await parseResponseBody(response);
   if (!response.ok) {
-    const details = data.error_description || data.error || data.message || data.raw || `HTTP ${response.status}`;
-    throw new Error(`Trakt token exchange failed: HTTP ${response.status}. ${details}. Redirect used: ${body.redirect_uri}`);
+    throw traktError('Trakt token exchange failed', response, data, `. Redirect used: ${body.redirect_uri}. User-Agent used: ${getTraktUserAgent()}`);
   }
   return data;
 }
 
 export async function getTraktSettings(accessToken) {
   const response = await fetch('https://api.trakt.tv/users/settings', {
-    headers: {
-      'Content-Type': 'application/json',
-      'trakt-api-version': '2',
-      'trakt-api-key': requiredEnv('TRAKT_CLIENT_ID'),
-      Authorization: `Bearer ${accessToken}`
-    }
+    headers: traktApiHeaders(accessToken)
   });
-  const data = await response.json().catch(() => ({}));
+  const data = await parseResponseBody(response);
   if (!response.ok) {
-    throw new Error(data?.error_description || data?.error || `Could not read Trakt user: HTTP ${response.status}`);
+    throw traktError('Could not read Trakt user', response, data);
   }
   return data;
 }
@@ -206,7 +245,7 @@ export async function refreshTraktTokenIfNeeded(user) {
   const redirectUri = getRedirectUri();
   const response = await fetch('https://api.trakt.tv/oauth/token', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: traktBaseHeaders(),
     body: JSON.stringify({
       refresh_token: user.trakt_refresh_token,
       client_id: requiredEnv('TRAKT_CLIENT_ID'),
@@ -215,8 +254,8 @@ export async function refreshTraktTokenIfNeeded(user) {
       grant_type: 'refresh_token'
     })
   });
-  const token = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(token.error_description || token.error || `Trakt token refresh failed: HTTP ${response.status}`);
+  const token = await parseResponseBody(response);
+  if (!response.ok) throw traktError('Trakt token refresh failed', response, token, `. User-Agent used: ${getTraktUserAgent()}`);
 
   const updated = {
     trakt_access_token: token.access_token,
@@ -234,15 +273,10 @@ export async function refreshTraktTokenIfNeeded(user) {
 
 export async function traktFetch(path, accessToken) {
   const response = await fetch(`https://api.trakt.tv${path}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      'trakt-api-version': '2',
-      'trakt-api-key': requiredEnv('TRAKT_CLIENT_ID'),
-      Authorization: `Bearer ${accessToken}`
-    }
+    headers: traktApiHeaders(accessToken)
   });
-  const data = await response.json().catch(() => null);
-  if (!response.ok) throw new Error(data?.error_description || data?.error || `Trakt HTTP ${response.status}`);
+  const data = await parseResponseBody(response);
+  if (!response.ok) throw traktError('Trakt API request failed', response, data);
   return data;
 }
 
