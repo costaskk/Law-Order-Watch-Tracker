@@ -1,12 +1,12 @@
 {
   "version": 7,
   "source": "trakt",
-  "exportedAt": "2026-07-05T09:24:33Z",
+  "exportedAt": "2026-07-05T14:12:23Z",
   "summary": {
     "guideRowsScanned": 1796,
-    "guideRowsMarkedWatched": 118,
+    "guideRowsMarkedWatched": 119,
     "traktWatchedCountsByShow": {
-      "Law & Order": 6,
+      "Law & Order": 7,
       "Homicide: Life on the Street": 0,
       "Law & Order: SVU": 112,
       "Criminal Intent": 0,
@@ -31,6 +31,8 @@
     "Law & Order|1|3": "Watched",
     "Law & Order|1|4|5": "Watched",
     "Law & Order|1|4": "Watched",
+    "Law & Order|1|5|6": "Watched",
+    "Law & Order|1|5": "Watched",
     "Law & Order: SVU|1|1|393": "Watched",
     "Law & Order: SVU|1|1": "Watched",
     "Law & Order: SVU|1|2|395": "Watched",
@@ -287,6 +289,13 @@
       "guideShow": "Law & Order",
       "season": 1,
       "episode": 4,
+      "status": "Watched"
+    },
+    {
+      "show": "Law & Order",
+      "guideShow": "Law & Order",
+      "season": 1,
+      "episode": 5,
       "status": "Watched"
     },
     {
