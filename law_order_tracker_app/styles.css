@@ -378,3 +378,8 @@ button,input,select,.fileBtn{background:linear-gradient(180deg,rgba(255,255,255,
     font-size: 34px !important;
   }
 }
+
+/* Wolf v4: personal Trakt/Supabase account panel */
+.traktAccountPanel{margin-top:14px;display:flex;align-items:center;justify-content:space-between;gap:14px;border-color:color-mix(in srgb,var(--info) 35%,var(--border))}
+.traktAccountMain{display:flex;flex-direction:column;gap:4px;min-width:0}.traktAccountMain strong{font-size:17px}.traktAccountMain span{color:var(--muted);font-size:13px;line-height:1.45}.traktAccountActions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.traktAccountActions button:first-child{background:linear-gradient(135deg,#7c3aed,#2563eb);border-color:transparent;color:#fff;box-shadow:0 12px 28px rgba(37,99,235,.22)}
+@media(max-width:760px){.traktAccountPanel{align-items:stretch;flex-direction:column}.traktAccountActions{display:grid;grid-template-columns:1fr 1fr}.traktAccountActions button:first-child:last-child{grid-column:1/-1}}

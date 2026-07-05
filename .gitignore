@@ -4,3 +4,10 @@ trakt_token.json
 __pycache__/
 *.pyc
 Law_Order_Professional_Watch_Tracker_Trakt_Synced.xlsx
+
+# local/private secrets
+.env
+.env.local
+.env.*.local
+trakt_config.json
+trakt_token.json

@@ -39,6 +39,9 @@ let syncBaselineSignature = '';
 let lastHostedStatusSignature = '';
 let lastHostedStatusFetchedAt = 0;
 
+let traktUser = null;
+let traktStatusLoadInProgress = false;
+
 const GUIDE_SCOPES = {
   core: 'Core Wolf Universe',
   connected: 'Core + Crossover Relevant',
@@ -1057,6 +1060,151 @@ function getCurrentStatusSignature() {
   return `${pieces.length}:${pieces.join('¦')}`;
 }
 
+
+function isServerMode() {
+  return window.location.protocol !== 'file:';
+}
+
+function isLocalHost() {
+  return ['localhost', '127.0.0.1', '0.0.0.0'].includes(window.location.hostname) || window.location.hostname.endsWith('.local');
+}
+
+function ensureTraktAccountPanel() {
+  if (document.getElementById('traktAccountPanel')) return;
+  const syncPanel = document.querySelector('.syncPanel');
+  if (!syncPanel || !syncPanel.parentNode) return;
+  const panel = document.createElement('section');
+  panel.id = 'traktAccountPanel';
+  panel.className = 'traktAccountPanel card';
+  panel.innerHTML = `
+    <div class="traktAccountMain">
+      <strong id="traktAccountTitle">Trakt account</strong>
+      <span id="traktAccountText">Checking login status…</span>
+    </div>
+    <div class="traktAccountActions">
+      <button id="traktLoginBtn" type="button">Login with Trakt</button>
+      <button id="traktLogoutBtn" type="button" class="ghost" hidden>Logout</button>
+    </div>`;
+  syncPanel.insertAdjacentElement('afterend', panel);
+  document.getElementById('traktLoginBtn')?.addEventListener('click', loginWithTrakt);
+  document.getElementById('traktLogoutBtn')?.addEventListener('click', logoutTraktUser);
+}
+
+function updateTraktAccountPanel() {
+  ensureTraktAccountPanel();
+  const title = document.getElementById('traktAccountTitle');
+  const text = document.getElementById('traktAccountText');
+  const login = document.getElementById('traktLoginBtn');
+  const logout = document.getElementById('traktLogoutBtn');
+  if (!title || !text || !login || !logout) return;
+  if (traktUser?.authenticated) {
+    title.textContent = `Trakt: ${traktUser.username || 'connected'}`;
+    text.textContent = traktUser.updated_at
+      ? `Personal Supabase sync active. Last saved ${new Date(traktUser.updated_at).toLocaleString()}.`
+      : 'Personal Supabase sync active. Press Sync with Trakt to import progress.';
+    login.textContent = 'Reconnect Trakt';
+    logout.hidden = false;
+  } else if (!isServerMode()) {
+    title.textContent = 'Local file mode';
+    text.textContent = 'Open through local_tracker_server.py or Vercel to use Trakt login. Manual/local sync still works.';
+    login.textContent = 'Login with Trakt';
+    logout.hidden = true;
+  } else {
+    title.textContent = 'Trakt account';
+    text.textContent = 'Login with Trakt to sync this app with your own watched progress without GitHub commits/deployments.';
+    login.textContent = 'Login with Trakt';
+    logout.hidden = true;
+  }
+}
+
+async function loadTraktUser({ pullStatus = true, quiet = false } = {}) {
+  ensureTraktAccountPanel();
+  if (!isServerMode()) {
+    traktUser = { authenticated: false };
+    updateTraktAccountPanel();
+    return traktUser;
+  }
+  try {
+    const response = await fetch('/api/me/status?ts=' + Date.now(), { cache: 'no-store' });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || `HTTP ${response.status}`);
+    traktUser = payload.authenticated ? payload : { authenticated: false };
+    updateTraktAccountPanel();
+    if (payload.authenticated && pullStatus && payload.statuses) {
+      await importStatusPayload({ statuses: payload.statuses }, 'Personal Supabase status', { suppressToast: quiet, silentNoChange: quiet });
+    }
+    return traktUser;
+  } catch (err) {
+    traktUser = { authenticated: false };
+    updateTraktAccountPanel();
+    if (!quiet) setText('syncStatus', `Could not check Trakt login: ${err.message}`);
+    return traktUser;
+  }
+}
+
+function loginWithTrakt() {
+  if (!isServerMode()) {
+    showModal({
+      title: 'Open through a server first',
+      message: 'Trakt login needs a server route. Use local_tracker_server.py for local fallback sync, or deploy on Vercel for personal Trakt login.',
+      type: 'warning',
+      confirmText: 'OK'
+    });
+    return;
+  }
+  window.location.href = '/api/auth/trakt/start';
+}
+
+async function logoutTraktUser() {
+  try {
+    await fetch('/api/auth/logout', { method: 'POST' });
+  } catch (_) {}
+  traktUser = { authenticated: false };
+  updateTraktAccountPanel();
+  showToast('Logged out', 'Personal Trakt session removed from this browser.', 'info');
+}
+
+async function fetchPersonalSupabaseStatus(options = {}) {
+  if (!isServerMode()) return { ok: false, error: 'file-mode' };
+  if (traktStatusLoadInProgress) return { ok: false, error: 'already-loading' };
+  traktStatusLoadInProgress = true;
+  try {
+    const response = await fetch('/api/me/status?ts=' + Date.now(), { cache: 'no-store' });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || `HTTP ${response.status}`);
+    traktUser = payload.authenticated ? payload : { authenticated: false };
+    updateTraktAccountPanel();
+    if (!payload.authenticated) return { ok: false, authenticated: false };
+    return await importStatusPayload({ statuses: payload.statuses || {} }, options.source || 'Personal Supabase status', options);
+  } catch (err) {
+    setText('syncStatus', `Personal status refresh failed: ${err.message}`);
+    if (!options.suppressToast) showToast('Personal sync warning', err.message, 'warning');
+    return { ok: false, error: err.message };
+  } finally {
+    traktStatusLoadInProgress = false;
+  }
+}
+
+async function syncPersonalTrakt() {
+  const response = await fetch('/api/sync/trakt', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ source: 'wolf-universe-tracker', ts: Date.now() })
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || payload.ok === false) throw new Error(payload.error || `HTTP ${response.status}`);
+  traktUser = {
+    authenticated: true,
+    username: payload.username || traktUser?.username || '',
+    updated_at: payload.updated_at || new Date().toISOString()
+  };
+  updateTraktAccountPanel();
+  const result = await importStatusPayload({ statuses: payload.statuses || {} }, 'Personal Trakt sync', { suppressToast: true });
+  setText('syncStatus', `Personal Trakt sync complete: ${result.watched} watched entries loaded, ${result.matched} guide rows matched at ${new Date().toLocaleTimeString()}.`);
+  showToast('Personal Trakt sync complete', `${result.watched} watched entries loaded.`, 'success');
+  return result;
+}
+
 function stopSyncPolling(message = '') {
   if (syncPollTimer) clearInterval(syncPollTimer);
   syncPollTimer = null;
@@ -1177,6 +1325,11 @@ async function importStatusPayload(payload, source = 'import', options = {}) {
 }
 
 async function fetchHostedStatus(options = {}) {
+  if (traktUser?.authenticated && !options.skipPersonal) {
+    const personal = await fetchPersonalSupabaseStatus({ source: options.source || 'Personal Supabase status', ...options });
+    if (personal?.ok !== false || personal?.authenticated !== false) return personal;
+  }
+
   if (window.location.protocol === 'file:') {
     const message = 'Auto-sync needs a server. For local use, start local_tracker_server.py and open http://localhost:8080/law_order_tracker_app/';
     setText('syncStatus', message);
@@ -1189,7 +1342,7 @@ async function fetchHostedStatus(options = {}) {
     const response = await fetch(statusUrl, { cache: 'no-store' });
     if (!response.ok) throw new Error(`status file returned HTTP ${response.status}`);
     const payload = await response.json();
-    return await importStatusPayload(payload, options.source || 'Pull latest', options);
+    return await importStatusPayload(payload, options.source || 'Shared hosted status', options);
   } catch (err) {
     const message = `Status refresh failed: ${err.message}. If you just triggered sync, wait for the workflow/deploy and try Pull latest again.`;
     setText('syncStatus', message);
@@ -1202,19 +1355,22 @@ async function triggerCloudSync() {
   if (window.location.protocol === 'file:') {
     await showModal({
       title: 'Sync unavailable in file mode',
-      message: 'Open this app through local_tracker_server.py or Vercel. Static file mode cannot run /api/trigger-sync.',
+      message: 'Open this app through local_tracker_server.py for local fallback sync, or Vercel for personal Trakt login. Static file mode cannot run /api routes.',
       type: 'warning',
       confirmText: 'OK'
     });
     return;
   }
 
-  const isLocalHost = ['localhost', '127.0.0.1', '0.0.0.0'].includes(window.location.hostname) || window.location.hostname.endsWith('.local');
+  const local = isLocalHost();
+  const hasPersonal = Boolean(traktUser?.authenticated);
   const ok = await showModal({
-    title: 'Sync with Trakt now?',
-    message: isLocalHost
-      ? 'This will run your local sync endpoint. Keep the local_tracker_server.py window open until it finishes.'
-      : 'This will trigger the online GitHub/Vercel sync. The watched status updates only after GitHub Actions finishes and the site receives the new watched_status.json.',
+    title: hasPersonal ? 'Sync your Trakt account now?' : 'Sync with Trakt now?',
+    message: hasPersonal
+      ? 'This syncs your own Trakt watched history into Supabase. It does not commit files to GitHub and does not trigger a Vercel deployment.'
+      : (local
+        ? 'This will run your local sync endpoint. Keep the local_tracker_server.py window open until it finishes.'
+        : 'No personal Trakt login is active. This will use the old shared GitHub Actions sync, which commits watched_status.json and can cause deployments.'),
     type: 'info',
     confirmText: 'Start sync',
     cancelText: 'Cancel'
@@ -1225,11 +1381,16 @@ async function triggerCloudSync() {
   const previousText = btn ? btn.textContent : '';
   if (btn) {
     btn.disabled = true;
-    btn.textContent = isLocalHost ? 'Running local sync…' : 'Starting online sync…';
+    btn.textContent = hasPersonal ? 'Syncing your Trakt…' : (local ? 'Running local sync…' : 'Starting online sync…');
   }
-  setText('syncStatus', isLocalHost ? 'Running local Trakt sync…' : 'Starting online Trakt sync. Waiting for GitHub Actions/Vercel to publish the updated status…');
+  setText('syncStatus', hasPersonal ? 'Syncing your personal Trakt account through Supabase…' : (local ? 'Running local Trakt sync…' : 'Starting shared online Trakt sync…'));
 
   try {
+    if (hasPersonal) {
+      await syncPersonalTrakt();
+      return;
+    }
+
     const response = await fetch('/api/trigger-sync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1241,15 +1402,15 @@ async function triggerCloudSync() {
       throw new Error(payload.error || `HTTP ${response.status}`);
     }
 
-    if (payload.completed || payload.finished || payload.local || isLocalHost) {
+    if (payload.completed || payload.finished || payload.local || local) {
       setText('syncStatus', payload.message || 'Local sync finished. Loading updated watched_status.json…');
       showToast('Sync finished', payload.message || 'Loading updated status now.', 'success');
-      await fetchHostedStatus({ source: 'Local sync result', expectedChange: false });
+      await fetchHostedStatus({ source: 'Local sync result', expectedChange: false, skipPersonal: true });
     } else {
       const workflowText = payload.run_url ? ` Workflow: ${payload.run_url}` : '';
-      setText('syncStatus', `Online sync started. Waiting for the updated watched_status.json to be published…${workflowText}`);
-      showToast('Online sync started', 'Polling until the updated status file is available.', 'success');
-      startStatusPolling({ reason: 'Online Trakt sync', intervalMs: 20000, maxMs: 6 * 60 * 1000 });
+      setText('syncStatus', `Shared online sync started. Waiting for the updated watched_status.json to be published…${workflowText}`);
+      showToast('Shared online sync started', 'Polling until the updated status file is available.', 'success');
+      startStatusPolling({ reason: 'Shared online Trakt sync', intervalMs: 20000, maxMs: 6 * 60 * 1000 });
     }
   } catch (err) {
     stopSyncPolling();
@@ -1257,7 +1418,7 @@ async function triggerCloudSync() {
     showToast('Sync failed', err.message, 'danger');
     await showModal({
       title: 'Could not start sync',
-      message: `${err.message}\n\nLocal: make sure local_tracker_server.py is running. Online: make sure Vercel has GITHUB_PAT, GITHUB_REPO, and GITHUB_WORKFLOW set.`,
+      message: `${err.message}\n\nPersonal sync: check Supabase and Trakt environment variables. Local fallback: make sure local_tracker_server.py is running. Shared online fallback: check GITHUB_PAT, GITHUB_REPO, and GITHUB_WORKFLOW.`,
       type: 'danger',
       confirmText: 'OK'
     });
@@ -1450,6 +1611,8 @@ document.addEventListener('DOMContentLoaded', () => {
     setText('syncStatus', 'Episode data did not load. Make sure data/episodes.js is next to index.html.');
   }
   initOptions();
+  ensureTraktAccountPanel();
   bindEvents();
   render();
+  loadTraktUser({ pullStatus: true, quiet: true });
 });
