@@ -1,5 +1,7 @@
 -- Wolf Universe per-user Trakt sync schema
--- Run this once in Supabase SQL Editor.
+-- Run this once in Supabase SQL Editor for a clean install.
+-- If you already created the tables and get a foreign key error, run:
+-- sql/FIX_WATCH_STATUS_FOREIGN_KEY.sql
 
 create extension if not exists pgcrypto;
 
