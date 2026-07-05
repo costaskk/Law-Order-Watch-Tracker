@@ -1,0 +1,864 @@
+#!/usr/bin/env python3
+"""
+Wolf Universe catalog updater for the tracker app.
+
+Safe replacement version.
+"""
+from __future__ import annotations
+
+import argparse
+import csv
+import json
+import os
+import re
+import time
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
+import requests
+
+TRAKT_BASE = "https://api.trakt.tv"
+TMDB_BASE = "https://api.themoviedb.org/3"
+
+EPISODES_JS = Path("law_order_tracker_app/data/episodes.js")
+SHOWS_JSON = Path("wolf_universe_shows.json")
+REPORT_JSON = Path("law_order_tracker_app/data/wolf_catalog_update_debug.json")
+CHANGES_CSV = Path("law_order_tracker_app/data/wolf_catalog_update_changes.csv")
+ARTWORK_JS = Path("law_order_tracker_app/data/wolf_artwork.js")
+CONFIG_PATH = Path("trakt_config.json")
+TMDB_CACHE_JSON = Path("law_order_tracker_app/data/tmdb_cache.json")
+
+REQUEST_TIMEOUT = 30
+REQUEST_SLEEP = 0.06
+
+DEFAULT_UNIVERSE: Dict[str, Any] = {
+    "aliases": {
+        "Law & Order: SVU": "Law & Order: Special Victims Unit",
+        "Law & Order SVU": "Law & Order: Special Victims Unit",
+        "Criminal Intent": "Law & Order: Criminal Intent",
+        "Trial by Jury": "Law & Order: Trial by Jury",
+        "True Crime": "Law & Order True Crime",
+        "NY Undercover": "New York Undercover",
+        "Chicago PD": "Chicago P.D.",
+        "Chicago P.D": "Chicago P.D.",
+        "FBI: CIA": "CIA (2026)"
+    },
+    "scopes": {
+        "core": "Core Wolf Universe",
+        "connected": "Core + crossover / important adjacent",
+        "complete": "Complete Dick Wolf archive"
+    },
+    "removeShows": ["CIA", "CIA (1992)", "FBI: CIA"],
+    "removeTraktSlugs": ["cia"],
+    "removeImdbIds": ["tt0250140"],
+    "removeTraktShowIds": [16683],
+    "shows": [
+        {"show": "Law & Order", "slug": "law-order", "franchise": "Law & Order", "scope": "core", "alwaysShow": True, "connection": "Core Law & Order franchise"},
+        {"show": "Law & Order: Special Victims Unit", "slug": "law-order-special-victims-unit", "franchise": "Law & Order", "scope": "core", "alwaysShow": True, "connection": "Core Law & Order franchise"},
+        {"show": "Law & Order: Criminal Intent", "slug": "law-order-criminal-intent", "franchise": "Law & Order", "aliases": ["Criminal Intent"], "scope": "core", "alwaysShow": True, "connection": "Core Law & Order franchise"},
+        {"show": "Law & Order: Trial by Jury", "slug": "law-order-trial-by-jury", "franchise": "Law & Order", "aliases": ["Trial by Jury"], "scope": "core", "alwaysShow": True, "connection": "Core Law & Order franchise"},
+        {"show": "Law & Order: Organized Crime", "slug": "law-order-organized-crime", "franchise": "Law & Order", "scope": "core", "alwaysShow": True, "connection": "Core Law & Order franchise"},
+        {"show": "Law & Order: LA", "slug": "law-and-order-la", "alt_slugs": ["law-order-los-angeles", "law-order-la", "law-and-order-los-angeles"], "franchise": "Law & Order", "scope": "core", "alwaysShow": True, "connection": "Law & Order franchise spinoff"},
+        {"show": "Law & Order: UK", "slug": "law-order-uk", "franchise": "Law & Order", "scope": "core", "alwaysShow": True, "connection": "Law & Order format/franchise"},
+        {"show": "Law & Order True Crime", "slug": "law-order-true-crime", "franchise": "Law & Order", "aliases": ["True Crime"], "scope": "core", "alwaysShow": True, "connection": "Law & Order anthology spinoff"},
+        {"show": "Law & Order Toronto: Criminal Intent", "slug": "law-order-toronto-criminal-intent", "franchise": "Law & Order", "scope": "core", "alwaysShow": True, "connection": "Law & Order international franchise"},
+        {"show": "Homicide: Life on the Street", "slug": "homicide-life-on-the-street", "franchise": "Law & Order", "scope": "connected", "alwaysShow": True, "connection": "Direct crossover with Law & Order; Munch bridge to SVU"},
+        {"show": "New York Undercover", "slug": "new-york-undercover", "franchise": "Law & Order", "scope": "connected", "alwaysShow": True, "connection": "Wolf-produced New York police drama; crossover-adjacent to the Law & Order era"},
+        {"show": "Deadline", "slug": "deadline", "franchise": "Law & Order", "scope": "connected", "alwaysShow": True, "connection": "Dick Wolf New York newspaper/legal-adjacent drama"},
+        {"show": "Conviction", "slug": "conviction", "franchise": "Law & Order", "scope": "connected", "alwaysShow": True, "connection": "Law & Order spinoff with Alexandra Cabot"},
+        {"show": "In Plain Sight", "slug": "in-plain-sight", "franchise": "Crossover Adjacent", "scope": "connected", "alwaysShow": True, "connection": "SVU character crossover / shared Dick Wolf connection"},
+
+        {"show": "Chicago Fire", "slug": "chicago-fire", "franchise": "One Chicago", "scope": "core", "alwaysShow": True, "connection": "Core One Chicago franchise"},
+        {"show": "Chicago P.D.", "slug": "chicago-p-d", "alt_slugs": ["chicago-pd"], "franchise": "One Chicago", "scope": "core", "alwaysShow": True, "connection": "Core One Chicago franchise; crossovers with SVU/FBI"},
+        {"show": "Chicago Med", "slug": "chicago-med", "franchise": "One Chicago", "scope": "core", "alwaysShow": True, "connection": "Core One Chicago franchise"},
+        {"show": "Chicago Justice", "slug": "chicago-justice", "franchise": "One Chicago", "scope": "core", "alwaysShow": True, "connection": "Core One Chicago legal spinoff"},
+
+        {"show": "FBI", "slug": "fbi", "franchise": "FBI", "scope": "core", "alwaysShow": True, "connection": "Core FBI franchise"},
+        {"show": "FBI: Most Wanted", "slug": "fbi-most-wanted", "franchise": "FBI", "scope": "core", "alwaysShow": True, "connection": "Core FBI franchise"},
+        {"show": "FBI: International", "slug": "fbi-international", "franchise": "FBI", "scope": "core", "alwaysShow": True, "connection": "Core FBI franchise"},
+        {"show": "CIA (2026)", "slug": "cia-2026", "alt_slugs": ["fbi-cia-2026"], "imdb": "tt35515227", "franchise": "FBI", "scope": "core", "alwaysShow": True, "connection": "Official 2026 Dick Wolf / FBI spinoff. The unrelated 1992 CIA show is intentionally excluded and never imported from Trakt slug cia."},
+
+        {"show": "Crime & Punishment", "slug": "crime-punishment", "franchise": "Crossover Adjacent", "scope": "complete", "optional": True, "alwaysShow": False, "connection": "Dick Wolf reality/legal series"},
+        {"show": "Mann & Machine", "slug": "mann-machine", "franchise": "Crossover Adjacent", "scope": "complete", "optional": True, "alwaysShow": False, "connection": "Early Dick Wolf sci-fi police series"},
+        {"show": "Players", "slug": "players", "alt_slugs": ["players-1997"], "franchise": "Crossover Adjacent", "scope": "complete", "optional": True, "alwaysShow": False, "connection": "Dick Wolf crime drama"},
+        {"show": "New York News", "slug": "new-york-news", "franchise": "Crossover Adjacent", "scope": "complete", "optional": True, "alwaysShow": False, "connection": "Dick Wolf-produced New York drama"},
+        {"show": "Arrest & Trial", "slug": "arrest-trial", "alt_slugs": ["arrest-and-trial"], "franchise": "Crossover Adjacent", "scope": "complete", "optional": True, "alwaysShow": False, "connection": "Dick Wolf reality/legal anthology"},
+        {"show": "Dragnet", "slug": "dragnet", "alt_slugs": ["dragnet-2003", "l-a-dragnet"], "franchise": "Crossover Adjacent", "scope": "complete", "optional": True, "alwaysShow": False, "connection": "Dick Wolf revival/producer connection"},
+        {"show": "Cold Justice", "slug": "cold-justice", "franchise": "Crossover Adjacent", "scope": "complete", "optional": True, "alwaysShow": False, "connection": "Wolf Entertainment unscripted true-crime series"},
+        {"show": "Blood & Money", "slug": "blood-money", "alt_slugs": ["blood-and-money"], "franchise": "Crossover Adjacent", "scope": "complete", "optional": True, "alwaysShow": False, "connection": "Wolf Entertainment true-crime series"},
+        {"show": "LA Fire & Rescue", "slug": "la-fire-rescue", "alt_slugs": ["la-fire-and-rescue"], "franchise": "Crossover Adjacent", "scope": "complete", "optional": True, "alwaysShow": False, "connection": "Wolf Entertainment first-responder docuseries"},
+        {"show": "On Call", "slug": "on-call", "franchise": "Crossover Adjacent", "scope": "connected", "optional": True, "alwaysShow": True, "connection": "Wolf Entertainment scripted police series; created by Elliot Wolf/Tim Walsh, executive produced by Dick Wolf"},
+        {"show": "Swift Justice", "slug": "swift-justice", "franchise": "Crossover Adjacent", "scope": "complete", "optional": True, "alwaysShow": False, "connection": "Dick Wolf-created crime drama"},
+        {"show": "South Beach", "slug": "south-beach", "alt_slugs": ["south-beach-1993"], "franchise": "Crossover Adjacent", "scope": "complete", "optional": True, "alwaysShow": False, "connection": "Dick Wolf-created crime drama"},
+        {"show": "D.C.", "slug": "d-c", "alt_slugs": ["dc"], "franchise": "Crossover Adjacent", "scope": "complete", "optional": True, "alwaysShow": False, "connection": "Dick Wolf-created political drama"},
+        {"show": "Feds", "slug": "feds", "franchise": "Crossover Adjacent", "scope": "complete", "optional": True, "alwaysShow": False, "connection": "Dick Wolf-created federal-law series"},
+        {"show": "Gideon Oliver", "slug": "gideon-oliver", "franchise": "Crossover Adjacent", "scope": "complete", "optional": True, "alwaysShow": False, "connection": "Early Dick Wolf television work"},
+        {"show": "Christine Cromwell", "slug": "christine-cromwell", "franchise": "Crossover Adjacent", "scope": "complete", "optional": True, "alwaysShow": False, "connection": "Early Dick Wolf legal/crime work"},
+        {"show": "Nasty Boys", "slug": "nasty-boys", "franchise": "Crossover Adjacent", "scope": "complete", "optional": True, "alwaysShow": False, "connection": "Dick Wolf-created police drama"},
+        {"show": "The Wright Verdicts", "slug": "the-wright-verdicts", "franchise": "Crossover Adjacent", "scope": "complete", "optional": True, "alwaysShow": False, "connection": "Dick Wolf-created legal drama"},
+        {"show": "H.E.L.P.", "slug": "h-e-l-p", "alt_slugs": ["help-1990", "h-e-l-p-1990"], "franchise": "Crossover Adjacent", "scope": "complete", "optional": True, "alwaysShow": False, "connection": "Wolf Entertainment / Dick Wolf archive title"},
+        {"show": "The Human Factor", "slug": "the-human-factor", "alt_slugs": ["human-factor"], "franchise": "Crossover Adjacent", "scope": "complete", "optional": True, "alwaysShow": False, "connection": "Wolf Entertainment / Dick Wolf archive title"},
+        {"show": "The Invisible Man", "slug": "the-invisible-man-1998", "alt_slugs": ["the-invisible-man"], "franchise": "Crossover Adjacent", "scope": "complete", "optional": True, "alwaysShow": False, "connection": "Wolf Entertainment television movie / archive title"},
+        {"show": "Paris enquêtes criminelles", "slug": "paris-enquetes-criminelles", "alt_slugs": ["paris-enquetes-criminelles-2007"], "franchise": "Law & Order", "scope": "complete", "optional": True, "alwaysShow": False, "connection": "French Law & Order: Criminal Intent adaptation"},
+        {"show": "Law & Order: Division of Field Investigation", "slug": "law-order-division-of-field-investigation", "alt_slugs": ["zakon-i-poryadok-otdel-operativnykh-rassledovaniy"], "franchise": "Law & Order", "scope": "complete", "optional": True, "alwaysShow": False, "connection": "Russian Law & Order: SVU adaptation"}
+    ],
+    "movies": [
+        {"show": "Exiled: A Law & Order Movie", "slug": "exiled", "alt_slugs": ["exiled-a-law-order-movie"], "imdb": "tt0169421", "franchise": "Wolf Specials", "scope": "connected", "optional": False, "alwaysShow": True, "connection": "Direct Law & Order TV movie"},
+        {"show": "Homicide: The Movie", "slug": "homicide-the-movie-2000", "alt_slugs": ["homicide-the-movie"], "imdb": "tt0251436", "franchise": "Wolf Specials", "scope": "connected", "optional": False, "alwaysShow": True, "connection": "Direct Homicide continuation / Munch timeline"}
+    ]
+}
+
+
+def load_dotenv_local(path: Path = Path(".env.local")) -> None:
+    """Tiny .env.local loader so TMDB_API_KEY works in local PowerShell/server setups."""
+    if not path.exists():
+        return
+    for raw in path.read_text(encoding="utf-8", errors="ignore").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
+def read_json(path: Path) -> Any:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def write_json(path: Path, data: Any) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, indent=2, ensure_ascii=False, sort_keys=False) + "\n", encoding="utf-8")
+
+
+def merge_universe(custom: Dict[str, Any]) -> Dict[str, Any]:
+    merged = json.loads(json.dumps(DEFAULT_UNIVERSE))
+    merged["aliases"].update(custom.get("aliases") or {})
+    merged["removeShows"] = sorted(set(merged.get("removeShows") or []) | set(custom.get("removeShows") or []))
+    by_show = {x["show"]: x for x in merged["shows"]}
+    for item in custom.get("shows") or []:
+        base = by_show.get(item.get("show"), {})
+        base.update(item)
+        by_show[item["show"]] = base
+    # Respect explicit exclusions even if an older/custom wolf_universe_shows.json still lists them.
+    remove_shows = set(merged.get("removeShows") or []) | set(custom.get("removeShows") or [])
+    for name in list(by_show.keys()):
+        if name in remove_shows:
+            by_show.pop(name, None)
+    merged["shows"] = list(by_show.values())
+    # Remove aliases that would accidentally rename legacy rows into a new/current show.
+    for alias in custom.get("removeAliases", []) or merged.get("removeAliases", []) or []:
+        merged.get("aliases", {}).pop(alias, None)
+    by_movie = {x["show"]: x for x in merged["movies"]}
+    for item in custom.get("movies") or []:
+        base = by_movie.get(item.get("show"), {})
+        base.update(item)
+        by_movie[item["show"]] = base
+    merged["movies"] = list(by_movie.values())
+    return merged
+
+
+def load_universe() -> Dict[str, Any]:
+    if SHOWS_JSON.exists():
+        return merge_universe(read_json(SHOWS_JSON))
+    write_json(SHOWS_JSON, DEFAULT_UNIVERSE)
+    return DEFAULT_UNIVERSE
+
+
+def load_config() -> Dict[str, str]:
+    if CONFIG_PATH.exists():
+        cfg = read_json(CONFIG_PATH)
+    else:
+        cfg = {
+            "client_id": os.environ.get("TRAKT_CLIENT_ID", ""),
+            "client_secret": os.environ.get("TRAKT_CLIENT_SECRET", "")
+        }
+    if not cfg.get("client_id"):
+        raise SystemExit("Missing Trakt client_id. Create trakt_config.json or set TRAKT_CLIENT_ID.")
+    return cfg
+
+
+def trakt_headers(cfg: Dict[str, str]) -> Dict[str, str]:
+    return {
+        "Content-Type": "application/json",
+        "trakt-api-version": "2",
+        "trakt-api-key": cfg["client_id"],
+        "User-Agent": "Wolf-Universe-Watch-Tracker/1.1"
+    }
+
+
+def get_json(url: str, headers: Dict[str, str], optional: bool = False, sleep: float = REQUEST_SLEEP, retries: int = 3) -> Any:
+    last_exc = None
+    for attempt in range(1, retries + 1):
+        try:
+            r = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT)
+            if optional and r.status_code in (404, 405):
+                return None
+            if r.status_code == 429:
+                retry = int(r.headers.get("Retry-After", "5"))
+                print(f"    Rate limited; sleeping {retry}s")
+                time.sleep(retry)
+                continue
+            r.raise_for_status()
+            if sleep:
+                time.sleep(sleep)
+            return r.json()
+        except requests.RequestException as exc:
+            last_exc = exc
+            if attempt < retries:
+                time.sleep(1.2 * attempt)
+                continue
+            if optional:
+                return None
+            raise
+    if last_exc:
+        raise last_exc
+    return None
+
+
+def first_working_slug(kind: str, item: Dict[str, Any], headers: Dict[str, str]) -> Tuple[Optional[str], Optional[Dict[str, Any]]]:
+    # Prefer exact IMDb lookup when supplied. This is crucial for names reused by multiple shows,
+    # e.g. CIA (1992) vs CIA (2026 / tt35515227).
+    imdb = (item.get("imdb") or "").strip()
+    trakt_type = "show" if kind == "shows" else "movie"
+    if imdb:
+        found = get_json(f"{TRAKT_BASE}/search/imdb/{imdb}?type={trakt_type}", headers, optional=True)
+        if isinstance(found, list) and found:
+            obj = (found[0].get(trakt_type) or {})
+            ids = obj.get("ids") or {}
+            resolved = ids.get("slug") or ids.get("trakt")
+            if resolved:
+                data = get_json(f"{TRAKT_BASE}/{kind}/{resolved}?extended=full", headers, optional=True)
+                if data:
+                    if str(resolved) != item.get("slug"):
+                        print(f"  Resolved by IMDb {imdb}: {item.get('slug')} -> {resolved}")
+                    return str(resolved), data
+
+    slugs = [item["slug"]] + list(item.get("alt_slugs") or [])
+    seen = set()
+    for slug in slugs:
+        if not slug or slug in seen:
+            continue
+        seen.add(slug)
+        data = get_json(f"{TRAKT_BASE}/{kind}/{slug}?extended=full", headers, optional=True)
+        if data:
+            # If an IMDb ID was requested, verify it so we do not accidentally import the wrong show.
+            if imdb and ((data.get("ids") or {}).get("imdb") or "") != imdb:
+                continue
+            if slug != item["slug"]:
+                print(f"  Resolved slug: {item['slug']} -> {slug}")
+            return slug, data
+    # Last resort for movies: search by title. This catches Trakt entries with unpredictable slugs.
+    if kind == "movies":
+        query = item.get("title") or item.get("show") or ""
+        if query:
+            try:
+                results = get_json(f"{TRAKT_BASE}/search/movie?query={requests.utils.quote(query)}", headers, optional=True)
+                if isinstance(results, list):
+                    want_imdb = (item.get("imdb") or "").strip()
+                    for result in results:
+                        obj = result.get("movie") or {}
+                        ids = obj.get("ids") or {}
+                        if want_imdb and ids.get("imdb") != want_imdb:
+                            continue
+                        resolved = ids.get("slug") or ids.get("trakt")
+                        if resolved:
+                            data = get_json(f"{TRAKT_BASE}/{kind}/{resolved}?extended=full", headers, optional=True)
+                            if data:
+                                print(f"  Resolved movie by search: {item.get('slug')} -> {resolved}")
+                                return str(resolved), data
+            except Exception:
+                pass
+    return None, None
+
+
+def load_episodes() -> List[Dict[str, Any]]:
+    txt = EPISODES_JS.read_text(encoding="utf-8")
+    start = txt.find("[")
+    end = txt.rfind("]")
+    if start < 0 or end < 0:
+        raise SystemExit(f"Could not parse {EPISODES_JS}")
+    return json.loads(txt[start:end + 1])
+
+
+def save_episodes(eps: List[Dict[str, Any]]) -> None:
+    eps.sort(key=sort_key)
+    for i, ep in enumerate(eps, 1):
+        ep["order"] = i
+        ep["code"] = build_code(ep)
+        if not ep.get("id") or str(ep.get("id", "")).startswith("trakt-"):
+            ep["id"] = stable_id(ep)
+    EPISODES_JS.write_text("window.LAW_ORDER_EPISODES = " + json.dumps(eps, indent=2, ensure_ascii=False) + ";\n", encoding="utf-8")
+
+
+def safe_int(v: Any, default: int = 0) -> int:
+    try:
+        if v is None or v == "":
+            return default
+        return int(v)
+    except Exception:
+        return default
+
+
+def norm_text(s: Any) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", str(s or "").lower().replace("&", "and")).strip()
+
+
+def build_code(ep: Dict[str, Any]) -> str:
+    s = safe_int(ep.get("season"))
+    e = safe_int(ep.get("episode"))
+    if ep.get("isMovie"):
+        return "MOVIE"
+    if ep.get("isSpecial") or s == 0:
+        return f"S00.{e:02d}"
+    return f"{s:02d}.{e:02d}"
+
+
+def stable_id(ep: Dict[str, Any]) -> str:
+    show = ep.get("show") or "Unknown"
+    s = safe_int(ep.get("season"))
+    e = safe_int(ep.get("episode"))
+    kind = "movie" if ep.get("isMovie") else "special" if ep.get("isSpecial") or s == 0 else "episode"
+    tid = ((ep.get("traktIds") or {}).get("trakt")) or ""
+    return f"{show}|{s}|{e}|{kind}|{tid}" if tid else f"{show}|{s}|{e}|{kind}"
+
+
+def sort_key(ep: Dict[str, Any]) -> Tuple[str, int, int, int, str]:
+    date = ep.get("airDate") or "9999-12-31"
+    return (date, safe_int(ep.get("isSpecial") or safe_int(ep.get("season")) == 0), safe_int(ep.get("season")), safe_int(ep.get("episode")), str(ep.get("show")))
+
+
+def date_from_first_aired(first: Any) -> str:
+    if not first:
+        return ""
+    s = str(first)
+    return s[:10] if re.match(r"^\d{4}-\d{2}-\d{2}", s) else ""
+
+
+def should_update_airdate(old: str, new: str) -> bool:
+    if not new:
+        return False
+    if not old:
+        return True
+    if old == new:
+        return False
+    try:
+        d_old = datetime.fromisoformat(old).date()
+        d_new = datetime.fromisoformat(new).date()
+        if abs((d_new - d_old).days) == 1:
+            return False
+    except Exception:
+        pass
+    return True
+
+
+def update_field(ep: Dict[str, Any], field: str, value: Any, changes: List[Dict[str, Any]], row_label: str, force: bool = False) -> None:
+    if value in (None, "", [], {}):
+        return
+    old = ep.get(field)
+    if force or old in (None, "", [], {}) or old != value:
+        if old != value:
+            ep[field] = value
+            changes.append({"type": f"{field}_changed", "row": row_label, "old": old, "new": value})
+
+
+def fetch_show_catalog(cfg: Dict[str, str], item: Dict[str, Any]) -> Tuple[Optional[Dict[str, Any]], List[Dict[str, Any]], Optional[str]]:
+    headers = trakt_headers(cfg)
+    slug, show = first_working_slug("shows", item, headers)
+    if not slug or not show:
+        return None, [], None
+    seasons = get_json(f"{TRAKT_BASE}/shows/{slug}/seasons?extended=episodes,full", headers, optional=item.get("optional", False)) or []
+    episodes = []
+    for season in seasons:
+        sn = season.get("number")
+        if not isinstance(sn, int):
+            continue
+        for tr_ep in season.get("episodes") or []:
+            en = tr_ep.get("number")
+            if not isinstance(en, int):
+                continue
+            first = tr_ep.get("first_aired") or ""
+            episodes.append({
+                "show": item["show"],
+                "franchise": item.get("franchise", "Wolf Universe"),
+                "season": sn,
+                "episode": en,
+                "code": f"{sn:02d}.{en:02d}" if sn != 0 else f"S00.{en:02d}",
+                "title": tr_ep.get("title") or "",
+                "airDate": date_from_first_aired(first),
+                "notes": "Special" if sn == 0 else "",
+                "era": item.get("franchise", "Wolf Universe"),
+                "sourceTab": "Trakt API",
+                "sourceWatch": "",
+                "status": "Not Started",
+                "isSpecial": sn == 0,
+                "isMovie": False,
+                "traktSlug": slug,
+                "traktFirstAired": first,
+                "overview": tr_ep.get("overview") or "",
+                "traktIds": tr_ep.get("ids") or {},
+                "showTraktIds": (show.get("ids") or {}),
+                "network": show.get("network") or "",
+                "runtime": tr_ep.get("runtime") or show.get("runtime") or None,
+                "country": show.get("country") or "",
+                "language": show.get("language") or "",
+                "optional": bool(item.get("optional", False)),
+                "alwaysShow": bool(item.get("alwaysShow", not item.get("optional", False))),
+                "scope": item.get("scope") or ("complete" if item.get("optional") else "core"),
+                "connection": item.get("connection") or ""
+            })
+    return show, episodes, slug
+
+
+def fetch_movie_catalog(cfg: Dict[str, str], item: Dict[str, Any], used_episode_number: int) -> Optional[Dict[str, Any]]:
+    headers = trakt_headers(cfg)
+    slug, movie = first_working_slug("movies", item, headers)
+    if not slug or not movie:
+        return None
+    released = movie.get("released") or ""
+    return {
+        "show": item["show"],
+        "franchise": item.get("franchise", "Wolf Specials"),
+        "season": 0,
+        "episode": used_episode_number,
+        "code": "MOVIE",
+        "title": movie.get("title") or item["show"],
+        "airDate": released,
+        "notes": "TV movie / special",
+        "era": item.get("franchise", "Wolf Specials"),
+        "sourceTab": "Trakt API",
+        "sourceWatch": "",
+        "status": "Not Started",
+        "isSpecial": True,
+        "isMovie": True,
+        "traktSlug": slug,
+        "traktFirstAired": released,
+        "overview": movie.get("overview") or "",
+        "traktIds": movie.get("ids") or {},
+        "showTraktIds": movie.get("ids") or {},
+        "runtime": movie.get("runtime") or None,
+        "network": "",
+        "country": movie.get("country") or "",
+        "language": movie.get("language") or "",
+        "optional": bool(item.get("optional", False)),
+        "alwaysShow": bool(item.get("alwaysShow", True)),
+        "scope": item.get("scope") or "connected",
+        "connection": item.get("connection") or ""
+    }
+
+
+_TMDB_CACHE: Optional[Dict[str, Any]] = None
+
+
+def load_tmdb_cache() -> Dict[str, Any]:
+    global _TMDB_CACHE
+    if _TMDB_CACHE is not None:
+        return _TMDB_CACHE
+    if TMDB_CACHE_JSON.exists():
+        try:
+            _TMDB_CACHE = read_json(TMDB_CACHE_JSON)
+        except Exception:
+            _TMDB_CACHE = {}
+    else:
+        _TMDB_CACHE = {}
+    return _TMDB_CACHE
+
+
+def save_tmdb_cache() -> None:
+    if _TMDB_CACHE is not None:
+        write_json(TMDB_CACHE_JSON, _TMDB_CACHE)
+
+
+def tmdb_get(api_key: str, path: str) -> Optional[Dict[str, Any]]:
+    if not api_key:
+        return None
+    cache = load_tmdb_cache()
+    cache_key = path
+    if cache_key in cache:
+        cached = cache[cache_key]
+        return cached if cached else None
+    r = requests.get(f"{TMDB_BASE}{path}", params={"api_key": api_key}, timeout=REQUEST_TIMEOUT)
+    if r.status_code == 404:
+        cache[cache_key] = None
+        return None
+    if r.status_code == 429:
+        retry = int(r.headers.get("Retry-After", "2"))
+        print(f"    TMDB rate limited; sleeping {retry}s")
+        time.sleep(retry)
+        r = requests.get(f"{TMDB_BASE}{path}", params={"api_key": api_key}, timeout=REQUEST_TIMEOUT)
+        if r.status_code == 404:
+            cache[cache_key] = None
+            return None
+    r.raise_for_status()
+    data = r.json()
+    cache[cache_key] = data
+    time.sleep(0.035)
+    return data
+
+
+def tmdb_image(path: Optional[str], size: str = "w780") -> str:
+    return f"https://image.tmdb.org/t/p/{size}{path}" if path else ""
+
+
+def enrich_artwork(eps: List[Dict[str, Any]], catalog: Dict[str, Any], show_items: List[Dict[str, Any]], episode_artwork: bool = False, episode_limit: int = 0) -> Dict[str, Any]:
+    api_key = os.environ.get("TMDB_API_KEY", "").strip()
+    artwork: Dict[str, Any] = {"shows": {}, "seasons": {}, "episodes": {}, "generatedAt": datetime.now(timezone.utc).isoformat()}
+    if not api_key:
+        artwork["note"] = "No TMDB_API_KEY was set, so generated SVG artwork placeholders will be used."
+        return artwork
+    print("Fetching TMDB show/season artwork...")
+    for item in show_items:
+        show_name = item["show"]
+        tmdb_id = (catalog.get(show_name) or {}).get("ids", {}).get("tmdb")
+        if not tmdb_id:
+            continue
+        try:
+            tv = tmdb_get(api_key, f"/tv/{tmdb_id}")
+            if tv:
+                artwork["shows"][show_name] = {"poster": tmdb_image(tv.get("poster_path"), "w500"), "backdrop": tmdb_image(tv.get("backdrop_path"), "w1280"), "tmdb": tmdb_id}
+                for s in tv.get("seasons") or []:
+                    sn = s.get("season_number")
+                    poster = tmdb_image(s.get("poster_path"), "w500")
+                    if sn is not None and poster:
+                        artwork["seasons"][f"{show_name}|{sn}"] = {"poster": poster}
+        except Exception as exc:
+            artwork.setdefault("errors", []).append({"show": show_name, "error": str(exc)})
+    if not episode_artwork:
+        artwork["episodeStillMode"] = "disabled; rerun with --episode-artwork to fetch episode stills"
+        return artwork
+    print(f"Fetching TMDB episode stills, limit={episode_limit or 'none'}...")
+    fetched = 0
+    for ep in eps:
+        if episode_limit and fetched >= episode_limit:
+            break
+        tmdb_id = (ep.get("showTraktIds") or {}).get("tmdb")
+        if not tmdb_id or ep.get("isMovie"):
+            continue
+        s, e = safe_int(ep.get("season")), safe_int(ep.get("episode"))
+        if s <= 0 or e <= 0:
+            continue
+        key = f"{ep.get('show')}|{s}|{e}"
+        if key in artwork["episodes"]:
+            continue
+        try:
+            tv_ep = tmdb_get(api_key, f"/tv/{tmdb_id}/season/{s}/episode/{e}")
+            if tv_ep and tv_ep.get("still_path"):
+                artwork["episodes"][key] = {"still": tmdb_image(tv_ep.get("still_path"), "w780")}
+            fetched += 1
+            if fetched % 50 == 0:
+                print(f"  episode stills checked: {fetched}")
+        except Exception:
+            continue
+    artwork["episodeStillChecked"] = fetched
+    return artwork
+
+
+def make_svg_assets(show_items: List[Dict[str, Any]]) -> None:
+    assets = Path("law_order_tracker_app/assets")
+    assets.mkdir(parents=True, exist_ok=True)
+    palette = {"Law & Order": "#b91c1c", "One Chicago": "#dc2626", "FBI": "#1d4ed8", "Crossover Adjacent": "#d97706", "Wolf Specials": "#525252"}
+    for item in show_items:
+        name = item["show"]
+        filename = re.sub(r"[^A-Za-z0-9]+", "_", name).strip("_") + ".svg"
+        path = assets / filename
+        if path.exists():
+            continue
+        color = palette.get(item.get("franchise"), "#334155")
+        abbr = "".join([w[0] for w in re.findall(r"[A-Za-z0-9]+", name)[:4]]).upper() or "W"
+        safe_name = name.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="900" height="520" viewBox="0 0 900 520">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="{color}"/><stop offset="1" stop-color="#050712"/></linearGradient></defs>
+  <rect width="900" height="520" rx="42" fill="url(#g)"/>
+  <circle cx="760" cy="90" r="180" fill="rgba(255,255,255,.08)"/>
+  <text x="50%" y="46%" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="110" font-weight="900" fill="white">{abbr}</text>
+  <text x="50%" y="64%" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700" fill="rgba(255,255,255,.88)">{safe_name}</text>
+</svg>"""
+        path.write_text(svg, encoding="utf-8")
+
+
+def update_show_themes(show_items: List[Dict[str, Any]], artwork: Dict[str, Any]) -> None:
+    path = Path("law_order_tracker_app/data/show_themes.js")
+    try:
+        txt = path.read_text(encoding="utf-8")
+        themes = json.loads(txt[txt.find("{"):txt.rfind("}") + 1])
+    except Exception:
+        themes = {}
+    for old_name in ["CIA", "CIA (1992)", "FBI: CIA"]:
+        themes.pop(old_name, None)
+    franchise_colors = {"Law & Order": ("#b91c1c", "#111827", "#fecaca"), "One Chicago": ("#dc2626", "#1c1917", "#fecaca"), "FBI": ("#1d4ed8", "#0f172a", "#bfdbfe"), "Crossover Adjacent": ("#d97706", "#1c1917", "#fde68a"), "Wolf Specials": ("#525252", "#171717", "#e5e5e5")}
+    for item in show_items:
+        show = item["show"]
+        primary, secondary, accent = franchise_colors.get(item.get("franchise"), ("#475569", "#0f172a", "#e2e8f0"))
+        filename = re.sub(r"[^A-Za-z0-9]+", "_", show).strip("_") + ".svg"
+        abbr = "".join([w[0] for w in re.findall(r"[A-Za-z0-9]+", show)[:4]]).upper() or "W"
+        img = (artwork.get("shows", {}).get(show, {}) or {}).get("backdrop") or f"assets/{filename}"
+        old = themes.get(show, {})
+        themes[show] = {**old, "primary": old.get("primary", primary), "secondary": old.get("secondary", secondary), "accent": old.get("accent", accent), "abbr": old.get("abbr", abbr), "image": img, "franchise": item.get("franchise", "Wolf Universe")}
+    path.write_text("window.SHOW_THEMES = " + json.dumps(themes, indent=2, ensure_ascii=False) + ";\n", encoding="utf-8")
+
+
+def update_app_title() -> None:
+    html = Path("law_order_tracker_app/index.html")
+    if html.exists():
+        txt = html.read_text(encoding="utf-8")
+        txt = txt.replace("Law & Order Master Watch Tracker", "Wolf Universe Watch Tracker")
+        txt = txt.replace("L&amp;O", "WOLF").replace(">L&O<", ">WOLF<")
+        txt = txt.replace("Chronological guide • Trakt sync • mobile-friendly app", "Law & Order • One Chicago • FBI • crossovers • specials")
+        if 'data/wolf_artwork.js' not in txt:
+            txt = txt.replace('<script src="data/show_themes.js"></script><script src="data/episodes.js"></script>', '<script src="data/show_themes.js"></script><script src="data/wolf_artwork.js"></script><script src="data/episodes.js"></script>')
+        html.write_text(txt, encoding="utf-8")
+    root = Path("index.html")
+    if root.exists():
+        r = root.read_text(encoding="utf-8").replace("Law & Order Master Watch Tracker", "Wolf Universe Watch Tracker")
+        root.write_text(r, encoding="utf-8")
+
+
+def patch_app_js() -> None:
+    path = Path("law_order_tracker_app/app.js")
+    if not path.exists():
+        return
+    txt = path.read_text(encoding="utf-8")
+    if "const artworkMeta = window.WOLF_ARTWORK" not in txt:
+        txt = txt.replace("const themes = window.SHOW_THEMES || {};", "const themes = window.SHOW_THEMES || {};\nconst artworkMeta = window.WOLF_ARTWORK || { shows: {}, seasons: {}, episodes: {} };")
+    if "function episodeArtwork(ep)" not in txt:
+        txt = re.sub(r"function artwork\(show\) \{.*?\n\}\n\nfunction setImageSafe", """function artwork(show) {
+  const art = (artworkMeta.shows || {})[show] || {};
+  if (art.backdrop || art.poster) return art.backdrop || art.poster;
+  const t = theme(show);
+  if (t.image) return t.image;
+  const abbr = encodeURIComponent(t.abbr || String(show || 'WOLF').slice(0, 4));
+  const color = encodeURIComponent((t.primary || '#b91c1c').replace('#',''));
+  return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='900' height='520'%3E%3Crect width='900' height='520' fill='%23${color}'/%3E%3Ctext x='50%25' y='52%25' text-anchor='middle' dominant-baseline='middle' font-family='Arial' font-size='96' font-weight='900' fill='white'%3E${abbr}%3C/text%3E%3C/svg%3E`;
+}
+
+function episodeArtwork(ep) {
+  const key = `${ep.show}|${Number(ep.season)||0}|${Number(ep.episode)||0}`;
+  const art = (artworkMeta.episodes || {})[key] || {};
+  const seasonArt = (artworkMeta.seasons || {})[`${ep.show}|${Number(ep.season)||0}`] || {};
+  return art.still || seasonArt.poster || artwork(ep.show);
+}
+
+function setImageSafe""", txt, flags=re.S)
+    txt = txt.replace('setImageSafe(poster, artwork(next.show));', 'setImageSafe(poster, episodeArtwork(next));')
+    txt = txt.replace('src="${esc(artwork(ep.show))}"', 'src="${esc(episodeArtwork(ep))}"')
+    txt = txt.replace("Your Law & Order universe tracker is complete.", "Your Wolf Universe tracker is complete.")
+    path.write_text(txt, encoding="utf-8")
+
+
+def write_reports(report: Dict[str, Any], changes: List[Dict[str, Any]]) -> None:
+    write_json(REPORT_JSON, report)
+    CHANGES_CSV.parent.mkdir(parents=True, exist_ok=True)
+    with CHANGES_CSV.open("w", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=["type", "row", "old", "new"])
+        writer.writeheader()
+        for c in changes:
+            writer.writerow({k: json.dumps(v, ensure_ascii=False) if isinstance(v, (dict, list)) else v for k, v in c.items()})
+
+
+def catalog_from_current_episodes(eps: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+    catalog: Dict[str, Dict[str, Any]] = {}
+    for ep in eps:
+        show = ep.get("show")
+        ids = ep.get("showTraktIds") or {}
+        if show and ids and show not in catalog:
+            catalog[show] = {"ids": ids}
+    return catalog
+
+
+def run_artwork_phase(args: argparse.Namespace) -> None:
+    load_dotenv_local()
+    universe = load_universe()
+    show_items = universe["shows"] + universe.get("movies", [])
+    eps = load_episodes()
+    show_catalog = catalog_from_current_episodes(eps)
+    episode_mode = args.phase == "episode-artwork" or args.episode_artwork
+    artwork = enrich_artwork(eps, show_catalog, show_items, episode_mode, args.episode_artwork_limit)
+    ARTWORK_JS.parent.mkdir(parents=True, exist_ok=True)
+    ARTWORK_JS.write_text("window.WOLF_ARTWORK = " + json.dumps(artwork, indent=2, ensure_ascii=False) + ";\n", encoding="utf-8")
+    save_tmdb_cache()
+    make_svg_assets(show_items)
+    update_show_themes(show_items, artwork)
+    update_app_title()
+    patch_app_js()
+    print(f"Artwork JS: {ARTWORK_JS}")
+    print(f"TMDB cache: {TMDB_CACHE_JSON}")
+
+
+
+def row_ids(ep: Dict[str, Any]) -> Tuple[str, str, int]:
+    """Return common identifiers for a guide row so legacy/wrong CIA rows can be purged."""
+    trakt_ids = ep.get("traktIds") or {}
+    show_ids = ep.get("showTraktIds") or {}
+    imdb = str(trakt_ids.get("imdb") or show_ids.get("imdb") or "").strip()
+    slug = str(ep.get("traktSlug") or trakt_ids.get("slug") or show_ids.get("slug") or "").strip()
+    trakt_show_id = safe_int(show_ids.get("trakt") or 0)
+    return imdb, slug, trakt_show_id
+
+
+def is_excluded_legacy_row(ep: Dict[str, Any], universe: Dict[str, Any]) -> bool:
+    """True for rows that belong to the unrelated 1992 CIA show or old duplicate labels."""
+    remove_shows = set(universe.get("removeShows") or [])
+    remove_slugs = set(universe.get("removeTraktSlugs") or [])
+    remove_imdbs = set(universe.get("removeImdbIds") or [])
+    remove_show_ids = set(safe_int(x) for x in (universe.get("removeTraktShowIds") or []))
+    show = str(ep.get("show") or "").strip()
+    imdb, slug, trakt_show_id = row_ids(ep)
+    if show in remove_shows:
+        return True
+    if slug and slug in remove_slugs:
+        return True
+    if imdb and imdb in remove_imdbs:
+        return True
+    if trakt_show_id and trakt_show_id in remove_show_ids:
+        return True
+    # Extra protection: an older bad run may have renamed the 1992 rows to CIA (2026) while keeping 1992 IDs/slug.
+    if show == "CIA (2026)" and (slug == "cia" or imdb == "tt0250140" or trakt_show_id in remove_show_ids):
+        return True
+    return False
+
+def main() -> None:
+    load_dotenv_local()
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--phase", choices=["all", "catalog", "artwork", "episode-artwork"], default="all", help="Split updater into safe phases. catalog = Trakt guide only, artwork = TMDB shows/seasons only, episode-artwork = TMDB episode stills.")
+    ap.add_argument("--no-artwork", action="store_true")
+    ap.add_argument("--episode-artwork", action="store_true", help="Also fetch TMDB episode stills. Slower.")
+    ap.add_argument("--episode-artwork-limit", type=int, default=0, help="Limit TMDB episode still checks. 0 = no limit.")
+    args = ap.parse_args()
+
+    if args.phase in ("artwork", "episode-artwork"):
+        if args.dry_run:
+            print("Dry-run is not meaningful for artwork phases; no episode catalog will be changed.")
+        run_artwork_phase(args)
+        return
+
+    cfg = load_config()
+    universe = load_universe()
+    show_items = universe["shows"]
+    movie_items = universe.get("movies", [])
+    aliases = universe.get("aliases", {})
+    remove_shows = set(universe.get("removeShows") or [])
+    eps = load_episodes()
+    original_rows = len(eps)
+    removed_existing = [ep for ep in eps if is_excluded_legacy_row(ep, universe)]
+    if removed_existing:
+        removed_names = sorted(set(str(ep.get("show")) for ep in removed_existing))[:12]
+        print(f"Removing excluded legacy/1992 CIA rows: {len(removed_existing)} ({', '.join(removed_names)})")
+        eps = [ep for ep in eps if not is_excluded_legacy_row(ep, universe)]
+    for ep in eps:
+        if ep.get("show") in aliases:
+            ep["show"] = aliases[ep["show"]]
+        item = next((x for x in show_items if x["show"] == ep.get("show")), None)
+        if item:
+            ep.setdefault("franchise", item.get("franchise"))
+
+    existing = {(norm_text(ep.get("show")), safe_int(ep.get("season")), safe_int(ep.get("episode")), bool(ep.get("isMovie"))): ep for ep in eps}
+
+    changes: List[Dict[str, Any]] = []
+    show_catalog: Dict[str, Dict[str, Any]] = {}
+    failed: List[Dict[str, Any]] = []
+    added = 0
+
+    print("Wolf Universe catalog update")
+    print(f"Original guide rows: {len(eps)}")
+
+    for item in show_items:
+        print(f"Fetching Trakt catalog: {item['show']} ({item['slug']})")
+        try:
+            show, tr_eps, resolved_slug = fetch_show_catalog(cfg, item)
+        except Exception as exc:
+            failed.append({"show": item["show"], "slug": item["slug"], "error": str(exc)})
+            print(f"  WARNING failed: {exc}")
+            continue
+        if not show:
+            print("  Not found/unsupported; skipped")
+            failed.append({"show": item["show"], "slug": item["slug"], "error": "not found"})
+            continue
+
+        show_catalog[item["show"]] = show
+        regular = sum(1 for e in tr_eps if not e.get("isSpecial"))
+        specials = sum(1 for e in tr_eps if e.get("isSpecial"))
+        print(f"  Found {regular} regular + {specials} specials")
+
+        for tr_ep in tr_eps:
+            key = (norm_text(tr_ep["show"]), safe_int(tr_ep["season"]), safe_int(tr_ep["episode"]), False)
+            row_label = f"{tr_ep['show']} S{safe_int(tr_ep['season']):02d}E{safe_int(tr_ep['episode']):02d}"
+            ep = existing.get(key)
+
+            if not ep:
+                tr_ep["id"] = stable_id(tr_ep)
+                eps.append(tr_ep)
+                existing[key] = tr_ep
+                added += 1
+                changes.append({"type": "missing_episode_added", "row": row_label, "old": "", "new": tr_ep["id"]})
+                continue
+
+            if should_update_airdate(str(ep.get("airDate") or ""), tr_ep.get("airDate") or ""):
+                update_field(ep, "airDate", tr_ep.get("airDate"), changes, row_label, force=True)
+
+            for f in ["title", "overview", "traktSlug", "traktFirstAired", "traktIds", "showTraktIds", "franchise", "network", "runtime", "country", "language", "isSpecial", "optional", "alwaysShow", "scope", "connection"]:
+                update_field(ep, f, tr_ep.get(f), changes, row_label)
+
+    for item in movie_items:
+        print(f"Fetching Trakt movie/special: {item['show']} ({item['slug']})")
+        try:
+            next_num = 1 + max([safe_int(e.get("episode")) for e in eps if e.get("show") == item["show"] and safe_int(e.get("season")) == 0] or [0])
+            movie_ep = fetch_movie_catalog(cfg, item, next_num)
+        except Exception as exc:
+            failed.append({"movie": item["show"], "slug": item["slug"], "error": str(exc)})
+            print(f"  WARNING failed: {exc}")
+            continue
+        if not movie_ep:
+            print("  Not found/unsupported; skipped")
+            continue
+        key = (norm_text(movie_ep["show"]), 0, safe_int(movie_ep["episode"]), True)
+        if key not in existing:
+            movie_ep["id"] = stable_id(movie_ep)
+            eps.append(movie_ep)
+            existing[key] = movie_ep
+            added += 1
+            changes.append({"type": "movie_added", "row": movie_ep["show"], "old": "", "new": movie_ep["id"]})
+
+    artwork = {"shows": {}, "seasons": {}, "episodes": {}, "generatedAt": datetime.now(timezone.utc).isoformat(), "note": "Artwork skipped."}
+    if args.phase == "all" and not args.no_artwork:
+        try:
+            artwork = enrich_artwork(eps, show_catalog, show_items, args.episode_artwork, args.episode_artwork_limit)
+            save_tmdb_cache()
+        except Exception as exc:
+            artwork = {"shows": {}, "seasons": {}, "episodes": {}, "generatedAt": datetime.now(timezone.utc).isoformat(), "error": str(exc)}
+
+    eps.sort(key=sort_key)
+    report = {"generatedAt": datetime.now(timezone.utc).isoformat(), "dryRun": args.dry_run, "originalRows": original_rows, "finalRows": len(eps), "rowsAdded": added, "rowsRemoved": len(removed_existing), "removedShows": sorted(remove_shows), "changesReported": len(changes), "failed": failed, "showsChecked": len(show_items), "moviesChecked": len(movie_items), "changesSample": changes[:300]}
+    write_reports(report, changes)
+
+    print(f"Final guide rows: {len(eps)}")
+    print(f"Rows added from Trakt: {added}")
+    print(f"Total changes reported: {len(changes)}")
+    print(f"Failed/optional missing: {len(failed)}")
+    print(f"Report: {REPORT_JSON}")
+    print(f"Changes CSV: {CHANGES_CSV}")
+
+    if args.dry_run:
+        print("Dry run: episodes.js and UI/support files were not modified.")
+        return
+
+    if args.phase == "all":
+        ARTWORK_JS.parent.mkdir(parents=True, exist_ok=True)
+        ARTWORK_JS.write_text("window.WOLF_ARTWORK = " + json.dumps(artwork, indent=2, ensure_ascii=False) + ";\n", encoding="utf-8")
+        make_svg_assets(show_items + movie_items)
+        update_show_themes(show_items + movie_items, artwork)
+        update_app_title()
+        patch_app_js()
+    else:
+        print("Catalog phase: preserving existing artwork/theme files.")
+    save_episodes(eps)
+    print(f"Updated {EPISODES_JS}")
+    if args.phase == "all":
+        print(f"Artwork JS: {ARTWORK_JS}")
+
+
+if __name__ == "__main__":
+    main()

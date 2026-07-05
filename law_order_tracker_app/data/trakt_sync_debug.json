@@ -1,16 +1,26 @@
 {
-  "exportedAt": "2026-07-04T08:09:22Z",
+  "exportedAt": "2026-07-05T08:09:44Z",
   "matchedShows": {
     "Law & Order": {
       "watchedEndpoint": 0,
-      "historyEndpoint": 4
+      "historyEndpoint": 6
     },
     "Law & Order: SVU": {
       "watchedEndpoint": 0,
-      "historyEndpoint": 108
+      "historyEndpoint": 112
     }
   },
   "unmatchedTraktShows": [
+    {
+      "title": "Dragnet",
+      "slug": "dragnet",
+      "source": "watched"
+    },
+    {
+      "title": "CIA",
+      "slug": "cia",
+      "source": "watched"
+    },
     {
       "title": "The Summer I Turned Pretty",
       "slug": "the-summer-i-turned-pretty",
@@ -287,13 +297,13 @@
       "source": "watched"
     },
     {
-      "title": "Gordon Ramsay on Cocaine",
-      "slug": "gordon-ramsay-on-cocaine",
+      "title": "90 Day Diaries",
+      "slug": "90-day-diaries",
       "source": "watched"
     },
     {
-      "title": "90 Day Diaries",
-      "slug": "90-day-diaries",
+      "title": "Gordon Ramsay on Cocaine",
+      "slug": "gordon-ramsay-on-cocaine",
       "source": "watched"
     },
     {
@@ -492,16 +502,6 @@
       "source": "watched"
     },
     {
-      "title": "Rick and Morty",
-      "slug": "rick-and-morty",
-      "source": "watched"
-    },
-    {
-      "title": "Walk the Prank",
-      "slug": "walk-the-prank",
-      "source": "watched"
-    },
-    {
       "title": "Criminal Minds",
       "slug": "criminal-minds",
       "source": "history"
@@ -614,19 +614,19 @@
   ],
   "sources": {
     "/sync/watched/shows": 100,
-    "/sync/history/shows": 9594
+    "/sync/history/shows": 9605
   },
   "finalCounts": {
-    "Law & Order": 4,
-    "Law & Order: SVU": 108
+    "Law & Order": 6,
+    "Law & Order: SVU": 112
   },
   "appStatusSummary": {
     "guideRowsScanned": 1796,
-    "guideRowsMarkedWatched": 112,
+    "guideRowsMarkedWatched": 118,
     "traktWatchedCountsByShow": {
-      "Law & Order": 4,
+      "Law & Order": 6,
       "Homicide: Life on the Street": 0,
-      "Law & Order: SVU": 108,
+      "Law & Order: SVU": 112,
       "Criminal Intent": 0,
       "Trial by Jury": 0,
       "Conviction": 0,

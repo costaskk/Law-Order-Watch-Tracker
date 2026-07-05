@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#111827">
-  <title>Law & Order Master Watch Tracker</title>
+  <title>Wolf Universe Watch Tracker</title>
   <link rel="manifest" href="manifest.webmanifest">
   <style id="app-critical-css">
 :root{
@@ -28,11 +28,11 @@ button,input,select,.fileBtn{background:linear-gradient(180deg,rgba(255,255,255,
 @supports not (color:color-mix(in srgb,red,blue)){.hero,.ep,.showChip::before{background:var(--panel)}input:focus,select:focus,button:focus-visible{outline-color:rgba(239,68,68,.32)}}
 
 </style>
-  <link rel="stylesheet" href="./styles.css?v=20260703-stylefix">
+  <link rel="stylesheet" href="./styles.css?v=20260704-v33">
 </head>
 <body>
   <header class="topbar">
-    <div class="brandBlock"><div class="badgeLogo">L&O</div><div><h1>Law & Order Master Watch Tracker</h1><p>Chronological guide • Trakt sync • mobile-friendly app</p></div></div>
+    <div class="brandBlock"><div class="badgeLogo">WOLF</div><div><h1>Wolf Universe Watch Tracker</h1><p>Law & Order • One Chicago • FBI • crossovers • specials</p></div></div>
     <div class="topActions"><button id="syncNowBtn" class="primary smallBtn">Sync with Trakt</button><button id="pullStatusBtn" class="smallBtn">Pull latest</button><button id="themeBtn" class="ghost smallBtn">Theme</button></div>
   </header>
 
@@ -59,21 +59,38 @@ button,input,select,.fileBtn{background:linear-gradient(180deg,rgba(255,255,255,
   <section class="controls card">
     <input id="searchBox" placeholder="Search title, show, notes…" autocomplete="off">
     <select id="showFilter"><option value="">All shows</option></select>
+    <select id="franchiseFilter"><option value="">All franchises</option></select>
+    <select id="actorFilter"><option value="">All regular actors</option></select>
     <select id="seasonFilter"><option value="">All seasons</option></select>
-    <select id="statusFilter"><option value="unwatched">Only unwatched</option><option value="all">Show all</option><option value="watched">Only watched</option><option value="watching">Watching</option><option value="skipped">Skipped</option></select>
+    <select id="scopeFilter" aria-label="Guide scope">
+      <option value="core">Core Wolf Universe</option>
+      <option value="connected" selected>Core + Crossover Relevant</option>
+      <option value="adjacent">Adjacent / Archive Only</option>
+      <option value="complete">Complete Dick Wolf Universe</option>
+    </select>
+    <select id="statusFilter">
+      <option value="unwatched">Only unwatched</option>
+      <option value="all">Show all</option>
+      <option value="watched">Only watched</option>
+      <option value="watching">Watching</option>
+      <option value="skipped">Skipped</option>
+    </select>
     <label class="toggle"><input type="checkbox" id="hideWatched" checked> Hide watched</label>
   </section>
+
+  <section class="scopeSummary card" id="scopeSummary"></section>
 
   <section class="actions card">
     <button id="exportJson">Export Status JSON</button><label class="fileBtn">Import Status JSON<input id="importJson" type="file" accept="application/json"></label><button id="exportCsv">Export Current View CSV</button><button id="installBtn">Install app</button><button id="resetFilters" class="ghost">Reset filters</button>
   </section>
 
-  <section class="seasonPanel card"><h2>Season Manager</h2><div class="seasonControls"><select id="bulkShow"></select><select id="bulkSeason"></select><button id="markSeasonWatched" class="primary">Mark season watched</button><button id="markSeasonUnwatched">Mark season unwatched</button><button id="markShowWatched">Mark whole show watched</button></div><p class="small">Bulk changes save instantly in your browser. Export JSON to back up or move to another device.</p></section>
   <main id="episodeList" class="episodeList"></main>
   </div>
   <div id="toastHost" class="toastHost" aria-live="polite"></div>
   <div id="modalOverlay" class="modalOverlay" role="dialog" aria-modal="true"></div>
+  <div id="episodeModalOverlay" class="episodeModalOverlay" aria-modal="true" role="dialog"></div>
+  <div id="lightboxOverlay" class="lightboxOverlay" aria-modal="true" role="dialog"></div>
   <nav class="bottomNav"><button data-status="unwatched">Unwatched</button><button data-status="all">All</button><button data-status="watched">Watched</button><button id="bottomNext">Next</button></nav>
-  <script src="data/show_themes.js"></script><script src="data/episodes.js"></script><script src="app.js"></script>
+  <script src="data/show_themes.js"></script><script src="data/wolf_artwork.js"></script><script src="data/wolf_cast_index.js"></script><script src="data/episodes.js"></script><script src="app.js"></script>
 </body>
 </html>

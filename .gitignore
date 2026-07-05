@@ -1,5 +1,6 @@
 trakt_config.json
 trakt_token.json
+.env.local
 __pycache__/
 *.pyc
 Law_Order_Professional_Watch_Tracker_Trakt_Synced.xlsx

@@ -4,70 +4,110 @@ window.SHOW_THEMES = {
     "secondary": "#111827",
     "accent": "#fecaca",
     "abbr": "L&O",
-    "image": "assets/Law_Order.svg"
+    "image": "https://image.tmdb.org/t/p/w1280/tc7canPSAn2X14hYi6Rl3gZm1o4.jpg",
+    "franchise": "Law & Order",
+    "optional": false,
+    "alwaysShow": true,
+    "connection": "Core Law & Order series"
   },
   "Homicide: Life on the Street": {
     "primary": "#d97706",
     "secondary": "#1f2937",
     "accent": "#fde68a",
     "abbr": "HLOTS",
-    "image": "assets/Homicide_Life_on_the_Street.svg"
+    "image": "https://image.tmdb.org/t/p/w1280/sEkUddzvrgRd70o28aRiZdwdq2p.jpg",
+    "franchise": "Law & Order",
+    "optional": false,
+    "alwaysShow": true,
+    "connection": "Major Law & Order crossover series"
   },
   "Law & Order: Special Victims Unit": {
     "primary": "#2563eb",
     "secondary": "#0f172a",
     "accent": "#bfdbfe",
     "abbr": "SVU",
-    "image": "assets/Law_Order_Special_Victims_Unit.svg"
+    "image": "https://image.tmdb.org/t/p/w1280/obtdxPgmfykYwVnvuYXC5f2xKlQ.jpg",
+    "franchise": "Law & Order",
+    "optional": false,
+    "alwaysShow": true,
+    "connection": "Core Law & Order series"
   },
   "Law & Order: Criminal Intent": {
     "primary": "#7c3aed",
     "secondary": "#111827",
     "accent": "#ddd6fe",
     "abbr": "CI",
-    "image": "assets/Law_Order_Criminal_Intent.svg"
+    "image": "https://image.tmdb.org/t/p/w1280/qLYumObEHeRHFMC6N3SfCrnBFjp.jpg",
+    "franchise": "Law & Order",
+    "optional": false,
+    "alwaysShow": true,
+    "connection": "Core Law & Order series"
   },
   "Law & Order: Trial by Jury": {
     "primary": "#059669",
     "secondary": "#06281d",
     "accent": "#a7f3d0",
     "abbr": "TBJ",
-    "image": "assets/Law_Order_Trial_by_Jury.svg"
+    "image": "https://image.tmdb.org/t/p/w1280/aP4z1ZLsr8dydQCypn3Dg0Uf0hd.jpg",
+    "franchise": "Law & Order",
+    "optional": false,
+    "alwaysShow": true,
+    "connection": "Core Law & Order series"
   },
   "Conviction": {
     "primary": "#db2777",
     "secondary": "#23111c",
     "accent": "#fbcfe8",
     "abbr": "CON",
-    "image": "assets/Conviction.svg"
+    "image": "https://image.tmdb.org/t/p/w1280/uo2Y3aN1ML2JwhFztjE2wazvihx.jpg",
+    "franchise": "Law & Order",
+    "optional": false,
+    "alwaysShow": true,
+    "connection": "Law & Order/SVU character continuation"
   },
   "Law & Order: UK": {
     "primary": "#dc2626",
     "secondary": "#0f172a",
     "accent": "#fee2e2",
     "abbr": "UK",
-    "image": "assets/Law_Order_UK.svg"
+    "image": "https://image.tmdb.org/t/p/w1280/qNqre6kPY8JcogbKPs2oHEaW9Nm.jpg",
+    "franchise": "Law & Order",
+    "optional": false,
+    "alwaysShow": true,
+    "connection": "Official Law & Order adaptation"
   },
   "Law & Order: LA": {
     "primary": "#f97316",
     "secondary": "#1c1917",
     "accent": "#fed7aa",
     "abbr": "LA",
-    "image": "assets/Law_Order_LA.svg"
+    "image": "https://image.tmdb.org/t/p/w1280/i3WNbk47niwSrWe3Q81vqpSndiY.jpg",
+    "franchise": "Law & Order",
+    "optional": false,
+    "alwaysShow": true,
+    "connection": "Law & Order spinoff"
   },
   "Law & Order True Crime": {
     "primary": "#525252",
     "secondary": "#171717",
     "accent": "#e5e5e5",
     "abbr": "TC",
-    "image": "assets/Law_Order_True_Crime.svg"
+    "image": "https://image.tmdb.org/t/p/w1280/o9YZvh82gSfkZuScn4XM9xeNeCY.jpg",
+    "franchise": "Law & Order",
+    "optional": false,
+    "alwaysShow": true,
+    "connection": "Law & Order anthology"
   },
   "Law & Order: Organized Crime": {
     "primary": "#0e7490",
     "secondary": "#0f172a",
     "accent": "#a5f3fc",
     "abbr": "OC",
-    "image": "assets/Law_Order_Organized_Crime.svg"
+    "image": "https://image.tmdb.org/t/p/w1280/3mDSrhLUX2cAhaPqurNBslPh8rz.jpg",
+    "franchise": "Law & Order",
+    "optional": false,
+    "alwaysShow": true,
+    "connection": "SVU continuation / Stabler series"
   },
   "Criminal Intent: Toronto": {
     "primary": "#9333ea",
@@ -81,14 +121,22 @@ window.SHOW_THEMES = {
     "secondary": "#1c1917",
     "accent": "#fef08a",
     "abbr": "DL",
-    "image": "assets/Deadline.svg"
+    "image": "https://image.tmdb.org/t/p/w1280/7QvPNPokOVjpoti4ezAGVksgLnL.jpg",
+    "franchise": "Law & Order",
+    "optional": false,
+    "alwaysShow": true,
+    "connection": "Shared Law & Order character/cast connection"
   },
   "New York Undercover": {
     "primary": "#0891b2",
     "secondary": "#082f49",
     "accent": "#cffafe",
     "abbr": "NYU",
-    "image": "assets/New_York_Undercover.svg"
+    "image": "https://image.tmdb.org/t/p/w1280/pLC7Iv0YyEn6L1uwgNs4z4hIJyf.jpg",
+    "franchise": "Law & Order",
+    "optional": false,
+    "alwaysShow": true,
+    "connection": "Shared character/crossover-adjacent Wolf series"
   },
   "Law & Order: SVU": {
     "primary": "#2563eb",
@@ -96,5 +144,364 @@ window.SHOW_THEMES = {
     "accent": "#bfdbfe",
     "abbr": "SVU",
     "image": "assets/Law_Order_SVU.svg"
+  },
+  "Law & Order Toronto: Criminal Intent": {
+    "primary": "#b91c1c",
+    "secondary": "#0f172a",
+    "accent": "#e2e8f0",
+    "abbr": "LOTC",
+    "image": "https://image.tmdb.org/t/p/w1280/u3HllpiOl4C9FnjSAQeh3ftB4cv.jpg",
+    "franchise": "Law & Order",
+    "optional": false,
+    "alwaysShow": true,
+    "connection": "Official Criminal Intent adaptation"
+  },
+  "In Plain Sight": {
+    "primary": "#d97706",
+    "secondary": "#0f172a",
+    "accent": "#e2e8f0",
+    "abbr": "IPS",
+    "image": "https://image.tmdb.org/t/p/w1280/yamqMxxRgjX2jR5Q5Ue3KbCkuhO.jpg",
+    "franchise": "Crossover Adjacent",
+    "optional": false,
+    "alwaysShow": true,
+    "connection": "Official crossover with Law & Order: Criminal Intent"
+  },
+  "Chicago Fire": {
+    "primary": "#dc2626",
+    "secondary": "#0f172a",
+    "accent": "#e2e8f0",
+    "abbr": "CF",
+    "image": "https://image.tmdb.org/t/p/w1280/14LzHqJrFcHk7ruMNCXpEkB0Thg.jpg",
+    "franchise": "One Chicago",
+    "optional": false,
+    "alwaysShow": true,
+    "connection": "Core One Chicago series"
+  },
+  "Chicago P.D.": {
+    "primary": "#dc2626",
+    "secondary": "#0f172a",
+    "accent": "#e2e8f0",
+    "abbr": "CPD",
+    "image": "https://image.tmdb.org/t/p/w1280/rhp8vYG1sIFtqH3ETmHJuI5Z3Cb.jpg",
+    "franchise": "One Chicago",
+    "optional": false,
+    "alwaysShow": true,
+    "connection": "Core One Chicago series; SVU crossover series"
+  },
+  "Chicago Med": {
+    "primary": "#dc2626",
+    "secondary": "#0f172a",
+    "accent": "#e2e8f0",
+    "abbr": "CM",
+    "image": "https://image.tmdb.org/t/p/w1280/x2jNLrYw1s9i6kihEJqsBQgs9nR.jpg",
+    "franchise": "One Chicago",
+    "optional": false,
+    "alwaysShow": true,
+    "connection": "Core One Chicago series"
+  },
+  "Chicago Justice": {
+    "primary": "#dc2626",
+    "secondary": "#0f172a",
+    "accent": "#e2e8f0",
+    "abbr": "CJ",
+    "image": "https://image.tmdb.org/t/p/w1280/7WyWk8bWgbWKqnhNEj8PYt4VjPo.jpg",
+    "franchise": "One Chicago",
+    "optional": false,
+    "alwaysShow": true,
+    "connection": "One Chicago / Law & Order legal crossover-adjacent series"
+  },
+  "FBI": {
+    "primary": "#1d4ed8",
+    "secondary": "#0f172a",
+    "accent": "#e2e8f0",
+    "abbr": "F",
+    "image": "https://image.tmdb.org/t/p/w1280/5DFvscYGpcFaQMJljCic5gbzVe6.jpg",
+    "franchise": "FBI",
+    "optional": false,
+    "alwaysShow": true,
+    "connection": "Core FBI series"
+  },
+  "FBI: Most Wanted": {
+    "primary": "#1d4ed8",
+    "secondary": "#0f172a",
+    "accent": "#e2e8f0",
+    "abbr": "FMW",
+    "image": "https://image.tmdb.org/t/p/w1280/4BrWdbv2Cqe0zLqvNzkoednZQAb.jpg",
+    "franchise": "FBI",
+    "optional": false,
+    "alwaysShow": true,
+    "connection": "Core FBI spinoff"
+  },
+  "FBI: International": {
+    "primary": "#1d4ed8",
+    "secondary": "#0f172a",
+    "accent": "#e2e8f0",
+    "abbr": "FI",
+    "image": "https://image.tmdb.org/t/p/w1280/8JtKCIBzf3AYbsxBFSL74NoGH2u.jpg",
+    "franchise": "FBI",
+    "optional": false,
+    "alwaysShow": true,
+    "connection": "Core FBI spinoff"
+  },
+  "Crime & Punishment": {
+    "primary": "#525252",
+    "secondary": "#0f172a",
+    "accent": "#e2e8f0",
+    "abbr": "CP",
+    "image": "https://image.tmdb.org/t/p/w1280/1Evr25h6TJCi7Vcxy1eVVSTLU87.jpg",
+    "franchise": "Crossover Adjacent",
+    "optional": true,
+    "alwaysShow": false,
+    "connection": "Dick Wolf adjacent unscripted/legal series"
+  },
+  "Mann & Machine": {
+    "primary": "#525252",
+    "secondary": "#0f172a",
+    "accent": "#e2e8f0",
+    "abbr": "MM",
+    "image": "https://image.tmdb.org/t/p/w1280/8R1lZAs6kTHQCWSkFeO8b24XkBI.jpg",
+    "franchise": "Crossover Adjacent",
+    "optional": true,
+    "alwaysShow": false,
+    "connection": "Dick Wolf-created adjacent show"
+  },
+  "Exiled: A Law & Order Movie": {
+    "primary": "#b91c1c",
+    "secondary": "#0f172a",
+    "accent": "#e2e8f0",
+    "abbr": "EALO",
+    "image": "assets/Exiled_A_Law_Order_Movie.svg",
+    "franchise": "Wolf Specials",
+    "optional": false,
+    "alwaysShow": true,
+    "connection": "Direct Law & Order TV movie"
+  },
+  "Homicide: The Movie": {
+    "primary": "#d97706",
+    "secondary": "#0f172a",
+    "accent": "#e2e8f0",
+    "abbr": "HTM",
+    "image": "assets/Homicide_The_Movie.svg",
+    "franchise": "Wolf Specials",
+    "optional": false,
+    "alwaysShow": true,
+    "connection": "Direct Homicide continuation movie"
+  },
+  "Players": {
+    "primary": "#475569",
+    "secondary": "#0f172a",
+    "accent": "#e2e8f0",
+    "abbr": "P",
+    "image": "https://image.tmdb.org/t/p/w1280/nsgPc1Y5IkAZ7fSkGhxFBwYoD8G.jpg",
+    "franchise": "Crossover Adjacent",
+    "optional": true,
+    "alwaysShow": false,
+    "connection": "Dick Wolf-created adjacent show"
+  },
+  "New York News": {
+    "primary": "#475569",
+    "secondary": "#0f172a",
+    "accent": "#e2e8f0",
+    "abbr": "NYN",
+    "image": "https://image.tmdb.org/t/p/w1280/71zXrZS8RcifffebVsIhaZZ46VP.jpg",
+    "franchise": "Crossover Adjacent",
+    "optional": true,
+    "alwaysShow": false,
+    "connection": "Dick Wolf-created adjacent show"
+  },
+  "Arrest & Trial": {
+    "primary": "#475569",
+    "secondary": "#0f172a",
+    "accent": "#e2e8f0",
+    "abbr": "AT",
+    "image": "assets/Arrest_Trial.svg",
+    "franchise": "Crossover Adjacent",
+    "optional": true,
+    "alwaysShow": false,
+    "connection": "Dick Wolf-produced adjacent format"
+  },
+  "Dragnet": {
+    "primary": "#475569",
+    "secondary": "#0f172a",
+    "accent": "#e2e8f0",
+    "abbr": "D",
+    "image": "https://image.tmdb.org/t/p/w1280/66Qqh7rJTCOSZgJkVAJa3wfUMMI.jpg",
+    "franchise": "Crossover Adjacent",
+    "optional": true,
+    "alwaysShow": false,
+    "connection": "Dick Wolf-developed adjacent police procedural"
+  },
+  "Cold Justice": {
+    "primary": "#475569",
+    "secondary": "#0f172a",
+    "accent": "#e2e8f0",
+    "abbr": "CJ",
+    "image": "https://image.tmdb.org/t/p/w1280/aTvLuNGRSBrFcQPlOnYy7YVy5lu.jpg",
+    "franchise": "Crossover Adjacent",
+    "optional": true,
+    "alwaysShow": false,
+    "connection": "Wolf Entertainment unscripted adjacent show"
+  },
+  "Blood & Money": {
+    "primary": "#475569",
+    "secondary": "#0f172a",
+    "accent": "#e2e8f0",
+    "abbr": "BM",
+    "image": "assets/Blood_Money.svg",
+    "franchise": "Crossover Adjacent",
+    "optional": true,
+    "alwaysShow": false,
+    "connection": "Wolf Entertainment unscripted adjacent show"
+  },
+  "LA Fire & Rescue": {
+    "primary": "#475569",
+    "secondary": "#0f172a",
+    "accent": "#e2e8f0",
+    "abbr": "LFR",
+    "image": "https://image.tmdb.org/t/p/w1280/dT6H2wYM9h4HtT16MhYj9l2aVqo.jpg",
+    "franchise": "Crossover Adjacent",
+    "optional": true,
+    "alwaysShow": false,
+    "connection": "Wolf Entertainment emergency-services adjacent show"
+  },
+  "On Call": {
+    "primary": "#475569",
+    "secondary": "#0f172a",
+    "accent": "#e2e8f0",
+    "abbr": "OC",
+    "image": "https://image.tmdb.org/t/p/w1280/urgOc75FXlEU64eToxSypCarJoN.jpg",
+    "franchise": "Crossover Adjacent",
+    "optional": true,
+    "alwaysShow": false,
+    "connection": "Wolf Entertainment police procedural adjacent show"
+  },
+  "CIA (2026)": {
+    "primary": "#1d4ed8",
+    "secondary": "#0f172a",
+    "accent": "#bfdbfe",
+    "abbr": "C2",
+    "image": "https://image.tmdb.org/t/p/w1280/5lyGqz3YiqpKNgS78xiZ4ImpB8w.jpg",
+    "franchise": "FBI"
+  },
+  "Swift Justice": {
+    "primary": "#d97706",
+    "secondary": "#1c1917",
+    "accent": "#fde68a",
+    "abbr": "SJ",
+    "image": "assets/Swift_Justice.svg",
+    "franchise": "Crossover Adjacent"
+  },
+  "South Beach": {
+    "primary": "#d97706",
+    "secondary": "#1c1917",
+    "accent": "#fde68a",
+    "abbr": "SB",
+    "image": "https://image.tmdb.org/t/p/w1280/eylxeeeuBxsCi7iS5824DZUHuwM.jpg",
+    "franchise": "Crossover Adjacent"
+  },
+  "D.C.": {
+    "primary": "#d97706",
+    "secondary": "#1c1917",
+    "accent": "#fde68a",
+    "abbr": "DC",
+    "image": "https://image.tmdb.org/t/p/w1280/5fMDvIekx6GfW6XDmFcxZisIu0m.jpg",
+    "franchise": "Crossover Adjacent"
+  },
+  "Feds": {
+    "primary": "#d97706",
+    "secondary": "#1c1917",
+    "accent": "#fde68a",
+    "abbr": "F",
+    "image": "assets/Feds.svg",
+    "franchise": "Crossover Adjacent"
+  },
+  "Gideon Oliver": {
+    "primary": "#d97706",
+    "secondary": "#1c1917",
+    "accent": "#fde68a",
+    "abbr": "GO",
+    "image": "https://image.tmdb.org/t/p/w1280/kYqGkJKCpRivQpZ00qWabuGItKg.jpg",
+    "franchise": "Crossover Adjacent"
+  },
+  "Christine Cromwell": {
+    "primary": "#d97706",
+    "secondary": "#1c1917",
+    "accent": "#fde68a",
+    "abbr": "CC",
+    "image": "https://image.tmdb.org/t/p/w1280/zXN2cAhKZGVc2gNayKMEsTo9MBx.jpg",
+    "franchise": "Crossover Adjacent"
+  },
+  "Nasty Boys": {
+    "primary": "#d97706",
+    "secondary": "#1c1917",
+    "accent": "#fde68a",
+    "abbr": "NB",
+    "image": "https://image.tmdb.org/t/p/w1280/s6Vmic8muAftHV4HjVLgiSvd4Q.jpg",
+    "franchise": "Crossover Adjacent"
+  },
+  "The Wright Verdicts": {
+    "primary": "#d97706",
+    "secondary": "#1c1917",
+    "accent": "#fde68a",
+    "abbr": "TWV",
+    "image": "https://image.tmdb.org/t/p/w1280/71sp8trh0FoDoa3ZuINDsG9G2w8.jpg",
+    "franchise": "Crossover Adjacent"
+  },
+  "H.E.L.P.": {
+    "primary": "#d97706",
+    "secondary": "#1c1917",
+    "accent": "#fde68a",
+    "abbr": "HELP",
+    "image": "assets/H_E_L_P.svg",
+    "franchise": "Crossover Adjacent"
+  },
+  "The Human Factor": {
+    "primary": "#d97706",
+    "secondary": "#1c1917",
+    "accent": "#fde68a",
+    "abbr": "THF",
+    "image": "assets/The_Human_Factor.svg",
+    "franchise": "Crossover Adjacent"
+  },
+  "The Invisible Man": {
+    "primary": "#d97706",
+    "secondary": "#1c1917",
+    "accent": "#fde68a",
+    "abbr": "TIM",
+    "image": "https://image.tmdb.org/t/p/w1280/cdGS9KyuJcT141SHgXRSMTVyZYN.jpg",
+    "franchise": "Crossover Adjacent"
+  },
+  "Paris enquêtes criminelles": {
+    "primary": "#b91c1c",
+    "secondary": "#111827",
+    "accent": "#fecaca",
+    "abbr": "PETC",
+    "image": "https://image.tmdb.org/t/p/w1280/xtyLJsHhw7rqEEUAl2r0Uqrxtuj.jpg",
+    "franchise": "Law & Order"
+  },
+  "Law & Order: Division of Field Investigation": {
+    "primary": "#b91c1c",
+    "secondary": "#111827",
+    "accent": "#fecaca",
+    "abbr": "LODO",
+    "image": "assets/Law_Order_Division_of_Field_Investigation.svg",
+    "franchise": "Law & Order"
+  },
+  "L.A. Dragnet": {
+    "primary": "#475569",
+    "secondary": "#0f172a",
+    "accent": "#e2e8f0",
+    "abbr": "LAD",
+    "image": "https://image.tmdb.org/t/p/w1280/u2BiSwlO3lPMZTpsEimur7teRgq.jpg",
+    "franchise": "Wolf Adjacent"
+  },
+  "CIA": {
+    "primary": "#1d4ed8",
+    "secondary": "#0f172a",
+    "accent": "#bfdbfe",
+    "abbr": "C",
+    "image": "assets/CIA.svg",
+    "franchise": "FBI"
   }
 };

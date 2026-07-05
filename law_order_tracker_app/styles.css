@@ -17,3 +17,58 @@ button,input,select,.fileBtn{background:linear-gradient(180deg,rgba(255,255,255,
 @media(max-width:760px){.topbar{align-items:flex-start}.topActions{flex-direction:column}.appShell{padding-top:12px}.dashboard{grid-template-columns:1fr 1fr}.hero{grid-template-columns:1fr;min-height:0}.poster{height:145px}.syncPanel{align-items:flex-start;flex-direction:column}.controls{grid-template-columns:1fr}.seasonControls{grid-template-columns:1fr}.ep{grid-template-columns:52px 1fr}.epArt{display:none}.statusBtns{grid-template-columns:repeat(2,1fr)}.badgeLogo{width:38px;height:38px}.topbar p{display:none}}
 @media(max-width:480px){h1{font-size:16px}.dashboard{gap:10px}.card{border-radius:18px;padding:13px}.stat strong{font-size:26px}.hero h2{font-size:28px}.poster{height:120px}.showChip{font-size:13px}.showChip small{display:none}button,input,select,.fileBtn{font-size:14px}.toastHost{right:10px;left:10px;max-width:none}.bottomNav button{font-size:13px}}
 @supports not (color:color-mix(in srgb,red,blue)){.hero,.ep,.showChip::before{background:var(--panel)}input:focus,select:focus,button:focus-visible{outline-color:rgba(239,68,68,.32)}}
+
+
+/* Wolf Universe v2 UI refinements */
+.controls{
+  grid-template-columns:minmax(220px,1.5fr) minmax(170px,.85fr) minmax(155px,.75fr) minmax(135px,.65fr) minmax(230px,1.05fr) minmax(145px,.7fr) auto;
+  align-items:center;
+}
+.scopeSummary{margin-top:14px;overflow:hidden}
+.scopeHeader{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}
+.scopeHeader strong{display:block;font-size:18px}
+.scopeHeader span{display:block;color:var(--muted);font-size:13px;margin-top:3px}
+.scopeMiniRail{display:flex;gap:10px;overflow:auto;padding-bottom:4px;scrollbar-color:var(--border) transparent}
+.scopeMiniChip{--showColor:var(--brand);flex:0 0 auto;min-width:160px;text-align:left;border-radius:999px;display:flex;justify-content:space-between;align-items:center;gap:10px;background:linear-gradient(90deg,color-mix(in srgb,var(--showColor) 20%,transparent),transparent 80%),var(--panel2)}
+.scopeMiniChip small{color:var(--muted)}
+.showStripEmpty{color:var(--muted);padding:10px 12px;border:1px dashed var(--border);border-radius:999px;background:var(--panel)}
+.overview{color:var(--muted);font-size:13px;line-height:1.45;margin:9px 0 0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.poster,.epArt,.scopeMiniChip,.showChip{transition:transform .16s ease,filter .16s ease,border-color .16s ease,box-shadow .16s ease}
+.poster:hover,.epArt:hover{transform:scale(1.025);filter:brightness(1.08);cursor:zoom-in;box-shadow:0 18px 42px rgba(0,0,0,.36)}
+.showChip:hover,.scopeMiniChip:hover{transform:translateY(-2px);border-color:color-mix(in srgb,var(--showColor) 70%,var(--border))}
+.lightboxOverlay{position:fixed;inset:0;z-index:120;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.78);backdrop-filter:blur(10px)}
+.lightboxOverlay.show{display:flex}
+.lightboxDialog{position:relative;max-width:min(1120px,96vw);max-height:92vh;display:grid;gap:10px}
+.lightboxDialog img{max-width:100%;max-height:78vh;object-fit:contain;border-radius:20px;border:1px solid rgba(255,255,255,.2);box-shadow:0 30px 90px rgba(0,0,0,.55);background:#050712}
+.lightboxCaption{display:flex;flex-direction:column;gap:3px;color:white;background:rgba(10,15,25,.72);border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:12px 14px}
+.lightboxCaption span{color:#cbd5e1;font-size:13px}
+.lightboxClose{position:absolute;right:10px;top:10px;z-index:2;width:42px;height:42px;border-radius:999px;background:rgba(0,0,0,.65);color:white;border:1px solid rgba(255,255,255,.28);font-size:24px;line-height:1;padding:0}
+@media(max-width:1200px){
+  .controls{grid-template-columns:1fr 1fr 1fr}
+}
+@media(max-width:760px){
+  .controls{grid-template-columns:1fr}
+  .ep{grid-template-columns:52px 92px 1fr}
+  .epArt{display:block;width:92px;height:62px}
+  .epMain{grid-column:2 / -1}
+  .statusBtns{grid-column:1 / -1}
+  .scopeMiniChip{min-width:145px}
+  .showChip small{display:inline}
+}
+@media(max-width:480px){
+  .ep{grid-template-columns:44px 76px 1fr;gap:10px;padding:11px}
+  .epArt{width:76px;height:52px;border-radius:12px}
+  .order{padding:9px 5px;font-size:12px}
+  .ep h3{font-size:15px}
+  .meta,.overview,.crossover{font-size:12px}
+  .statusBtns button{font-size:12px;padding:8px 6px}
+  .scopeMiniRail,.showStrip{gap:8px}
+}
+
+/* Wolf Universe v3.3 professional UI fixes */
+.controls{grid-template-columns:minmax(220px,1.3fr) minmax(155px,.8fr) minmax(155px,.8fr) minmax(155px,.8fr) minmax(180px,.9fr) minmax(230px,1fr) minmax(145px,.7fr) auto;align-items:center}
+.showChip,.scopeMiniChip{min-height:54px;padding:10px 14px;align-items:center}.showChip{flex-direction:column;justify-content:center;gap:2px;text-align:center;min-width:170px}.showChip .dot{position:absolute;left:12px;top:50%;transform:translateY(-50%)}.showChipTitle,.showChip span:not(.dot){font-weight:850;line-height:1.1;max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.showChip small,.scopeMiniChip small{font-size:12px;opacity:.95}.scopeMiniChip{display:flex;flex-direction:column;justify-content:center;text-align:center;min-width:185px}.scopeMiniChip span{font-weight:850;max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ep{cursor:pointer;transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease}.ep:hover{box-shadow:0 18px 44px color-mix(in srgb,var(--showColor) 20%,rgba(0,0,0,.24))}.ep .statusBtns,.ep .statusBtns *,.epArt{cursor:auto}.epArt,.poster,.detailArtTile img{cursor:zoom-in;transition:transform .18s ease,filter .18s ease}.epArt:hover,.poster:hover,.detailArtTile:hover img{transform:scale(1.035);filter:brightness(1.08)}.overview{color:var(--muted);font-size:13px;line-height:1.45;margin:9px 0 0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.mutedText{color:var(--muted)}
+.episodeModalOverlay{position:fixed;inset:0;z-index:92;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,.68);backdrop-filter:blur(12px)}.episodeModalOverlay.show{display:flex}.episodeDetail{width:min(1180px,calc(100vw - 28px));max-height:calc(100vh - 34px);overflow:auto;border:1px solid color-mix(in srgb,var(--showColor,var(--brand)) 52%,var(--border));background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.025)),var(--panel);border-radius:28px;box-shadow:0 35px 120px rgba(0,0,0,.62);position:relative}.episodeDetailClose{position:sticky;top:14px;float:right;z-index:3;width:52px;height:52px;border-radius:999px;display:grid;place-items:center;font-size:34px;line-height:1;padding:0;margin:14px 14px -66px auto;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.28);color:#fff}.episodeDetailHero{display:grid;grid-template-columns:minmax(280px,1fr) minmax(320px,1.05fr);gap:22px;padding:22px}.episodeDetailBackdrop{width:100%;min-height:320px;max-height:520px;object-fit:cover;border-radius:22px;border:1px solid rgba(255,255,255,.18);box-shadow:var(--shadow)}.episodeDetailInfo h2{font-size:clamp(25px,3.2vw,46px);letter-spacing:-.04em;line-height:1.03;margin:8px 0 12px}.detailKicker{color:color-mix(in srgb,var(--showColor,var(--brand)) 70%,#fff);font-weight:850;text-transform:uppercase;font-size:12px;letter-spacing:.08em}.detailOverview{color:var(--muted);font-size:15px;line-height:1.58}.detailGrid{display:grid;grid-template-columns:minmax(320px,.9fr) 1fr;gap:18px;padding:0 22px 22px}.detailGrid h3{margin:0 0 10px}.detailArtGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.detailArtTile{padding:0;overflow:hidden;border-radius:18px;position:relative;background:var(--panel2)}.detailArtTile img{width:100%;height:128px;object-fit:cover;display:block}.detailArtTile span{position:absolute;left:8px;bottom:8px;background:rgba(0,0,0,.62);border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:4px 8px;font-size:12px;color:#fff}.castGrid{display:flex;flex-wrap:wrap;gap:8px}.castPill{display:inline-flex;flex-direction:column;gap:2px;padding:8px 10px;border-radius:14px;background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02)),var(--panel2);border:1px solid var(--border)}.castPill small{color:var(--muted);font-size:12px}.lightboxOverlay{z-index:120}.lightboxClose{width:58px!important;height:58px!important;font-size:38px!important;border-radius:999px!important;background:rgba(0,0,0,.72)!important;color:white!important;border:1px solid rgba(255,255,255,.35)!important}.lightboxDialog{position:relative;z-index:121}
+@media(max-width:980px){.controls{grid-template-columns:1fr 1fr}.episodeDetailHero,.detailGrid{grid-template-columns:1fr}.episodeDetailBackdrop{min-height:220px}.detailArtGrid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:760px){.controls{grid-template-columns:1fr}.ep{grid-template-columns:54px 96px minmax(0,1fr)}.epArt{display:block!important;width:96px;height:64px}.statusBtns{grid-column:1/-1}.showChip small{display:block!important}.episodeDetailHero,.detailGrid{padding:14px}.detailArtGrid{grid-template-columns:1fr 1fr}.episodeDetailClose{width:48px;height:48px;font-size:32px}.episodeDetailBackdrop{min-height:190px}.scopeMiniChip,.showChip{min-width:150px}}
+@media(max-width:480px){.ep{grid-template-columns:48px 82px minmax(0,1fr);gap:10px}.epArt{width:82px;height:58px}.ep h3{font-size:15px}.meta{font-size:12px}.detailArtGrid{grid-template-columns:1fr}.castPill{width:100%}}

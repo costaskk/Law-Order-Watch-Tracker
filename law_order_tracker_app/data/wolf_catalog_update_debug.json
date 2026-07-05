@@ -1,0 +1,25 @@
+{
+  "generatedAt": "2026-07-04T17:27:00.773607+00:00",
+  "dryRun": false,
+  "originalRows": 3910,
+  "finalRows": 3911,
+  "rowsAdded": 1,
+  "changesReported": 1,
+  "failed": [
+    {
+      "show": "Law & Order: Division of Field Investigation",
+      "slug": "law-order-division-of-field-investigation",
+      "error": "not found"
+    }
+  ],
+  "showsChecked": 47,
+  "moviesChecked": 2,
+  "changesSample": [
+    {
+      "type": "movie_added",
+      "row": "Homicide: The Movie",
+      "old": "",
+      "new": "Homicide: The Movie|0|13|movie|19764"
+    }
+  ]
+}

@@ -1,0 +1,506 @@
+{
+  "aliases": {
+    "Law & Order: SVU": "Law & Order: Special Victims Unit",
+    "Law & Order SVU": "Law & Order: Special Victims Unit",
+    "Criminal Intent": "Law & Order: Criminal Intent",
+    "Trial by Jury": "Law & Order: Trial by Jury",
+    "True Crime": "Law & Order True Crime",
+    "NY Undercover": "New York Undercover",
+    "Chicago PD": "Chicago P.D.",
+    "Chicago P.D": "Chicago P.D.",
+    "FBI: CIA": "CIA (2026)"
+  },
+  "scopes": {
+    "core": "Core Wolf Universe",
+    "connected": "Core + crossover / important adjacent",
+    "complete": "Complete Dick Wolf archive",
+    "adjacent": "Adjacent only"
+  },
+  "shows": [
+    {
+      "show": "Law & Order",
+      "slug": "law-order",
+      "franchise": "Law & Order",
+      "scope": "core",
+      "alwaysShow": true,
+      "connection": "Core Law & Order franchise"
+    },
+    {
+      "show": "Law & Order: Special Victims Unit",
+      "slug": "law-order-special-victims-unit",
+      "franchise": "Law & Order",
+      "scope": "core",
+      "alwaysShow": true,
+      "connection": "Core Law & Order franchise"
+    },
+    {
+      "show": "Law & Order: Criminal Intent",
+      "slug": "law-order-criminal-intent",
+      "franchise": "Law & Order",
+      "aliases": [
+        "Criminal Intent"
+      ],
+      "scope": "core",
+      "alwaysShow": true,
+      "connection": "Core Law & Order franchise"
+    },
+    {
+      "show": "Law & Order: Trial by Jury",
+      "slug": "law-order-trial-by-jury",
+      "franchise": "Law & Order",
+      "aliases": [
+        "Trial by Jury"
+      ],
+      "scope": "core",
+      "alwaysShow": true,
+      "connection": "Core Law & Order franchise"
+    },
+    {
+      "show": "Law & Order: Organized Crime",
+      "slug": "law-order-organized-crime",
+      "franchise": "Law & Order",
+      "scope": "core",
+      "alwaysShow": true,
+      "connection": "Core Law & Order franchise"
+    },
+    {
+      "show": "Law & Order: LA",
+      "slug": "law-and-order-la",
+      "alt_slugs": [
+        "law-order-los-angeles",
+        "law-order-la",
+        "law-and-order-los-angeles"
+      ],
+      "franchise": "Law & Order",
+      "scope": "core",
+      "alwaysShow": true,
+      "connection": "Law & Order franchise spinoff"
+    },
+    {
+      "show": "Law & Order: UK",
+      "slug": "law-order-uk",
+      "franchise": "Law & Order",
+      "scope": "core",
+      "alwaysShow": true,
+      "connection": "Law & Order format/franchise"
+    },
+    {
+      "show": "Law & Order True Crime",
+      "slug": "law-order-true-crime",
+      "franchise": "Law & Order",
+      "aliases": [
+        "True Crime"
+      ],
+      "scope": "core",
+      "alwaysShow": true,
+      "connection": "Law & Order anthology spinoff"
+    },
+    {
+      "show": "Law & Order Toronto: Criminal Intent",
+      "slug": "law-order-toronto-criminal-intent",
+      "franchise": "Law & Order",
+      "scope": "core",
+      "alwaysShow": true,
+      "connection": "Law & Order international franchise"
+    },
+    {
+      "show": "Homicide: Life on the Street",
+      "slug": "homicide-life-on-the-street",
+      "franchise": "Law & Order",
+      "scope": "connected",
+      "alwaysShow": true,
+      "connection": "Direct crossover with Law & Order; Munch bridge to SVU"
+    },
+    {
+      "show": "New York Undercover",
+      "slug": "new-york-undercover",
+      "franchise": "Law & Order",
+      "scope": "connected",
+      "alwaysShow": true,
+      "connection": "Wolf-produced New York police drama; crossover-adjacent to the Law & Order era"
+    },
+    {
+      "show": "Deadline",
+      "slug": "deadline",
+      "franchise": "Law & Order",
+      "scope": "connected",
+      "alwaysShow": true,
+      "connection": "Dick Wolf New York newspaper/legal-adjacent drama"
+    },
+    {
+      "show": "Conviction",
+      "slug": "conviction",
+      "franchise": "Law & Order",
+      "scope": "connected",
+      "alwaysShow": true,
+      "connection": "Law & Order spinoff with Alexandra Cabot"
+    },
+    {
+      "show": "In Plain Sight",
+      "slug": "in-plain-sight",
+      "franchise": "Crossover Adjacent",
+      "scope": "connected",
+      "alwaysShow": true,
+      "connection": "SVU character crossover / shared Dick Wolf connection"
+    },
+    {
+      "show": "Chicago Fire",
+      "slug": "chicago-fire",
+      "franchise": "One Chicago",
+      "scope": "core",
+      "alwaysShow": true,
+      "connection": "Core One Chicago franchise"
+    },
+    {
+      "show": "Chicago P.D.",
+      "slug": "chicago-p-d",
+      "alt_slugs": [
+        "chicago-pd"
+      ],
+      "franchise": "One Chicago",
+      "scope": "core",
+      "alwaysShow": true,
+      "connection": "Core One Chicago franchise; crossovers with SVU/FBI"
+    },
+    {
+      "show": "Chicago Med",
+      "slug": "chicago-med",
+      "franchise": "One Chicago",
+      "scope": "core",
+      "alwaysShow": true,
+      "connection": "Core One Chicago franchise"
+    },
+    {
+      "show": "Chicago Justice",
+      "slug": "chicago-justice",
+      "franchise": "One Chicago",
+      "scope": "core",
+      "alwaysShow": true,
+      "connection": "Core One Chicago legal spinoff"
+    },
+    {
+      "show": "FBI",
+      "slug": "fbi",
+      "franchise": "FBI",
+      "scope": "core",
+      "alwaysShow": true,
+      "connection": "Core FBI franchise"
+    },
+    {
+      "show": "FBI: Most Wanted",
+      "slug": "fbi-most-wanted",
+      "franchise": "FBI",
+      "scope": "core",
+      "alwaysShow": true,
+      "connection": "Core FBI franchise"
+    },
+    {
+      "show": "FBI: International",
+      "slug": "fbi-international",
+      "franchise": "FBI",
+      "scope": "core",
+      "alwaysShow": true,
+      "connection": "Core FBI franchise"
+    },
+    {
+      "show": "CIA (2026)",
+      "slug": "cia-2026",
+      "alt_slugs": [
+        "fbi-cia-2026"
+      ],
+      "imdb": "tt35515227",
+      "franchise": "FBI",
+      "scope": "core",
+      "optional": false,
+      "alwaysShow": true,
+      "connection": "Official 2026 Dick Wolf / FBI spinoff. The unrelated 1992 CIA show at Trakt slug cia / IMDb tt0250140 is intentionally excluded."
+    },
+    {
+      "show": "Crime & Punishment",
+      "slug": "crime-punishment",
+      "franchise": "Crossover Adjacent",
+      "scope": "complete",
+      "optional": true,
+      "alwaysShow": false,
+      "connection": "Dick Wolf reality/legal series"
+    },
+    {
+      "show": "Mann & Machine",
+      "slug": "mann-machine",
+      "franchise": "Crossover Adjacent",
+      "scope": "complete",
+      "optional": true,
+      "alwaysShow": false,
+      "connection": "Early Dick Wolf sci-fi police series"
+    },
+    {
+      "show": "Players",
+      "slug": "players",
+      "alt_slugs": [
+        "players-1997"
+      ],
+      "franchise": "Crossover Adjacent",
+      "scope": "complete",
+      "optional": true,
+      "alwaysShow": false,
+      "connection": "Dick Wolf crime drama"
+    },
+    {
+      "show": "New York News",
+      "slug": "new-york-news",
+      "franchise": "Crossover Adjacent",
+      "scope": "complete",
+      "optional": true,
+      "alwaysShow": false,
+      "connection": "Dick Wolf-produced New York drama"
+    },
+    {
+      "show": "Arrest & Trial",
+      "slug": "arrest-trial",
+      "alt_slugs": [
+        "arrest-and-trial"
+      ],
+      "franchise": "Crossover Adjacent",
+      "scope": "complete",
+      "optional": true,
+      "alwaysShow": false,
+      "connection": "Dick Wolf reality/legal anthology"
+    },
+    {
+      "show": "Dragnet",
+      "slug": "dragnet",
+      "alt_slugs": [
+        "dragnet-2003",
+        "l-a-dragnet"
+      ],
+      "franchise": "Crossover Adjacent",
+      "scope": "complete",
+      "optional": true,
+      "alwaysShow": false,
+      "connection": "Dick Wolf revival/producer connection"
+    },
+    {
+      "show": "Cold Justice",
+      "slug": "cold-justice",
+      "franchise": "Crossover Adjacent",
+      "scope": "complete",
+      "optional": true,
+      "alwaysShow": false,
+      "connection": "Wolf Entertainment unscripted true-crime series"
+    },
+    {
+      "show": "Blood & Money",
+      "slug": "blood-money",
+      "alt_slugs": [
+        "blood-and-money"
+      ],
+      "franchise": "Crossover Adjacent",
+      "scope": "complete",
+      "optional": true,
+      "alwaysShow": false,
+      "connection": "Wolf Entertainment true-crime series"
+    },
+    {
+      "show": "LA Fire & Rescue",
+      "slug": "la-fire-rescue",
+      "alt_slugs": [
+        "la-fire-and-rescue"
+      ],
+      "franchise": "Crossover Adjacent",
+      "scope": "complete",
+      "optional": true,
+      "alwaysShow": false,
+      "connection": "Wolf Entertainment first-responder docuseries"
+    },
+    {
+      "show": "On Call",
+      "slug": "on-call",
+      "franchise": "Crossover Adjacent",
+      "scope": "connected",
+      "optional": true,
+      "alwaysShow": true,
+      "connection": "Wolf Entertainment scripted police series; created by Elliot Wolf/Tim Walsh, executive produced by Dick Wolf"
+    },
+    {
+      "show": "Swift Justice",
+      "slug": "swift-justice",
+      "franchise": "Crossover Adjacent",
+      "scope": "complete",
+      "optional": true,
+      "alwaysShow": false,
+      "connection": "Dick Wolf-created crime drama"
+    },
+    {
+      "show": "South Beach",
+      "slug": "south-beach",
+      "alt_slugs": [
+        "south-beach-1993"
+      ],
+      "franchise": "Crossover Adjacent",
+      "scope": "complete",
+      "optional": true,
+      "alwaysShow": false,
+      "connection": "Dick Wolf-created crime drama"
+    },
+    {
+      "show": "D.C.",
+      "slug": "d-c",
+      "alt_slugs": [
+        "dc"
+      ],
+      "franchise": "Crossover Adjacent",
+      "scope": "complete",
+      "optional": true,
+      "alwaysShow": false,
+      "connection": "Dick Wolf-created political drama"
+    },
+    {
+      "show": "Feds",
+      "slug": "feds",
+      "franchise": "Crossover Adjacent",
+      "scope": "complete",
+      "optional": true,
+      "alwaysShow": false,
+      "connection": "Dick Wolf-created federal-law series"
+    },
+    {
+      "show": "Gideon Oliver",
+      "slug": "gideon-oliver",
+      "franchise": "Crossover Adjacent",
+      "scope": "complete",
+      "optional": true,
+      "alwaysShow": false,
+      "connection": "Early Dick Wolf television work"
+    },
+    {
+      "show": "Christine Cromwell",
+      "slug": "christine-cromwell",
+      "franchise": "Crossover Adjacent",
+      "scope": "complete",
+      "optional": true,
+      "alwaysShow": false,
+      "connection": "Early Dick Wolf legal/crime work"
+    },
+    {
+      "show": "Nasty Boys",
+      "slug": "nasty-boys",
+      "franchise": "Crossover Adjacent",
+      "scope": "complete",
+      "optional": true,
+      "alwaysShow": false,
+      "connection": "Dick Wolf-created police drama"
+    },
+    {
+      "show": "The Wright Verdicts",
+      "slug": "the-wright-verdicts",
+      "franchise": "Crossover Adjacent",
+      "scope": "complete",
+      "optional": true,
+      "alwaysShow": false,
+      "connection": "Dick Wolf-created legal drama"
+    },
+    {
+      "show": "H.E.L.P.",
+      "slug": "h-e-l-p",
+      "alt_slugs": [
+        "help-1990",
+        "h-e-l-p-1990"
+      ],
+      "franchise": "Crossover Adjacent",
+      "scope": "complete",
+      "optional": true,
+      "alwaysShow": false,
+      "connection": "Wolf Entertainment / Dick Wolf archive title"
+    },
+    {
+      "show": "The Human Factor",
+      "slug": "the-human-factor",
+      "alt_slugs": [
+        "human-factor"
+      ],
+      "franchise": "Crossover Adjacent",
+      "scope": "complete",
+      "optional": true,
+      "alwaysShow": false,
+      "connection": "Wolf Entertainment / Dick Wolf archive title"
+    },
+    {
+      "show": "The Invisible Man",
+      "slug": "the-invisible-man-1998",
+      "alt_slugs": [
+        "the-invisible-man"
+      ],
+      "franchise": "Crossover Adjacent",
+      "scope": "complete",
+      "optional": true,
+      "alwaysShow": false,
+      "connection": "Wolf Entertainment television movie / archive title"
+    },
+    {
+      "show": "Paris enquêtes criminelles",
+      "slug": "paris-enquetes-criminelles",
+      "alt_slugs": [
+        "paris-enquetes-criminelles-2007"
+      ],
+      "franchise": "Law & Order",
+      "scope": "complete",
+      "optional": true,
+      "alwaysShow": false,
+      "connection": "French Law & Order: Criminal Intent adaptation"
+    },
+    {
+      "show": "Law & Order: Division of Field Investigation",
+      "slug": "law-order-division-of-field-investigation",
+      "alt_slugs": [
+        "zakon-i-poryadok-otdel-operativnykh-rassledovaniy"
+      ],
+      "franchise": "Law & Order",
+      "scope": "complete",
+      "optional": true,
+      "alwaysShow": false,
+      "connection": "Russian Law & Order: SVU adaptation"
+    }
+  ],
+  "movies": [
+    {
+      "show": "Exiled: A Law & Order Movie",
+      "slug": "exiled",
+      "alt_slugs": [
+        "exiled-a-law-order-movie"
+      ],
+      "imdb": "tt0169421",
+      "franchise": "Wolf Specials",
+      "scope": "connected",
+      "optional": false,
+      "alwaysShow": true,
+      "connection": "Direct Law & Order TV movie"
+    },
+    {
+      "show": "Homicide: The Movie",
+      "slug": "homicide-the-movie-2000",
+      "alt_slugs": [
+        "homicide-the-movie"
+      ],
+      "imdb": "tt0251436",
+      "franchise": "Wolf Specials",
+      "scope": "connected",
+      "optional": false,
+      "alwaysShow": true,
+      "connection": "Direct Homicide continuation / Munch timeline"
+    }
+  ],
+  "removeShows": [
+    "CIA",
+    "CIA (1992)",
+    "FBI: CIA"
+  ],
+  "removeTraktSlugs": [
+    "cia"
+  ],
+  "removeImdbIds": [
+    "tt0250140"
+  ],
+  "removeTraktShowIds": [
+    16683
+  ]
+}

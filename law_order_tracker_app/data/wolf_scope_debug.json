@@ -1,0 +1,9 @@
+{
+  "note": "Runtime writes live counts to console as window.WOLF_SCOPE_DEBUG",
+  "configuredShows": 47,
+  "categories": {
+    "core": 17,
+    "connected": 8,
+    "adjacent": 22
+  }
+}
