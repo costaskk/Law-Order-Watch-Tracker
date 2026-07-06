@@ -32,6 +32,7 @@ let autoTimer = null;
 let actorIndex = new Map();
 let actorDetailShowCache = new Map();
 let renderQueued = false;
+let renderQueuedPreserveScroll = false;
 let syncPollTimer = null;
 let syncPollDeadline = 0;
 let syncPollStartedAt = 0;
@@ -196,7 +197,7 @@ function setStatus(ep, status, silent = false) {
   statusMap[ep.id] = status;
   statusMap[episodeKey(ep)] = status;
   save();
-  render();
+  renderPreservingScroll();
   if (!silent && previous !== status) showToast('Status updated', `${ep.show} ${ep.code} is now ${status}.`, 'success');
 }
 
@@ -503,13 +504,24 @@ function showSortEntries(entries, source = scopedEpisodes) {
   });
 }
 
-function scheduleRender() {
+function scheduleRender(preserveScroll = false) {
+  renderQueuedPreserveScroll = renderQueuedPreserveScroll || Boolean(preserveScroll);
   if (renderQueued) return;
   renderQueued = true;
   requestAnimationFrame(() => {
+    const shouldPreserve = renderQueuedPreserveScroll;
     renderQueued = false;
-    render();
+    renderQueuedPreserveScroll = false;
+    if (shouldPreserve) renderPreservingScroll();
+    else render();
   });
+}
+
+function renderPreservingScroll() {
+  const x = window.scrollX || window.pageXOffset || 0;
+  const y = window.scrollY || window.pageYOffset || 0;
+  render();
+  requestAnimationFrame(() => window.scrollTo(x, y));
 }
 
 function showArtworkGallery(ep) {
@@ -771,11 +783,15 @@ function render() {
   const bar = document.getElementById('progressBar');
   if (bar) bar.style.width = `${percent}%`;
 
-  const next = scopedEpisodes.find(e => getStatus(e) !== 'Watched');
-  renderNext(next);
-
   current = scopedEpisodes.filter(matches);
   renderedCount = Math.min(PAGE_SIZE, current.length);
+
+  // The hero should follow the active view. If the user filters by show,
+  // actor, season, search, scope, or status, show the next unwatched item
+  // from that filtered result set instead of from the whole scope.
+  const next = current.find(e => getStatus(e) !== 'Watched');
+  renderNext(next);
+
   renderShowStrip(values);
   renderScopeSummary();
   renderList();
@@ -860,8 +876,7 @@ function renderShowStrip(values = getFilterValues()) {
       const showFilter = document.getElementById('showFilter');
       showFilter.value = button.dataset.show;
       refreshDynamicFilters({ keepShow: true, keepSeason: false, keepFranchise: true, keepActor: true });
-      render();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      renderPreservingScroll();
     });
   });
 }
@@ -992,7 +1007,7 @@ async function markBulk(scope, status) {
     statusMap[episodeKey(ep)] = status;
   });
   save();
-  render();
+  renderPreservingScroll();
   setText('syncStatus', `${changed} episode statuses updated.`);
   showToast('Bulk update complete', `${changed} entries updated for ${label}.`, 'success');
 }
@@ -1219,6 +1234,7 @@ async function fetchPersonalSupabaseStatus(options = {}) {
 }
 
 async function syncPersonalTrakt() {
+  setText('syncStatus', 'Contacting Trakt and Supabase…');
   const response = await fetch('/api/sync/trakt', {
     method: 'POST',
     credentials: 'include',
@@ -1238,18 +1254,46 @@ async function syncPersonalTrakt() {
   };
   updateTraktAccountPanel();
 
-  const result = await importStatusPayload(
+  // Apply the statuses returned by /api/sync/trakt immediately.
+  // This removes the old "press sync twice" behaviour where the first click
+  // saved Supabase data and only the second click loaded it into the browser.
+  let result = await importStatusPayload(
     { statuses: syncPayload.statuses || {} },
     'Personal Trakt sync',
-    { suppressToast: true }
+    { suppressToast: true, silentNoChange: true }
   );
 
-  const apiMatched = syncPayload.debug?.watchedShows?.guideMatches || syncPayload.debug?.history?.guideMatches || 0;
+  // Some serverless/Supabase responses can be eventually consistent. If the
+  // sync endpoint returned no directly usable rows, immediately re-read the
+  // user's stored Supabase status once or twice before reporting success.
+  if (!result.matched || !result.watched) {
+    await new Promise(resolve => setTimeout(resolve, 650));
+    const retry = await fetchPersonalSupabaseStatus({
+      source: 'Personal Supabase refresh',
+      suppressToast: true,
+      silentNoChange: true
+    });
+    if (retry && retry.ok !== false) result = retry;
+  }
+  if (!result.matched || !result.watched) {
+    await new Promise(resolve => setTimeout(resolve, 1350));
+    const retry = await fetchPersonalSupabaseStatus({
+      source: 'Personal Supabase refresh',
+      suppressToast: true,
+      silentNoChange: true
+    });
+    if (retry && retry.ok !== false) result = retry;
+  }
+
+  const apiMatched = syncPayload.matched || syncPayload.guide_matches || syncPayload.debug?.watchedShows?.guideMatches || syncPayload.debug?.history?.guideMatches || 0;
+  const watched = result.watched ?? getWatchedCountFromMap();
+  const matched = result.matched ?? 0;
   const debugTail = apiMatched ? ` Server matched ${apiMatched} guide rows.` : '';
-  setText('syncStatus', `Personal Trakt sync complete: ${result.watched} watched entries loaded, ${result.matched} browser guide rows matched at ${new Date().toLocaleTimeString()}.${debugTail}`);
-  showToast('Personal Trakt sync complete', `${result.watched} watched entries loaded.`, 'success');
+  setText('syncStatus', `Personal Trakt sync complete: ${watched} watched entries loaded, ${matched} browser guide rows matched at ${new Date().toLocaleTimeString()}.${debugTail}`);
+  showToast('Personal Trakt sync complete', `${watched} watched entries loaded.`, 'success', 5200);
   return result;
 }
+
 
 function stopSyncPolling(message = '') {
   if (syncPollTimer) clearInterval(syncPollTimer);
@@ -1351,7 +1395,7 @@ async function importStatusPayload(payload, source = 'import', options = {}) {
   if (localChanged) save();
   lastHostedStatusSignature = incomingSignature || lastHostedStatusSignature;
   lastHostedStatusFetchedAt = Date.now();
-  render();
+  renderPreservingScroll();
 
   const watched = getWatchedCountFromMap();
   const time = new Date().toLocaleTimeString();
@@ -1476,14 +1520,17 @@ async function triggerCloudSync() {
     }
   } catch (err) {
     stopSyncPolling();
-    setText('syncStatus', `Sync failed: ${err.message}`);
-    showToast('Sync failed', err.message, 'danger');
-    await showModal({
-      title: 'Could not start sync',
-      message: `${err.message}\n\nPersonal sync: check Supabase and Trakt environment variables. Local fallback: make sure local_tracker_server.py is running. Shared online fallback: check GITHUB_PAT, GITHUB_REPO, and GITHUB_WORKFLOW.`,
-      type: 'danger',
-      confirmText: 'OK'
-    });
+    const detail = err.message || String(err);
+    setText('syncStatus', `Sync failed: ${detail}`);
+    showToast('Sync failed', detail, 'danger', 6500);
+    window.setTimeout(() => {
+      showModal({
+        title: 'Sync failed',
+        message: `${detail}\n\nPersonal sync: check Supabase and Trakt environment variables. Local fallback: make sure local_tracker_server.py is running. Shared online fallback: check GITHUB_PAT, GITHUB_REPO, and GITHUB_WORKFLOW.`,
+        type: 'danger',
+        confirmText: 'OK'
+      });
+    }, 350);
   } finally {
     if (btn) {
       btn.disabled = false;
@@ -1515,7 +1562,7 @@ function bindEvents() {
       } else if (id === 'showFilter') {
         refreshDynamicFilters({ keepShow: true, keepSeason: false, keepFranchise: true, keepActor: true });
       }
-      scheduleRender();
+      scheduleRender(true);
     };
     el.addEventListener('input', handler);
     el.addEventListener('change', handler);
@@ -1623,8 +1670,7 @@ function bindEvents() {
     button.addEventListener('click', () => {
       document.getElementById('statusFilter').value = button.dataset.status;
       document.getElementById('hideWatched').checked = button.dataset.status !== 'watched';
-      render();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      renderPreservingScroll();
     });
   });
 
