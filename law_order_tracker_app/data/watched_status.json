@@ -1,14 +1,14 @@
 {
   "version": 7,
   "source": "trakt",
-  "exportedAt": "2026-07-06T15:56:45Z",
+  "exportedAt": "2026-07-06T20:16:40Z",
   "summary": {
     "guideRowsScanned": 1796,
-    "guideRowsMarkedWatched": 123,
+    "guideRowsMarkedWatched": 126,
     "traktWatchedCountsByShow": {
       "Law & Order": 10,
       "Homicide: Life on the Street": 0,
-      "Law & Order: SVU": 113,
+      "Law & Order: SVU": 116,
       "Criminal Intent": 0,
       "Trial by Jury": 0,
       "Conviction": 0,
@@ -268,7 +268,13 @@
     "Law & Order: SVU|5|21|696": "Watched",
     "Law & Order: SVU|5|21": "Watched",
     "Law & Order: SVU|5|22|698": "Watched",
-    "Law & Order: SVU|5|22": "Watched"
+    "Law & Order: SVU|5|22": "Watched",
+    "Law & Order: SVU|5|23|700": "Watched",
+    "Law & Order: SVU|5|23": "Watched",
+    "Law & Order: SVU|5|24|702": "Watched",
+    "Law & Order: SVU|5|24": "Watched",
+    "Law & Order: SVU|5|25|705": "Watched",
+    "Law & Order: SVU|5|25": "Watched"
   },
   "episodes": [
     {
@@ -1130,6 +1136,27 @@
       "guideShow": "Law & Order: SVU",
       "season": 5,
       "episode": 22,
+      "status": "Watched"
+    },
+    {
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
+      "season": 5,
+      "episode": 23,
+      "status": "Watched"
+    },
+    {
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
+      "season": 5,
+      "episode": 24,
+      "status": "Watched"
+    },
+    {
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
+      "season": 5,
+      "episode": 25,
       "status": "Watched"
     }
   ]
