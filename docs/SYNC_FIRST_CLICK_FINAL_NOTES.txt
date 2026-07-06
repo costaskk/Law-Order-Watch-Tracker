@@ -1,0 +1,15 @@
+Files included:
+- law_order_tracker_app/app.js
+- api/sync/trakt.js
+- api/me/status.js
+- sql/FIX_WATCH_STATUS_DUPLICATES_AND_UNIQUE.sql
+
+What changed:
+1. The frontend no longer lets an old exact-id "Not Started" value shadow a freshly imported "Watched" no-order key.
+2. The frontend normalizes object-shaped status values too, not only strings.
+3. The backend now prefers a single-row Supabase upsert instead of delete-then-insert, avoiding a short empty read window.
+4. The backend still falls back to delete+insert if your Supabase table has not yet received the unique user_id constraint.
+5. Both API endpoints return only clean watched statuses and no-cache headers.
+
+Recommended once:
+Run sql/FIX_WATCH_STATUS_DUPLICATES_AND_UNIQUE.sql in Supabase SQL Editor.

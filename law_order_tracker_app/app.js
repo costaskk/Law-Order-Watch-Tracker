@@ -176,6 +176,12 @@ function rebuildEpisodeIndexes() {
 }
 
 function normalizeStatus(value) {
+  // Supabase/Trakt imports should normally be plain strings, but older
+  // debug/status payloads may contain objects like { status: 'Watched' }.
+  // Normalize those too so the UI never ignores a valid watched value.
+  if (value && typeof value === 'object') {
+    value = value.status ?? value.value ?? value.state ?? value.progress ?? value.watch_status ?? '';
+  }
   const v = String(value ?? '').trim().toLowerCase();
   if (['watched', 'complete', 'completed', 'yes', 'true', '1'].includes(v)) return 'Watched';
   if (['watching', 'in progress', 'started'].includes(v)) return 'Watching';
@@ -184,12 +190,23 @@ function normalizeStatus(value) {
   return ['Not Started', 'Watching', 'Watched', 'Skipped'].includes(value) ? value : null;
 }
 
+function statusRank(status) {
+  return ({ 'Watched': 4, 'Watching': 3, 'Skipped': 2, 'Not Started': 1 })[normalizeStatus(status)] || 0;
+}
+
 function statusFromMap(ep) {
-  return statusMap[ep.id] || statusMap[episodeKey(ep)] || null;
+  const byId = normalizeStatus(statusMap[ep.id]);
+  const byKey = normalizeStatus(statusMap[episodeKey(ep)]);
+
+  // Prefer the strongest imported status. This fixes the remaining double-click
+  // symptom when an old local exact-id value such as "Not Started" shadows the
+  // freshly imported no-order key "Watched" from Supabase/Trakt.
+  if (byId && byKey) return statusRank(byKey) > statusRank(byId) ? byKey : byId;
+  return byId || byKey || null;
 }
 
 function getStatus(ep) {
-  return statusFromMap(ep) || ep.status || 'Not Started';
+  return statusFromMap(ep) || normalizeStatus(ep.status) || 'Not Started';
 }
 
 function setStatus(ep, status, silent = false) {
@@ -1042,7 +1059,12 @@ function downloadBlob(blob, name) {
 }
 
 function getWatchedCountFromMap(map = statusMap) {
-  return episodes.reduce((total, ep) => total + ((map[ep.id] || map[episodeKey(ep)] || ep.status) === 'Watched' ? 1 : 0), 0);
+  return episodes.reduce((total, ep) => {
+    const byId = normalizeStatus(map[ep.id]);
+    const byKey = normalizeStatus(map[episodeKey(ep)]);
+    const chosen = byId && byKey ? (statusRank(byKey) > statusRank(byId) ? byKey : byId) : (byId || byKey || normalizeStatus(ep.status));
+    return total + (chosen === 'Watched' ? 1 : 0);
+  }, 0);
 }
 
 function statusSignatureFromPayload(payload) {
@@ -1234,11 +1256,17 @@ async function fetchPersonalSupabaseStatus(options = {}) {
 }
 
 async function syncPersonalTrakt() {
-  setText('syncStatus', 'Contacting Trakt and Supabase…');
+  const startedAt = new Date().toISOString();
+  setText('syncStatus', 'Contacting Trakt, updating Supabase, and waiting for the fresh status row…');
+
   const response = await fetch('/api/sync/trakt', {
     method: 'POST',
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
+    cache: 'no-store',
+    headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache'
+    },
     body: JSON.stringify({ source: 'wolf-universe-tracker', ts: Date.now() })
   });
 
@@ -1250,48 +1278,70 @@ async function syncPersonalTrakt() {
   traktUser = {
     authenticated: true,
     username: syncPayload.username || traktUser?.username || '',
-    updated_at: syncPayload.updated_at || new Date().toISOString()
+    updated_at: syncPayload.updated_at || startedAt
   };
   updateTraktAccountPanel();
 
-  // Apply the statuses returned by /api/sync/trakt immediately.
-  // This removes the old "press sync twice" behaviour where the first click
-  // saved Supabase data and only the second click loaded it into the browser.
-  let result = await importStatusPayload(
+  const expectedUpdatedAt = syncPayload.updated_at || startedAt;
+  const expectedKeys = Number(syncPayload.watched_keys || syncPayload.status_count || Object.keys(syncPayload.statuses || {}).length || 0);
+  const expectedServerMatches = Number(syncPayload.matched || syncPayload.guide_matches || syncPayload.debug?.watchedShows?.guideMatches || syncPayload.debug?.history?.guideMatches || 0);
+
+  let bestResult = await importStatusPayload(
     { statuses: syncPayload.statuses || {} },
     'Personal Trakt sync',
     { suppressToast: true, silentNoChange: true }
   );
 
-  // Some serverless/Supabase responses can be eventually consistent. If the
-  // sync endpoint returned no directly usable rows, immediately re-read the
-  // user's stored Supabase status once or twice before reporting success.
-  if (!result.matched || !result.watched) {
-    await new Promise(resolve => setTimeout(resolve, 650));
-    const retry = await fetchPersonalSupabaseStatus({
-      source: 'Personal Supabase refresh',
-      suppressToast: true,
-      silentNoChange: true
+  async function readPersonalStatusDirect(attempt) {
+    const url = `/api/me/status?ts=${Date.now()}&after=${encodeURIComponent(expectedUpdatedAt)}&attempt=${attempt}`;
+    const r = await fetch(url, {
+      cache: 'no-store',
+      credentials: 'include',
+      headers: { 'Cache-Control': 'no-cache' }
     });
-    if (retry && retry.ok !== false) result = retry;
-  }
-  if (!result.matched || !result.watched) {
-    await new Promise(resolve => setTimeout(resolve, 1350));
-    const retry = await fetchPersonalSupabaseStatus({
-      source: 'Personal Supabase refresh',
-      suppressToast: true,
-      silentNoChange: true
-    });
-    if (retry && retry.ok !== false) result = retry;
+    const payload = await r.json().catch(() => ({}));
+    if (!r.ok || payload.ok === false) throw new Error(payload.error || `HTTP ${r.status}`);
+    traktUser = payload.authenticated ? payload : { authenticated: false };
+    updateTraktAccountPanel();
+    const imported = await importStatusPayload(
+      { statuses: payload.statuses || {} },
+      'Personal Supabase status',
+      { suppressToast: true, silentNoChange: true }
+    );
+    imported.updated_at = payload.updated_at || null;
+    imported.status_count = payload.status_count || Object.keys(payload.statuses || {}).length;
+    return imported;
   }
 
-  const apiMatched = syncPayload.matched || syncPayload.guide_matches || syncPayload.debug?.watchedShows?.guideMatches || syncPayload.debug?.history?.guideMatches || 0;
-  const watched = result.watched ?? getWatchedCountFromMap();
-  const matched = result.matched ?? 0;
-  const debugTail = apiMatched ? ` Server matched ${apiMatched} guide rows.` : '';
-  setText('syncStatus', `Personal Trakt sync complete: ${watched} watched entries loaded, ${matched} browser guide rows matched at ${new Date().toLocaleTimeString()}.${debugTail}`);
+  // Important: Vercel/Supabase can be read-after-write delayed for a short moment.
+  // Do not report success from the first stale row. Keep reading until the row is
+  // at least as new as this sync call, or until we have imported a useful status map.
+  const delays = [0, 350, 700, 1200, 1800, 2600];
+  for (let i = 0; i < delays.length; i += 1) {
+    if (delays[i]) await new Promise(resolve => setTimeout(resolve, delays[i]));
+    setText('syncStatus', `Finalizing personal Trakt sync… checking Supabase update ${i + 1}/${delays.length}.`);
+    try {
+      const retry = await readPersonalStatusDirect(i + 1);
+      if (retry && retry.ok !== false) {
+        if (!bestResult || retry.matched >= (bestResult.matched || 0) || retry.watched >= (bestResult.watched || 0)) {
+          bestResult = retry;
+        }
+        const rowIsFresh = !retry.updated_at || !expectedUpdatedAt || new Date(retry.updated_at).getTime() >= new Date(expectedUpdatedAt).getTime() - 1500;
+        const hasExpectedSize = !expectedKeys || retry.status_count >= Math.max(1, Math.floor(expectedKeys * 0.95));
+        const hasExpectedMatches = !expectedServerMatches || retry.matched >= Math.max(1, Math.floor(expectedServerMatches * 0.95));
+        if (rowIsFresh && hasExpectedSize && (hasExpectedMatches || retry.watched > 0)) break;
+      }
+    } catch (err) {
+      if (i === delays.length - 1) throw err;
+    }
+  }
+
+  const watched = bestResult?.watched ?? getWatchedCountFromMap();
+  const matched = bestResult?.matched ?? 0;
+  const serverTail = expectedServerMatches ? ` Server matched ${expectedServerMatches} guide rows.` : '';
+  setText('syncStatus', `Personal Trakt sync complete: ${watched} watched entries loaded, ${matched} browser guide rows matched at ${new Date().toLocaleTimeString()}.${serverTail}`);
   showToast('Personal Trakt sync complete', `${watched} watched entries loaded.`, 'success', 5200);
-  return result;
+  return bestResult;
 }
 
 
@@ -1342,14 +1392,28 @@ async function importStatusPayload(payload, source = 'import', options = {}) {
   let matched = 0;
 
   function applyToEpisode(ep, status) {
+    status = normalizeStatus(status);
     if (!ep || !status) return;
     matched++;
-    if (statusMap[ep.id] !== status) {
-      statusMap[ep.id] = status;
+
+    const noOrder = episodeKey(ep);
+    const existingId = normalizeStatus(statusMap[ep.id]);
+    const existingKey = normalizeStatus(statusMap[noOrder]);
+
+    // Never let a stale "Not Started" payload downgrade a freshly imported
+    // watched status for the same guide row.
+    const finalStatus = Math.max(statusRank(status), statusRank(existingId), statusRank(existingKey)) === statusRank(existingId)
+      ? existingId
+      : (Math.max(statusRank(status), statusRank(existingKey)) === statusRank(existingKey) ? existingKey : status);
+
+    if (normalizeStatus(statusMap[ep.id]) !== finalStatus) {
+      statusMap[ep.id] = finalStatus;
       changed++;
     }
-    const noOrder = episodeKey(ep);
-    if (statusMap[noOrder] !== status) statusMap[noOrder] = status;
+    if (normalizeStatus(statusMap[noOrder]) !== finalStatus) {
+      statusMap[noOrder] = finalStatus;
+      changed++;
+    }
   }
 
   if (Array.isArray(payload.episodes)) {
@@ -1381,8 +1445,10 @@ async function importStatusPayload(payload, source = 'import', options = {}) {
       }
     }
 
-    if (statusMap[rawId] !== status) {
-      statusMap[rawId] = status;
+    const existingRaw = normalizeStatus(statusMap[rawId]);
+    const finalRaw = statusRank(existingRaw) > statusRank(status) ? existingRaw : status;
+    if (normalizeStatus(statusMap[rawId]) !== finalRaw) {
+      statusMap[rawId] = finalRaw;
       changed++;
     }
   }

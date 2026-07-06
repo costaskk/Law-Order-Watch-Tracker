@@ -6,9 +6,32 @@ function noStore(res) {
   res.setHeader('Expires', '0');
 }
 
+function normalizeStatusValue(value) {
+  if (value && typeof value === 'object') value = value.status ?? value.value ?? value.state ?? '';
+  const v = String(value ?? '').trim().toLowerCase();
+  if (['watched', 'complete', 'completed', 'yes', 'true', '1'].includes(v)) return 'Watched';
+  if (['watching', 'in progress', 'started'].includes(v)) return 'Watching';
+  if (['skipped', 'skip'].includes(v)) return 'Skipped';
+  if (['not started', 'todo', 'unwatched', 'false', '0', ''].includes(v)) return 'Not Started';
+  return null;
+}
+
+function cleanStatuses(statuses) {
+  const out = {};
+  if (!statuses || typeof statuses !== 'object') return out;
+  for (const [key, value] of Object.entries(statuses)) {
+    const status = normalizeStatusValue(value);
+    if (!key || !status) continue;
+    // Supabase only needs meaningful rows. Keeping watched rows makes the payload
+    // smaller and avoids stale Not Started entries shadowing Watched rows in older browsers.
+    if (status === 'Watched') out[key] = 'Watched';
+  }
+  return out;
+}
+
 function countWatched(statuses) {
   if (!statuses || typeof statuses !== 'object') return 0;
-  return Object.values(statuses).filter(value => String(value).toLowerCase() === 'watched').length;
+  return Object.values(statuses).filter(value => normalizeStatusValue(value) === 'Watched').length;
 }
 
 async function readLatestWatchStatus(userId) {
@@ -17,6 +40,42 @@ async function readLatestWatchStatus(userId) {
     { method: 'GET' }
   );
   return Array.isArray(rows) ? rows[0] : null;
+}
+
+async function writeWatchStatus(userId, statuses, updatedAt) {
+  const body = JSON.stringify({ user_id: userId, status: statuses, updated_at: updatedAt });
+
+  // Preferred path: one-row upsert. This avoids the tiny DELETE->INSERT empty-window
+  // that can make the UI look like it needs a second sync click.
+  try {
+    const rows = await supabaseFetch('/watch_status?on_conflict=user_id', {
+      method: 'POST',
+      prefer: 'resolution=merge-duplicates,return=representation',
+      body
+    });
+    const row = Array.isArray(rows) ? rows[0] : rows;
+    if (row?.status) return row;
+  } catch (err) {
+    // If the database still lacks a unique/primary key on watch_status.user_id,
+    // PostgREST cannot upsert. Fall back safely below.
+    const msg = String(err?.message || err || '').toLowerCase();
+    if (!msg.includes('unique') && !msg.includes('conflict') && !msg.includes('constraint') && !msg.includes('42p10')) {
+      throw err;
+    }
+  }
+
+  // Compatibility fallback for older databases. Delete duplicates, then insert one row.
+  await supabaseFetch(`/watch_status?user_id=eq.${encodeURIComponent(userId)}`, {
+    method: 'DELETE',
+    prefer: 'return=minimal'
+  });
+
+  const insertedRows = await supabaseFetch('/watch_status', {
+    method: 'POST',
+    prefer: 'return=representation',
+    body
+  });
+  return Array.isArray(insertedRows) ? insertedRows[0] : insertedRows;
 }
 
 export default async function handler(req, res) {
@@ -29,53 +88,25 @@ export default async function handler(req, res) {
 
   try {
     let user = await getSessionUser(req);
-    if (!user) {
-      return res.status(401).json({ ok: false, error: 'Not logged in with Trakt' });
-    }
+    if (!user) return res.status(401).json({ ok: false, error: 'Not logged in with Trakt' });
 
     user = await refreshTraktTokenIfNeeded(user);
 
     const built = await buildWatchedStatusesForGuide(user.trakt_access_token);
-    const statuses = built?.statuses && typeof built.statuses === 'object' ? built.statuses : {};
+    const statuses = cleanStatuses(built?.statuses || {});
     const now = new Date().toISOString();
-    const watchedKeys = Object.keys(statuses).length;
 
-    /*
-      Important:
-      We intentionally replace this user's single watch_status row instead of relying
-      on an upsert that may leave older duplicate rows behind if the DB was created
-      before the unique user_id constraint/fix existed.
-
-      This fixes the "sync works only after pressing twice" symptom:
-      - first press used to write a fresh row
-      - /api/me/status could still read an older/empty duplicate row
-      - second press appeared to work after the browser/server state caught up
-    */
-    await supabaseFetch(`/watch_status?user_id=eq.${encodeURIComponent(user.id)}`, {
-      method: 'DELETE',
-      prefer: 'return=minimal'
-    });
-
-    const insertedRows = await supabaseFetch('/watch_status', {
-      method: 'POST',
-      prefer: 'return=representation',
-      body: JSON.stringify({
-        user_id: user.id,
-        status: statuses,
-        updated_at: now
-      })
-    });
-
-    const inserted = Array.isArray(insertedRows) ? insertedRows[0] : insertedRows;
-    const savedRow = inserted?.status ? inserted : await readLatestWatchStatus(user.id);
-    const savedStatuses = savedRow?.status && typeof savedRow.status === 'object' ? savedRow.status : statuses;
-    const savedUpdatedAt = savedRow?.updated_at || now;
+    const writtenRow = await writeWatchStatus(user.id, statuses, now);
+    const latestRow = writtenRow?.status ? writtenRow : await readLatestWatchStatus(user.id);
+    const savedStatuses = cleanStatuses(latestRow?.status || statuses);
+    const savedUpdatedAt = latestRow?.updated_at || now;
 
     return res.status(200).json({
       ok: true,
       authenticated: true,
       username: user.trakt_username,
       updated_at: savedUpdatedAt,
+      status_count: Object.keys(savedStatuses).length,
       watched_keys: Object.keys(savedStatuses).length,
       watched_count: countWatched(savedStatuses),
       matched: built?.matched || built?.guide_matches || built?.debug?.watchedShows?.guideMatches || built?.debug?.history?.guideMatches || 0,
@@ -83,7 +114,7 @@ export default async function handler(req, res) {
       debug: {
         ...(built?.debug || {}),
         wrote_watch_status_row: true,
-        returned_from: savedRow?.status ? 'supabase_saved_row' : 'built_statuses_fallback'
+        returned_from: latestRow?.status ? 'supabase_written_or_latest_row' : 'built_statuses_fallback'
       }
     });
   } catch (err) {
