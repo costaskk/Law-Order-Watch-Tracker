@@ -1259,20 +1259,46 @@ async function syncPersonalTrakt() {
   const startedAt = new Date().toISOString();
   setText('syncStatus', 'Contacting Trakt, updating Supabase, and waiting for the fresh status row…');
 
-  const response = await fetch('/api/sync/trakt', {
-    method: 'POST',
-    credentials: 'include',
-    cache: 'no-store',
-    headers: {
-      'Content-Type': 'application/json',
-      'Cache-Control': 'no-cache'
-    },
-    body: JSON.stringify({ source: 'wolf-universe-tracker', ts: Date.now() })
-  });
+  async function runSyncRequest(attempt) {
+    if (attempt > 1) {
+      setText('syncStatus', `Trakt returned an empty first response. Retrying sync request ${attempt}/4…`);
+      await new Promise(resolve => setTimeout(resolve, attempt === 2 ? 1200 : 2200));
+    }
 
-  const syncPayload = await response.json().catch(() => ({}));
-  if (!response.ok || syncPayload.ok === false) {
-    throw new Error(syncPayload.error || `HTTP ${response.status}`);
+    const response = await fetch('/api/sync/trakt/', {
+      method: 'POST',
+      credentials: 'include',
+      cache: 'no-store',
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache'
+      },
+      body: JSON.stringify({ source: 'wolf-universe-tracker', ts: Date.now(), attempt })
+    });
+
+    const payload = await response.json().catch(() => ({}));
+    if (response.status === 202 && payload.retryable) return { retryable: true, payload };
+    if (!response.ok || payload.ok === false) throw new Error(payload.error || `HTTP ${response.status}`);
+    return { retryable: false, payload };
+  }
+
+  let syncPayload = null;
+  let lastRetryablePayload = null;
+  for (let attempt = 1; attempt <= 4; attempt += 1) {
+    const result = await runSyncRequest(attempt);
+    if (!result.retryable) {
+      syncPayload = result.payload;
+      break;
+    }
+    lastRetryablePayload = result.payload;
+  }
+
+  if (!syncPayload) {
+    const previousCount = Number(lastRetryablePayload?.watched_count || lastRetryablePayload?.status_count || 0);
+    if (lastRetryablePayload && previousCount > 0) {
+      await importStatusPayload(lastRetryablePayload, 'Previous Supabase status', { suppressToast: true, silentNoChange: true });
+    }
+    throw new Error(lastRetryablePayload?.error || 'Trakt returned an empty watched-status build after retries. Supabase was not overwritten; try again shortly.');
   }
 
   traktUser = {

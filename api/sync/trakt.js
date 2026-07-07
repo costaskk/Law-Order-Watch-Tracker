@@ -34,6 +34,41 @@ function countWatched(statuses) {
   return Object.values(statuses).filter(value => normalizeStatusValue(value) === 'Watched').length;
 }
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function builtMatchCount(built) {
+  return Number(
+    built?.matched ||
+    built?.guide_matches ||
+    built?.debug?.watchedShows?.guideMatches ||
+    built?.debug?.history?.guideMatches ||
+    0
+  );
+}
+
+async function buildWatchedStatusesWithRetry(accessToken) {
+  const attempts = [];
+  const delays = [0, 900, 1800];
+
+  for (let i = 0; i < delays.length; i += 1) {
+    if (delays[i]) await sleep(delays[i]);
+    const built = await buildWatchedStatusesForGuide(accessToken);
+    const statuses = cleanStatuses(built?.statuses || {});
+    const episodes = Array.isArray(built?.episodes) ? built.episodes : [];
+    const watchedKeys = Object.keys(statuses).length;
+    const guideMatches = Math.max(builtMatchCount(built), episodes.length);
+    attempts.push({ attempt: i + 1, watchedKeys, guideMatches, episodeRows: episodes.length, debug: built?.debug || {} });
+
+    if (watchedKeys > 0 || guideMatches > 0 || episodes.length > 0) {
+      return { built, statuses, attempts };
+    }
+  }
+
+  return { built: attempts.length ? { debug: attempts[attempts.length - 1].debug, episodes: [] } : { episodes: [] }, statuses: {}, attempts };
+}
+
 async function readLatestWatchStatus(userId) {
   const rows = await supabaseFetch(
     `/watch_status?user_id=eq.${encodeURIComponent(userId)}&select=status,updated_at&order=updated_at.desc&limit=1`,
@@ -92,17 +127,47 @@ export default async function handler(req, res) {
 
     user = await refreshTraktTokenIfNeeded(user);
 
-    const built = await buildWatchedStatusesForGuide(user.trakt_access_token);
-    const statuses = cleanStatuses(built?.statuses || {});
+    const { built, statuses, attempts } = await buildWatchedStatusesWithRetry(user.trakt_access_token);
     const now = new Date().toISOString();
+    const statusCount = Object.keys(statuses).length;
+    const builtEpisodes = Array.isArray(built?.episodes) ? built.episodes : [];
+    const matchCount = Math.max(builtMatchCount(built), builtEpisodes.length);
+
+    // Never overwrite a user's saved progress with an empty map. The browser
+    // trace showed the first click can sometimes build 0 watched entries and
+    // write that empty object, making the second click appear necessary. Empty
+    // builds are now treated as temporary/retryable and the previous row is kept.
+    if (statusCount === 0 && matchCount === 0) {
+      const previousRow = await readLatestWatchStatus(user.id);
+      const previousStatuses = cleanStatuses(previousRow?.status || {});
+      const previousEpisodes = statusesToGuideEpisodes(previousStatuses);
+      return res.status(202).json({
+        ok: false,
+        retryable: true,
+        authenticated: true,
+        username: user.trakt_username,
+        updated_at: previousRow?.updated_at || null,
+        status_count: Object.keys(previousStatuses).length,
+        watched_keys: Object.keys(previousStatuses).length,
+        watched_count: countWatched(previousStatuses),
+        matched: previousEpisodes.length,
+        statuses: previousStatuses,
+        episodes: previousEpisodes,
+        error: 'Trakt returned 0 watched episodes on this attempt, so Supabase was not overwritten. Retrying usually succeeds in a few seconds.',
+        debug: {
+          empty_build_guard: true,
+          build_attempts: attempts,
+          previous_row_kept: Boolean(previousRow),
+          returned_episode_rows: previousEpisodes.length
+        }
+      });
+    }
 
     const writtenRow = await writeWatchStatus(user.id, statuses, now);
     const latestRow = writtenRow?.status ? writtenRow : await readLatestWatchStatus(user.id);
     const savedStatuses = cleanStatuses(latestRow?.status || statuses);
     const savedUpdatedAt = latestRow?.updated_at || now;
-    const savedEpisodes = Array.isArray(built?.episodes) && built.episodes.length
-      ? built.episodes
-      : statusesToGuideEpisodes(savedStatuses);
+    const savedEpisodes = builtEpisodes.length ? builtEpisodes : statusesToGuideEpisodes(savedStatuses);
 
     return res.status(200).json({
       ok: true,
@@ -112,13 +177,14 @@ export default async function handler(req, res) {
       status_count: Object.keys(savedStatuses).length,
       watched_keys: Object.keys(savedStatuses).length,
       watched_count: countWatched(savedStatuses),
-      matched: savedEpisodes.length || built?.matched || built?.guide_matches || built?.debug?.watchedShows?.guideMatches || built?.debug?.history?.guideMatches || 0,
+      matched: savedEpisodes.length || matchCount,
       statuses: savedStatuses,
       episodes: savedEpisodes,
       debug: {
         ...(built?.debug || {}),
         wrote_watch_status_row: true,
         returned_from: latestRow?.status ? 'supabase_written_or_latest_row' : 'built_statuses_fallback',
+        build_attempts: attempts,
         returned_episode_rows: savedEpisodes.length
       }
     });
