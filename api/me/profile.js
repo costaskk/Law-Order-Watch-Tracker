@@ -1,4 +1,4 @@
-import { getSessionUser, refreshTraktTokenIfNeeded, getTraktSettings, supabaseFetch, statusesToGuideEpisodes } from '../_wolf_auth.js';
+import { getSessionUser, refreshTraktTokenIfNeeded, getTraktSettings, getTraktUserProfile, supabaseFetch, statusesToGuideEpisodes } from '../_wolf_auth.js';
 
 function noStore(res) {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
@@ -24,7 +24,9 @@ export default async function handler(req, res) {
     user = await refreshTraktTokenIfNeeded(user);
 
     let settings = {};
+    let fullProfile = {};
     try { settings = await getTraktSettings(user.trakt_access_token); } catch (_) {}
+    try { fullProfile = await getTraktUserProfile(user.trakt_access_token, user.trakt_username || settings?.user?.username); } catch (_) {}
 
     const rows = await supabaseFetch(
       `/watch_status?user_id=eq.${encodeURIComponent(user.id)}&select=status,updated_at&order=updated_at.desc&limit=1`,
@@ -33,7 +35,8 @@ export default async function handler(req, res) {
     const row = Array.isArray(rows) ? rows[0] : null;
     const statuses = row?.status && typeof row.status === 'object' ? row.status : {};
     const episodes = statusesToGuideEpisodes(statuses);
-    const trakt = settings?.user || {};
+    const trakt = { ...(settings?.user || {}), ...(fullProfile || {}) };
+    const avatar = trakt.images?.avatar?.full || trakt.images?.avatar?.medium || trakt.images?.avatar?.thumb || trakt.images?.avatar?.original || '';
 
     return res.status(200).json({
       ok: true,
@@ -46,7 +49,7 @@ export default async function handler(req, res) {
         joined_at: trakt.joined_at || null,
         location: trakt.location || '',
         about: trakt.about || '',
-        avatar: trakt.images?.avatar?.full || trakt.images?.avatar?.medium || ''
+        avatar
       },
       stats: {
         updated_at: row?.updated_at || null,

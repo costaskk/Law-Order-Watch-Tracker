@@ -1170,9 +1170,12 @@ function ensureTraktAccountPanel() {
   panel.id = 'traktAccountPanel';
   panel.className = 'traktAccountPanel card';
   panel.innerHTML = `
-    <div class="traktAccountMain">
-      <strong id="traktAccountTitle">Trakt account</strong>
-      <span id="traktAccountText">Checking login status…</span>
+    <div class="traktAccountIdentity">
+      <img id="traktAccountAvatar" class="traktAccountAvatar" alt="Trakt avatar" hidden>
+      <div class="traktAccountMain">
+        <strong id="traktAccountTitle">Trakt account</strong>
+        <span id="traktAccountText">Checking login status…</span>
+      </div>
     </div>
     <div class="traktAccountActions">
       <button id="traktLoginBtn" type="button">Login with Trakt</button>
@@ -1187,6 +1190,16 @@ function ensureTraktAccountPanel() {
   document.getElementById('traktProfileBtn')?.addEventListener('click', showTraktProfile);
   document.getElementById('traktDisconnectBtn')?.addEventListener('click', disconnectTraktUser);
   document.getElementById('traktLogoutBtn')?.addEventListener('click', logoutTraktUser);
+
+  // Delegated handler keeps Profile working even if the account panel is rebuilt
+  // or the login state flips immediately after page load.
+  panel.addEventListener('click', ev => {
+    const target = ev.target.closest('button');
+    if (!target) return;
+    if (target.id === 'traktProfileBtn') { ev.preventDefault(); showTraktProfile(); }
+    if (target.id === 'traktDisconnectBtn') { ev.preventDefault(); disconnectTraktUser(); }
+    if (target.id === 'traktLogoutBtn') { ev.preventDefault(); logoutTraktUser(); }
+  });
 }
 
 function updateTraktAccountPanel() {
@@ -1198,9 +1211,15 @@ function updateTraktAccountPanel() {
   const logout = document.getElementById('traktLogoutBtn');
   const profile = document.getElementById('traktProfileBtn');
   const disconnect = document.getElementById('traktDisconnectBtn');
+  const avatar = document.getElementById('traktAccountAvatar');
   if (!title || !text || !login || !logout) return;
   if (traktUser?.authenticated) {
     title.textContent = `Trakt: ${traktUser.username || 'connected'}`;
+    if (avatar) {
+      const src = traktUser.avatar || traktUser.profile?.avatar || '';
+      if (src) { avatar.src = src; avatar.hidden = false; }
+      else { avatar.hidden = false; avatar.removeAttribute('src'); avatar.dataset.initial = (traktUser.username || 'T').slice(0, 1).toUpperCase(); }
+    }
     text.textContent = traktUser.updated_at
       ? `Personal Supabase sync active. Last saved ${new Date(traktUser.updated_at).toLocaleString()}.`
       : 'Personal Supabase sync active. Press Sync with Trakt to import progress.';
@@ -1214,6 +1233,7 @@ function updateTraktAccountPanel() {
     text.textContent = 'Open through local_tracker_server.py or Vercel to use Trakt login. Manual/local sync still works.';
     login.textContent = 'Login with Trakt';
     if (reset) reset.hidden = false;
+    if (avatar) avatar.hidden = true;
     if (profile) profile.hidden = true;
     if (disconnect) disconnect.hidden = true;
     logout.hidden = true;
@@ -1222,6 +1242,7 @@ function updateTraktAccountPanel() {
     text.textContent = 'Login with Trakt to sync this app with your own watched progress without GitHub commits/deployments.';
     login.textContent = 'Login with Trakt';
     if (reset) reset.hidden = false;
+    if (avatar) avatar.hidden = true;
     if (profile) profile.hidden = true;
     if (disconnect) disconnect.hidden = true;
     logout.hidden = true;
@@ -1239,7 +1260,7 @@ async function loadTraktUser({ pullStatus = true, quiet = false } = {}) {
     const response = await fetch('/api/me/status?ts=' + Date.now(), { cache: 'no-store', credentials: 'include' });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload.error || `HTTP ${response.status}`);
-    traktUser = payload.authenticated ? payload : { authenticated: false };
+    traktUser = payload.authenticated ? { ...payload, avatar: payload.avatar || payload.user?.avatar || payload.profile?.avatar || '' } : { authenticated: false };
     updateTraktAccountPanel();
     if (payload.authenticated && pullStatus && (payload.statuses || payload.episodes)) {
       await importStatusPayload(payload, 'Personal Supabase status', { suppressToast: quiet, silentNoChange: quiet });
@@ -1295,25 +1316,92 @@ async function resetLoggedOutProgress(ask = true) {
 
 
 async function showTraktProfile() {
+  // If the page just loaded, the profile button can be clicked before the
+  // initial /api/me/status call has finished. Resolve the session first so
+  // the first click works reliably.
+  if (!traktUser?.authenticated) {
+    await loadTraktUser({ pullStatus: false, quiet: true });
+  }
   if (!traktUser?.authenticated) {
     showToast('Not connected', 'Login with Trakt first.', 'warning');
     return;
   }
+
+  const btn = document.getElementById('traktProfileBtn');
+  const previous = btn?.textContent || 'Profile';
+  if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
+
   try {
-    const response = await fetch('/api/me/profile?ts=' + Date.now(), { cache: 'no-store', credentials: 'include' });
+    const response = await fetch('/api/me/profile/?ts=' + Date.now(), { cache: 'no-store', credentials: 'include' });
     const profile = await response.json().catch(() => ({}));
     if (!response.ok || profile.ok === false) throw new Error(profile.error || `HTTP ${response.status}`);
     const user = profile.user || {};
     const stats = profile.stats || {};
-    await showModal({
-      title: `Trakt profile: ${user.username || traktUser.username || 'connected'}`,
-      message: `Name: ${user.name || 'Not public'}\nVIP: ${user.vip ? 'Yes' : 'No'}\nJoined: ${user.joined_at ? new Date(user.joined_at).toLocaleDateString() : 'Unknown'}\nLast app sync: ${stats.updated_at ? new Date(stats.updated_at).toLocaleString() : 'Never'}\nWatched entries in this app: ${stats.watched_count || 0}`,
-      type: 'info',
-      confirmText: 'OK'
-    });
+
+    traktUser = {
+      ...traktUser,
+      authenticated: true,
+      username: user.username || traktUser.username || '',
+      avatar: user.avatar || traktUser.avatar || '',
+      profile: user,
+      updated_at: stats.updated_at || traktUser.updated_at || null
+    };
+    updateTraktAccountPanel();
+
+    openTraktProfileModal(user, stats);
   } catch (err) {
     showToast('Profile unavailable', err.message || String(err), 'warning');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = previous; }
   }
+}
+
+function openTraktProfileModal(user = {}, stats = {}) {
+  const overlay = document.getElementById('modalOverlay');
+  if (!overlay) return;
+  const username = user.username || traktUser?.username || 'connected';
+  const avatar = user.avatar || traktUser?.avatar || '';
+  const initial = esc(String(username || 'T').slice(0, 1).toUpperCase());
+  const joined = user.joined_at ? new Date(user.joined_at).toLocaleDateString() : 'Unknown';
+  const synced = stats.updated_at ? new Date(stats.updated_at).toLocaleString() : 'Never';
+  const location = user.location || 'Not public';
+  const about = user.about || '';
+  overlay.innerHTML = `
+    <div class="modal traktProfileModal" style="--modalColor:#ef4444">
+      <div class="traktProfileHeader">
+        <div class="traktProfileAvatarWrap">
+          ${avatar ? `<img class="traktProfileAvatar" src="${esc(avatar)}" alt="${esc(username)} avatar">` : `<div class="traktProfileAvatar fallback">${initial}</div>`}
+        </div>
+        <div>
+          <p class="label">Trakt profile</p>
+          <h2>${esc(username)}</h2>
+          <p class="mutedText">${esc(user.name || 'No public name')} ${user.vip ? '• VIP' : ''}</p>
+        </div>
+      </div>
+      <div class="traktProfileGrid">
+        <div><span>Watched entries</span><strong>${esc(stats.watched_count || 0)}</strong></div>
+        <div><span>Matched rows</span><strong>${esc(stats.matched || 0)}</strong></div>
+        <div><span>Status keys</span><strong>${esc(stats.status_count || 0)}</strong></div>
+        <div><span>Last sync</span><strong>${esc(synced)}</strong></div>
+      </div>
+      <div class="traktProfileMeta">
+        <p><strong>Joined:</strong> ${esc(joined)}</p>
+        <p><strong>Location:</strong> ${esc(location)}</p>
+        ${about ? `<p><strong>About:</strong> ${esc(about)}</p>` : ''}
+      </div>
+      <div class="modalActions">
+        <button id="modalOk" class="primary">Close</button>
+      </div>
+    </div>`;
+  overlay.classList.add('show');
+  const close = () => { overlay.classList.remove('show'); overlay.innerHTML = ''; };
+  overlay.querySelector('#modalOk')?.addEventListener('click', close);
+  overlay.addEventListener('click', function outside(ev) {
+    if (ev.target === overlay) {
+      overlay.removeEventListener('click', outside);
+      close();
+    }
+  });
 }
 
 async function disconnectTraktUser() {
@@ -1353,7 +1441,7 @@ async function fetchPersonalSupabaseStatus(options = {}) {
     const response = await fetch('/api/me/status?ts=' + Date.now(), { cache: 'no-store', credentials: 'include' });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload.error || `HTTP ${response.status}`);
-    traktUser = payload.authenticated ? payload : { authenticated: false };
+    traktUser = payload.authenticated ? { ...payload, avatar: payload.avatar || payload.user?.avatar || payload.profile?.avatar || '' } : { authenticated: false };
     updateTraktAccountPanel();
     if (!payload.authenticated) return { ok: false, authenticated: false };
     return await importStatusPayload(payload, options.source || 'Personal Supabase status', options);
