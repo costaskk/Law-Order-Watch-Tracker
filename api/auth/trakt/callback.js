@@ -8,7 +8,8 @@ import {
   setSessionCookie,
   getPublicBaseUrl,
   exchangeTraktCode,
-  getTraktSettings
+  getTraktSettings,
+  encryptToken
 } from '../../_wolf_auth.js';
 
 export default async function handler(req, res) {
@@ -30,8 +31,8 @@ export default async function handler(req, res) {
     const payload = {
       trakt_username: username,
       trakt_user_slug: settings?.user?.ids?.slug || username,
-      trakt_access_token: token.access_token,
-      trakt_refresh_token: token.refresh_token,
+      trakt_access_token: encryptToken(token.access_token),
+      trakt_refresh_token: encryptToken(token.refresh_token),
       token_expires_at: new Date(Date.now() + Number(token.expires_in || 7776000) * 1000).toISOString(),
       updated_at: new Date().toISOString()
     };

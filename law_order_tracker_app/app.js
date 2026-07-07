@@ -42,6 +42,9 @@ let lastHostedStatusFetchedAt = 0;
 
 let traktUser = null;
 let traktStatusLoadInProgress = false;
+let currentNextEpisode = null;
+let personalAutoSyncTimer = null;
+let personalSyncInProgress = false;
 
 const GUIDE_SCOPES = {
   core: 'Core Wolf Universe',
@@ -583,6 +586,7 @@ function openEpisodeDetail(ep) {
           <span class="detailKicker">${esc(ep.franchise || ep.era || 'Wolf Universe')} • ${esc(ep.scope || 'guide')}</span>
           <h2>${esc(ep.show)} ${esc(ep.code)}${ep.title ? ` — ${esc(ep.title)}` : ''}</h2>
           <div class="heroMeta"><span class="metaPill">${esc(ep.airDate || 'No date')}</span><span class="metaPill">${esc(episodeLabel(ep))}</span><span class="metaPill">${esc(st)}</span></div>
+          ${ratingsHtml(ep, 'detailRatings')}
           ${(ep.connection || ep.notes) ? `<div class="crossover">${esc(ep.connection || ep.notes)}</div>` : ''}
           ${ep.overview ? `<p class="detailOverview">${esc(ep.overview)}</p>` : '<p class="detailOverview mutedText">No summary available yet.</p>'}
         </div>
@@ -819,7 +823,56 @@ function setText(id, value) {
   if (el) el.textContent = value;
 }
 
+
+function normalizeRatingValue(value) {
+  if (value === null || value === undefined || value === '') return '';
+  if (typeof value === 'number') return Number.isFinite(value) ? String(Math.round(value * 10) / 10) : '';
+  return String(value).trim();
+}
+
+function getEpisodeRatings(ep = {}) {
+  const ratings = [];
+  const source = ep.ratings && typeof ep.ratings === 'object' ? ep.ratings : {};
+  const add = (label, value, suffix = '') => {
+    value = normalizeRatingValue(value);
+    if (!value || value === 'N/A') return;
+    ratings.push({ label, value: suffix && !String(value).includes(suffix) ? `${value}${suffix}` : value });
+  };
+
+  add('IMDb', source.imdb || source.imdbRating || ep.imdbRating || ep.imdb_rating);
+  add('RT', source.rottenTomatoes || source.rotten_tomatoes || source.tomatoes || ep.rottenTomatoes || ep.rotten_tomatoes, '%');
+  add('Metacritic', source.metacritic || ep.metacritic);
+  add('Trakt', source.trakt || source.traktRating || ep.traktRating || ep.trakt_rating);
+  add('TMDB', source.tmdb || source.tmdbRating || ep.tmdbRating || ep.voteAverage || ep.vote_average);
+  add('TVDB', source.tvdb || source.tvdbRating || ep.tvdbRating);
+
+  // OMDb stores ratings as an array such as [{Source:'Internet Movie Database', Value:'8.0/10'}]
+  const arr = Array.isArray(source.omdbRatings) ? source.omdbRatings : (Array.isArray(ep.omdbRatings) ? ep.omdbRatings : []);
+  arr.forEach(item => {
+    const src = String(item.Source || item.source || '').toLowerCase();
+    const val = item.Value || item.value;
+    if (src.includes('internet movie database')) add('IMDb', val);
+    else if (src.includes('rotten tomatoes')) add('RT', val);
+    else if (src.includes('metacritic')) add('Metacritic', val);
+  });
+
+  const seen = new Set();
+  return ratings.filter(item => {
+    const key = `${item.label}|${item.value}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).slice(0, 6);
+}
+
+function ratingsHtml(ep, className = 'ratingRow') {
+  const ratings = getEpisodeRatings(ep);
+  if (!ratings.length) return '';
+  return `<div class="${className}">${ratings.map(r => `<span class="ratingPill"><strong>${esc(r.label)}</strong> ${esc(r.value)}</span>`).join('')}</div>`;
+}
+
 function renderNext(next) {
+  currentNextEpisode = next || null;
   const nextTitle = document.getElementById('nextTitle');
   const nextMeta = document.getElementById('nextMeta');
   const nextNotes = document.getElementById('nextNotes');
@@ -827,6 +880,7 @@ function renderNext(next) {
   const poster = document.getElementById('nextPoster');
 
   if (!next) {
+    if (heroCard) heroCard.dataset.episodeId = '';
     nextTitle.textContent = 'Everything is watched';
     nextMeta.innerHTML = '<span class="metaPill">Your Wolf Universe tracker is complete for this scope.</span>';
     nextNotes.textContent = '';
@@ -835,9 +889,10 @@ function renderNext(next) {
   }
 
   const t = theme(next.show);
+  if (heroCard) heroCard.dataset.episodeId = String(next.id || '');
   nextTitle.textContent = `${next.show} ${next.code}${next.title ? ' — ' + next.title : ''}`;
-  nextMeta.innerHTML = `<span class="metaPill">#${esc(next.order)}</span><span class="metaPill">${esc(next.airDate || 'No air date')}</span><span class="metaPill">${episodeLabel(next)}</span>`;
-  nextNotes.textContent = next.connection || next.notes || next.overview || '';
+  nextMeta.innerHTML = `<span class="metaPill">#${esc(next.order)}</span><span class="metaPill">${esc(next.airDate || 'No air date')}</span><span class="metaPill">${episodeLabel(next)}</span>${ratingsHtml(next, 'heroRatings')}`;
+  nextNotes.textContent = next.overview || next.connection || next.notes || 'Open details for the full episode card, artwork, cast, and ratings.';
   heroCard.style.setProperty('--showColor', t.primary);
   const src = episodeArtwork(next);
   setImageSafe(poster, src, next.show);
@@ -988,6 +1043,7 @@ function epCard(ep) {
       <div class="epMain">
         <h3>${esc(ep.show)} ${esc(ep.code)}${title}</h3>
         <div class="meta">${esc(ep.airDate || 'No date')} • ${esc(episodeLabel(ep))} • <strong>${esc(st)}</strong></div>
+        ${ratingsHtml(ep)}
         <span class="pill">${esc(ep.franchise || ep.era || 'Wolf Universe')}</span>${scopePill}${source}${notes}
         ${ep.overview ? `<p class="overview">${esc(ep.overview)}</p>` : ''}
       </div>
@@ -1121,11 +1177,15 @@ function ensureTraktAccountPanel() {
     <div class="traktAccountActions">
       <button id="traktLoginBtn" type="button">Login with Trakt</button>
       <button id="traktResetLocalBtn" type="button" class="ghost">Reset local progress</button>
+      <button id="traktProfileBtn" type="button" class="ghost" hidden>Profile</button>
+      <button id="traktDisconnectBtn" type="button" class="ghost danger" hidden>Disconnect</button>
       <button id="traktLogoutBtn" type="button" class="ghost" hidden>Logout</button>
     </div>`;
   syncPanel.insertAdjacentElement('afterend', panel);
   document.getElementById('traktLoginBtn')?.addEventListener('click', loginWithTrakt);
   document.getElementById('traktResetLocalBtn')?.addEventListener('click', () => resetLoggedOutProgress(true));
+  document.getElementById('traktProfileBtn')?.addEventListener('click', showTraktProfile);
+  document.getElementById('traktDisconnectBtn')?.addEventListener('click', disconnectTraktUser);
   document.getElementById('traktLogoutBtn')?.addEventListener('click', logoutTraktUser);
 }
 
@@ -1136,6 +1196,8 @@ function updateTraktAccountPanel() {
   const login = document.getElementById('traktLoginBtn');
   const reset = document.getElementById('traktResetLocalBtn');
   const logout = document.getElementById('traktLogoutBtn');
+  const profile = document.getElementById('traktProfileBtn');
+  const disconnect = document.getElementById('traktDisconnectBtn');
   if (!title || !text || !login || !logout) return;
   if (traktUser?.authenticated) {
     title.textContent = `Trakt: ${traktUser.username || 'connected'}`;
@@ -1144,18 +1206,24 @@ function updateTraktAccountPanel() {
       : 'Personal Supabase sync active. Press Sync with Trakt to import progress.';
     login.textContent = 'Reconnect Trakt';
     if (reset) reset.hidden = true;
+    if (profile) profile.hidden = false;
+    if (disconnect) disconnect.hidden = false;
     logout.hidden = false;
   } else if (!isServerMode()) {
     title.textContent = 'Local file mode';
     text.textContent = 'Open through local_tracker_server.py or Vercel to use Trakt login. Manual/local sync still works.';
     login.textContent = 'Login with Trakt';
     if (reset) reset.hidden = false;
+    if (profile) profile.hidden = true;
+    if (disconnect) disconnect.hidden = true;
     logout.hidden = true;
   } else {
     title.textContent = 'Trakt account';
     text.textContent = 'Login with Trakt to sync this app with your own watched progress without GitHub commits/deployments.';
     login.textContent = 'Login with Trakt';
     if (reset) reset.hidden = false;
+    if (profile) profile.hidden = true;
+    if (disconnect) disconnect.hidden = true;
     logout.hidden = true;
   }
 }
@@ -1176,6 +1244,7 @@ async function loadTraktUser({ pullStatus = true, quiet = false } = {}) {
     if (payload.authenticated && pullStatus && (payload.statuses || payload.episodes)) {
       await importStatusPayload(payload, 'Personal Supabase status', { suppressToast: quiet, silentNoChange: quiet });
     }
+    startPersonalAutoSync();
     return traktUser;
   } catch (err) {
     traktUser = { authenticated: false };
@@ -1222,6 +1291,48 @@ async function resetLoggedOutProgress(ask = true) {
   setText('syncStatus', 'Logged-out local progress was reset. Login with Trakt to load personal progress.');
   showToast('Progress reset', 'Local logged-out progress cleared.', 'success');
   return true;
+}
+
+
+async function showTraktProfile() {
+  if (!traktUser?.authenticated) {
+    showToast('Not connected', 'Login with Trakt first.', 'warning');
+    return;
+  }
+  try {
+    const response = await fetch('/api/me/profile?ts=' + Date.now(), { cache: 'no-store', credentials: 'include' });
+    const profile = await response.json().catch(() => ({}));
+    if (!response.ok || profile.ok === false) throw new Error(profile.error || `HTTP ${response.status}`);
+    const user = profile.user || {};
+    const stats = profile.stats || {};
+    await showModal({
+      title: `Trakt profile: ${user.username || traktUser.username || 'connected'}`,
+      message: `Name: ${user.name || 'Not public'}\nVIP: ${user.vip ? 'Yes' : 'No'}\nJoined: ${user.joined_at ? new Date(user.joined_at).toLocaleDateString() : 'Unknown'}\nLast app sync: ${stats.updated_at ? new Date(stats.updated_at).toLocaleString() : 'Never'}\nWatched entries in this app: ${stats.watched_count || 0}`,
+      type: 'info',
+      confirmText: 'OK'
+    });
+  } catch (err) {
+    showToast('Profile unavailable', err.message || String(err), 'warning');
+  }
+}
+
+async function disconnectTraktUser() {
+  const ok = await showModal({
+    title: 'Disconnect Trakt?',
+    message: 'This logs this browser out and revokes the stored Trakt token for this app when Trakt allows it. Your Trakt account and Supabase progress are not deleted.',
+    type: 'warning',
+    confirmText: 'Disconnect',
+    cancelText: 'Cancel',
+    danger: true
+  });
+  if (!ok) return;
+  try {
+    await fetch('/api/auth/trakt/revoke', { method: 'POST', credentials: 'include' });
+  } catch (_) {}
+  traktUser = { authenticated: false };
+  updateTraktAccountPanel();
+  await resetLoggedOutProgress(false);
+  showToast('Trakt disconnected', 'Session and local browser progress were cleared.', 'info');
 }
 
 async function logoutTraktUser() {
@@ -1636,13 +1747,36 @@ async function triggerCloudSync() {
   }
 }
 
+function stopPersonalAutoSync() {
+  if (personalAutoSyncTimer) clearInterval(personalAutoSyncTimer);
+  personalAutoSyncTimer = null;
+}
+
+function startPersonalAutoSync() {
+  stopPersonalAutoSync();
+  if (!traktUser?.authenticated || localStorage.getItem(AUTOSYNC_KEY) === '0') return;
+  personalAutoSyncTimer = setInterval(async () => {
+    if (!traktUser?.authenticated || personalSyncInProgress) return;
+    try {
+      personalSyncInProgress = true;
+      await syncPersonalTrakt();
+    } catch (err) {
+      console.warn('Background Trakt sync failed:', err);
+    } finally {
+      personalSyncInProgress = false;
+    }
+  }, 30 * 60 * 1000);
+}
+
 function setAutoSync(enabled) {
   localStorage.setItem(AUTOSYNC_KEY, enabled ? '1' : '0');
   if (autoTimer) clearInterval(autoTimer);
   autoTimer = null;
+  stopPersonalAutoSync();
   if (enabled) {
     fetchHostedStatus();
     autoTimer = setInterval(fetchHostedStatus, 5 * 60 * 1000);
+    startPersonalAutoSync();
   }
 }
 
@@ -1686,9 +1820,21 @@ function bindEvents() {
     });
   }
 
+  const heroCard = document.getElementById('heroCard');
+  if (heroCard) {
+    heroCard.addEventListener('click', ev => {
+      if (ev.target.closest('button')) return;
+      if (currentNextEpisode) openEpisodeDetail(currentNextEpisode);
+    });
+  }
+
   const nextPoster = document.getElementById('nextPoster');
   if (nextPoster) {
-    nextPoster.addEventListener('click', () => openImageLightbox(nextPoster.dataset.lightboxSrc || nextPoster.src, nextPoster.dataset.lightboxTitle || 'Artwork'));
+    nextPoster.addEventListener('click', ev => {
+      ev.stopPropagation();
+      if (currentNextEpisode) openEpisodeDetail(currentNextEpisode);
+      else openImageLightbox(nextPoster.dataset.lightboxSrc || nextPoster.src, nextPoster.dataset.lightboxTitle || 'Artwork');
+    });
   }
 
   const episodeOverlay = document.getElementById('episodeModalOverlay');
@@ -1722,7 +1868,7 @@ function bindEvents() {
   document.getElementById('markShowWatched')?.addEventListener('click', () => markBulk('show', 'Watched'));
 
   document.getElementById('markNextWatched')?.addEventListener('click', async () => {
-    const next = scopedEpisodes.find(e => getStatus(e) !== 'Watched');
+    const next = (current.length ? current : scopedEpisodes).find(e => getStatus(e) !== 'Watched');
     if (!next) return showToast('Nothing to mark', 'All entries are already watched in this scope.', 'info');
     const ok = await showModal({
       title: 'Mark next entry watched?',
@@ -1735,7 +1881,7 @@ function bindEvents() {
   });
 
   const jump = () => {
-    const next = scopedEpisodes.find(e => getStatus(e) !== 'Watched');
+    const next = (current.length ? current : scopedEpisodes).find(e => getStatus(e) !== 'Watched');
     if (!next) return;
     document.getElementById('statusFilter').value = 'unwatched';
     document.getElementById('hideWatched').checked = true;

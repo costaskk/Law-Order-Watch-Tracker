@@ -22,6 +22,46 @@ function trimTrailingSlash(value) {
   return String(value || '').trim().replace(/\/+$/, '');
 }
 
+
+function tokenCryptoKey() {
+  // Uses SESSION_SECRET by default, so no extra DB schema is required.
+  // Set TOKEN_ENCRYPTION_SECRET if you want a separate rotation-ready key.
+  return crypto.createHash('sha256').update(optionalEnv('TOKEN_ENCRYPTION_SECRET', requiredEnv('SESSION_SECRET'))).digest();
+}
+
+export function encryptToken(value = '') {
+  value = String(value || '');
+  if (!value || value.startsWith('enc:v1:')) return value;
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', tokenCryptoKey(), iv);
+  const encrypted = Buffer.concat([cipher.update(value, 'utf8'), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return `enc:v1:${iv.toString('base64url')}:${tag.toString('base64url')}:${encrypted.toString('base64url')}`;
+}
+
+export function decryptToken(value = '') {
+  value = String(value || '');
+  if (!value || !value.startsWith('enc:v1:')) return value;
+  const [, version, iv64, tag64, data64] = value.split(':');
+  if (version !== 'v1' || !iv64 || !tag64 || !data64) return '';
+  try {
+    const decipher = crypto.createDecipheriv('aes-256-gcm', tokenCryptoKey(), Buffer.from(iv64, 'base64url'));
+    decipher.setAuthTag(Buffer.from(tag64, 'base64url'));
+    return Buffer.concat([decipher.update(Buffer.from(data64, 'base64url')), decipher.final()]).toString('utf8');
+  } catch (_) {
+    return '';
+  }
+}
+
+export function withDecryptedTokens(user) {
+  if (!user) return user;
+  return {
+    ...user,
+    trakt_access_token: decryptToken(user.trakt_access_token),
+    trakt_refresh_token: decryptToken(user.trakt_refresh_token)
+  };
+}
+
 function traktUserAgent() {
   return optionalEnv('TRAKT_USER_AGENT', 'Wolf-Universe-Watch-Tracker/1.0 (+https://law-and-order-watch-tracker1.vercel.app)');
 }
@@ -178,7 +218,7 @@ export async function getSessionUser(req) {
   const session = Array.isArray(sessions) ? sessions[0] : null;
   if (!session?.user_id) return null;
   const users = await supabaseFetch(`/trakt_users?id=eq.${encodeURIComponent(session.user_id)}&select=*`, { method: 'GET' });
-  return Array.isArray(users) ? users[0] : null;
+  return withDecryptedTokens(Array.isArray(users) ? users[0] : null);
 }
 
 async function parseJsonResponse(response) {
@@ -245,8 +285,8 @@ export async function refreshTraktTokenIfNeeded(user) {
   if (!response.ok) throw new Error(token.error_description || token.error || token.raw || `Trakt token refresh failed: HTTP ${response.status}`);
 
   const updated = {
-    trakt_access_token: token.access_token,
-    trakt_refresh_token: token.refresh_token || user.trakt_refresh_token,
+    trakt_access_token: encryptToken(token.access_token),
+    trakt_refresh_token: encryptToken(token.refresh_token || user.trakt_refresh_token),
     token_expires_at: new Date(Date.now() + Number(token.expires_in || 7776000) * 1000).toISOString(),
     updated_at: new Date().toISOString()
   };
@@ -255,7 +295,26 @@ export async function refreshTraktTokenIfNeeded(user) {
     prefer: 'return=representation',
     body: JSON.stringify(updated)
   });
-  return { ...user, ...updated };
+  return { ...user, trakt_access_token: token.access_token, trakt_refresh_token: token.refresh_token || user.trakt_refresh_token, token_expires_at: updated.token_expires_at, updated_at: updated.updated_at };
+}
+
+
+export async function revokeTraktToken(accessToken = '') {
+  if (!accessToken) return { ok: false, skipped: true };
+  const response = await fetch('https://api.trakt.tv/oauth/revoke', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'User-Agent': traktUserAgent()
+    },
+    body: JSON.stringify({
+      token: accessToken,
+      client_id: requiredEnv('TRAKT_CLIENT_ID'),
+      client_secret: requiredEnv('TRAKT_CLIENT_SECRET')
+    })
+  });
+  const data = await parseJsonResponse(response);
+  return { ok: response.ok, status: response.status, data };
 }
 
 export async function traktFetch(pathPart, accessToken) {
