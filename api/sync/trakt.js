@@ -1,4 +1,4 @@
-import { getSessionUser, refreshTraktTokenIfNeeded, buildWatchedStatusesForGuide, supabaseFetch } from '../_wolf_auth.js';
+import { getSessionUser, refreshTraktTokenIfNeeded, buildWatchedStatusesForGuide, supabaseFetch, statusesToGuideEpisodes } from '../_wolf_auth.js';
 
 function noStore(res) {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
@@ -100,6 +100,9 @@ export default async function handler(req, res) {
     const latestRow = writtenRow?.status ? writtenRow : await readLatestWatchStatus(user.id);
     const savedStatuses = cleanStatuses(latestRow?.status || statuses);
     const savedUpdatedAt = latestRow?.updated_at || now;
+    const savedEpisodes = Array.isArray(built?.episodes) && built.episodes.length
+      ? built.episodes
+      : statusesToGuideEpisodes(savedStatuses);
 
     return res.status(200).json({
       ok: true,
@@ -109,12 +112,14 @@ export default async function handler(req, res) {
       status_count: Object.keys(savedStatuses).length,
       watched_keys: Object.keys(savedStatuses).length,
       watched_count: countWatched(savedStatuses),
-      matched: built?.matched || built?.guide_matches || built?.debug?.watchedShows?.guideMatches || built?.debug?.history?.guideMatches || 0,
+      matched: savedEpisodes.length || built?.matched || built?.guide_matches || built?.debug?.watchedShows?.guideMatches || built?.debug?.history?.guideMatches || 0,
       statuses: savedStatuses,
+      episodes: savedEpisodes,
       debug: {
         ...(built?.debug || {}),
         wrote_watch_status_row: true,
-        returned_from: latestRow?.status ? 'supabase_written_or_latest_row' : 'built_statuses_fallback'
+        returned_from: latestRow?.status ? 'supabase_written_or_latest_row' : 'built_statuses_fallback',
+        returned_episode_rows: savedEpisodes.length
       }
     });
   } catch (err) {

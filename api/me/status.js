@@ -1,4 +1,4 @@
-import { getSessionUser, supabaseFetch } from '../_wolf_auth.js';
+import { getSessionUser, supabaseFetch, statusesToGuideEpisodes } from '../_wolf_auth.js';
 
 function noStore(res) {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
@@ -52,6 +52,7 @@ export default async function handler(req, res) {
     );
     const row = Array.isArray(rows) ? rows[0] : null;
     const statuses = cleanStatuses(row?.status || {});
+    const episodes = statusesToGuideEpisodes(statuses);
 
     return res.status(200).json({
       ok: true,
@@ -61,6 +62,8 @@ export default async function handler(req, res) {
       status_count: Object.keys(statuses).length,
       watched_keys: Object.keys(statuses).length,
       watched_count: countWatched(statuses),
+      matched: episodes.length,
+      episodes,
       statuses
     });
   } catch (err) {

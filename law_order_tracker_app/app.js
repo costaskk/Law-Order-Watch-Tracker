@@ -940,7 +940,7 @@ function renderScopeSummary() {
     button.addEventListener('click', () => {
       document.getElementById('showFilter').value = button.dataset.show;
       refreshDynamicFilters({ keepShow: true, keepSeason: false, keepFranchise: true, keepActor: true });
-      render();
+      renderPreservingScroll();
     });
   });
 }
@@ -1173,8 +1173,8 @@ async function loadTraktUser({ pullStatus = true, quiet = false } = {}) {
     if (!response.ok) throw new Error(payload.error || `HTTP ${response.status}`);
     traktUser = payload.authenticated ? payload : { authenticated: false };
     updateTraktAccountPanel();
-    if (payload.authenticated && pullStatus && payload.statuses) {
-      await importStatusPayload({ statuses: payload.statuses }, 'Personal Supabase status', { suppressToast: quiet, silentNoChange: quiet });
+    if (payload.authenticated && pullStatus && (payload.statuses || payload.episodes)) {
+      await importStatusPayload(payload, 'Personal Supabase status', { suppressToast: quiet, silentNoChange: quiet });
     }
     return traktUser;
   } catch (err) {
@@ -1245,7 +1245,7 @@ async function fetchPersonalSupabaseStatus(options = {}) {
     traktUser = payload.authenticated ? payload : { authenticated: false };
     updateTraktAccountPanel();
     if (!payload.authenticated) return { ok: false, authenticated: false };
-    return await importStatusPayload({ statuses: payload.statuses || {} }, options.source || 'Personal Supabase status', options);
+    return await importStatusPayload(payload, options.source || 'Personal Supabase status', options);
   } catch (err) {
     setText('syncStatus', `Personal status refresh failed: ${err.message}`);
     if (!options.suppressToast) showToast('Personal sync warning', err.message, 'warning');
@@ -1283,11 +1283,11 @@ async function syncPersonalTrakt() {
   updateTraktAccountPanel();
 
   const expectedUpdatedAt = syncPayload.updated_at || startedAt;
-  const expectedKeys = Number(syncPayload.watched_keys || syncPayload.status_count || Object.keys(syncPayload.statuses || {}).length || 0);
+  const expectedKeys = Number(syncPayload.watched_keys || syncPayload.status_count || Object.keys(syncPayload.statuses || {}).length || (Array.isArray(syncPayload.episodes) ? syncPayload.episodes.length : 0) || 0);
   const expectedServerMatches = Number(syncPayload.matched || syncPayload.guide_matches || syncPayload.debug?.watchedShows?.guideMatches || syncPayload.debug?.history?.guideMatches || 0);
 
   let bestResult = await importStatusPayload(
-    { statuses: syncPayload.statuses || {} },
+    syncPayload,
     'Personal Trakt sync',
     { suppressToast: true, silentNoChange: true }
   );
@@ -1304,7 +1304,7 @@ async function syncPersonalTrakt() {
     traktUser = payload.authenticated ? payload : { authenticated: false };
     updateTraktAccountPanel();
     const imported = await importStatusPayload(
-      { statuses: payload.statuses || {} },
+      payload,
       'Personal Supabase status',
       { suppressToast: true, silentNoChange: true }
     );
@@ -1401,10 +1401,10 @@ async function importStatusPayload(payload, source = 'import', options = {}) {
     const existingKey = normalizeStatus(statusMap[noOrder]);
 
     // Never let a stale "Not Started" payload downgrade a freshly imported
-    // watched status for the same guide row.
-    const finalStatus = Math.max(statusRank(status), statusRank(existingId), statusRank(existingKey)) === statusRank(existingId)
-      ? existingId
-      : (Math.max(statusRank(status), statusRank(existingKey)) === statusRank(existingKey) ? existingKey : status);
+    // watched status for the same guide row. Watched always wins.
+    const finalStatus = statusRank(status) >= Math.max(statusRank(existingId), statusRank(existingKey))
+      ? status
+      : (statusRank(existingId) >= statusRank(existingKey) ? existingId : existingKey);
 
     if (normalizeStatus(statusMap[ep.id]) !== finalStatus) {
       statusMap[ep.id] = finalStatus;
@@ -1412,13 +1412,18 @@ async function importStatusPayload(payload, source = 'import', options = {}) {
     }
     if (normalizeStatus(statusMap[noOrder]) !== finalStatus) {
       statusMap[noOrder] = finalStatus;
-      changed++;
+      if (normalizeStatus(statusMap[ep.id]) === finalStatus) changed++;
     }
   }
 
   if (Array.isArray(payload.episodes)) {
     for (const item of payload.episodes) {
       const status = normalizeStatus(item.status);
+      if (!status) continue;
+
+      const direct = item.id !== undefined && item.id !== null ? episodeByExactId.get(String(item.id)) : null;
+      if (direct) applyToEpisode(direct, status);
+
       const key = `${normShow(item.show)}|${normNum(item.season)}|${normNum(item.episode)}`;
       const eps = episodesByNoOrderKey.get(key) || [];
       eps.forEach(ep => applyToEpisode(ep, status));

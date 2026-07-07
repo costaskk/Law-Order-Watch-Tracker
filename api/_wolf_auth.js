@@ -336,6 +336,55 @@ function addWatchedMatch(statuses, ep) {
   statuses[episodeKey(ep)] = 'Watched';
 }
 
+function normalizeGuideStatusValue(value) {
+  const v = String(value ?? '').trim().toLowerCase();
+  if (['watched', 'complete', 'completed', 'yes', 'true', '1'].includes(v)) return 'Watched';
+  if (['watching', 'in progress', 'started'].includes(v)) return 'Watching';
+  if (['skipped', 'skip'].includes(v)) return 'Skipped';
+  if (['not started', 'todo', 'unwatched', 'false', '0', ''].includes(v)) return 'Not Started';
+  return '';
+}
+
+export function statusesToGuideEpisodes(statuses = {}, guideEpisodes = loadGuideEpisodes()) {
+  const out = [];
+  for (const ep of guideEpisodes || []) {
+    const idStatus = normalizeGuideStatusValue(statuses[String(ep.id)]);
+    const keyStatus = normalizeGuideStatusValue(statuses[episodeKey(ep)]);
+
+    // Important: prefer Watched if either key says Watched. Older browser/local
+    // data may still contain exact-id "Not Started" entries while the fresh
+    // Supabase/Trakt sync contains the season/episode key as Watched.
+    let status = '';
+    if (idStatus === 'Watched' || keyStatus === 'Watched') status = 'Watched';
+    else status = idStatus || keyStatus;
+
+    if (!status || status === 'Not Started') continue;
+    out.push({
+      id: String(ep.id),
+      show: ep.show,
+      season: ep.season,
+      episode: ep.episode,
+      status
+    });
+  }
+  return out;
+}
+
+export function normalizeStatusesForGuide(statuses = {}, guideEpisodes = loadGuideEpisodes()) {
+  const normalized = { ...(statuses || {}) };
+  const episodes = statusesToGuideEpisodes(normalized, guideEpisodes);
+
+  for (const item of episodes) {
+    if (item.status === 'Watched') {
+      normalized[String(item.id)] = 'Watched';
+      normalized[episodeKeyFromParts(item.show, item.season, item.episode)] = 'Watched';
+    }
+  }
+
+  return { statuses: normalized, episodes, matched: episodes.length };
+}
+
+
 function buildGuideIndexes(guideEpisodes = []) {
   const byShowSeasonEpisode = new Map();
   const byShowIdSeasonEpisode = new Map();
@@ -463,14 +512,19 @@ export async function buildWatchedStatusesForGuide(accessToken) {
     history.debug = { ...history.debug, error: err.message || String(err) };
   }
 
-  const statuses = { ...primary.statuses, ...history.statuses };
+  const rawStatuses = { ...primary.statuses, ...history.statuses };
+  const normalized = normalizeStatusesForGuide(rawStatuses, guideEpisodes);
   return {
-    statuses,
+    statuses: normalized.statuses,
+    episodes: normalized.episodes,
+    matched: normalized.matched,
+    guide_matches: normalized.matched,
     debug: {
       guideEpisodes: guideEpisodes.length,
       watchedShows: primary.debug,
       history: history.debug,
-      finalStatusKeys: Object.keys(statuses).length
+      finalStatusKeys: Object.keys(normalized.statuses).length,
+      finalGuideMatches: normalized.matched
     }
   };
 }
