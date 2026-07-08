@@ -1228,20 +1228,60 @@ function ensureTraktAccountPanel() {
 
 function setAvatarElements(src, username = 'Trakt') {
   const initial = String(username || 'T').slice(0, 1).toUpperCase();
-  const fallbacks = [document.getElementById('traktAccountFallback'), document.getElementById('traktDropdownFallback')];
-  const imgs = [document.getElementById('traktAccountAvatar'), document.getElementById('traktDropdownAvatar')];
-  fallbacks.forEach(el => { if (el) el.textContent = initial; });
-  imgs.forEach(img => {
+  const pairs = [
+    [document.getElementById('traktAccountFallback'), document.getElementById('traktAccountAvatar')],
+    [document.getElementById('traktDropdownFallback'), document.getElementById('traktDropdownAvatar')]
+  ];
+
+  pairs.forEach(([fallback, img]) => {
+    if (fallback) {
+      fallback.textContent = initial;
+      fallback.hidden = Boolean(src);
+    }
     if (!img) return;
+
+    img.onload = null;
+    img.onerror = null;
+
     if (src) {
-      img.src = src;
       img.hidden = false;
-      img.onerror = () => { img.hidden = true; };
+      img.src = src;
+      img.onload = () => {
+        img.hidden = false;
+        if (fallback) fallback.hidden = true;
+      };
+      img.onerror = () => {
+        img.hidden = true;
+        img.removeAttribute('src');
+        if (fallback) fallback.hidden = false;
+      };
     } else {
-      img.removeAttribute('src');
       img.hidden = true;
+      img.removeAttribute('src');
+      if (fallback) fallback.hidden = false;
     }
   });
+}
+
+async function loadTraktProfileSilently() {
+  if (!isServerMode() || !traktUser?.authenticated || traktUser.avatar) return;
+  try {
+    const response = await fetch('/api/me/profile/?ts=' + Date.now(), { cache: 'no-store', credentials: 'include' });
+    const profile = await response.json().catch(() => ({}));
+    if (!response.ok || profile.ok === false) return;
+    const user = profile.user || {};
+    const stats = profile.stats || {};
+    traktUser = {
+      ...traktUser,
+      username: user.username || traktUser.username || '',
+      avatar: user.avatar || traktUser.avatar || '',
+      profile: user,
+      updated_at: stats.updated_at || traktUser.updated_at || null
+    };
+    updateTraktAccountPanel();
+  } catch (_) {
+    // Avatar/profile enrichment is optional; do not disturb startup or sync.
+  }
 }
 
 function updateTraktAccountPanel() {
@@ -1316,6 +1356,9 @@ async function loadTraktUser({ pullStatus = true, quiet = false } = {}) {
     if (!response.ok) throw new Error(payload.error || `HTTP ${response.status}`);
     traktUser = payload.authenticated ? { ...payload, avatar: payload.avatar || payload.user?.avatar || payload.profile?.avatar || '' } : { authenticated: false };
     updateTraktAccountPanel();
+    if (payload.authenticated) {
+      loadTraktProfileSilently();
+    }
     if (payload.authenticated && pullStatus && (payload.statuses || payload.episodes)) {
       await importStatusPayload(payload, 'Personal Supabase status', { suppressToast: quiet, silentNoChange: quiet });
     }

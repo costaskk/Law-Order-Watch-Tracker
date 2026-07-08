@@ -395,3 +395,8 @@ img{
 @media(max-width:1200px){.dashboardV22{grid-template-columns:1fr!important;max-width:980px}.dashboardV22 .hero,.statsOverview{min-height:0}.statsOverview{display:grid;grid-template-columns:1fr 1.4fr;align-items:center}.statsGrid{grid-template-columns:repeat(4,1fr)}.syncStatusInline{grid-column:1/-1}}
 @media(max-width:760px){.topbar{align-items:flex-start}.topActions{width:100%;justify-content:flex-start}.accountDropdown{left:0;right:auto;width:min(320px,calc(100vw - 28px))}.dashboardV22{display:grid!important;grid-template-columns:1fr!important}.statsOverview{display:flex}.statsGrid{grid-template-columns:1fr 1fr}.dashboardV22 .hero{grid-template-columns:1fr}.accountMenuButton{min-width:0}.accountMenuText strong{max-width:90px}.statusBtns{justify-content:flex-start}}
 @media(max-width:480px){.statsTop strong{font-size:42px}.statsGrid strong{font-size:21px}.accountMenuButton{width:100%;justify-content:flex-start}.dashboardV22 .poster{height:145px}}
+
+/* v2.2.1: prevent fallback initials from showing beside the real Trakt avatar */
+.accountAvatarFallback[hidden],
+.traktAccountAvatar[hidden],
+.traktDropdownAvatar[hidden]{display:none!important}
