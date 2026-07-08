@@ -31,36 +31,33 @@ button,input,select,.fileBtn{background:linear-gradient(180deg,rgba(255,255,255,
 @supports not (color:color-mix(in srgb,red,blue)){.hero,.ep,.showChip::before{background:var(--panel)}input:focus,select:focus,button:focus-visible{outline-color:rgba(239,68,68,.32)}}
 
 </style>
-  <link rel="stylesheet" href="./styles.css?v=20260706-pro-polish">
+  <link rel="stylesheet" href="./styles.css?v=20260708-v22-pro">
 </head>
 <body>
   <header class="topbar">
     <div class="brandBlock"><div class="badgeLogo">WOLF</div><div><h1>Wolf Universe Watch Tracker</h1><p>Law & Order • One Chicago • FBI • crossovers • specials</p></div></div>
-    <div class="topActions"><button id="syncNowBtn" class="primary smallBtn">Sync with Trakt</button><button id="pullStatusBtn" class="smallBtn">Pull latest</button><button id="themeBtn" class="ghost smallBtn">Theme</button><div id="traktAccountMenu" class="accountMenu" aria-live="polite"></div></div>
+    <div class="topActions"><button id="syncNowBtn" class="primary smallBtn">Sync with Trakt</button><button id="pullStatusBtn" class="smallBtn">Pull latest</button><button id="themeBtn" class="ghost smallBtn">Theme</button></div>
   </header>
 
   <div class="appShell">
-  <section class="dashboard">
+  <section class="dashboard dashboardV22">
     <div class="card hero" id="heroCard">
       <div class="heroText"><span class="label">Next episode</span><h2 id="nextTitle">Loading…</h2><div id="nextMeta" class="heroMeta"></div><p id="nextNotes" class="notes"></p><div class="heroBtns"><button id="markNextWatched" class="primary">Mark next watched</button><button id="jumpNext">Jump to next</button></div></div>
       <div class="posterWrap"><img id="nextPoster" alt="Show artwork" class="poster"></div>
     </div>
-    <aside class="card statsOverview" id="statsOverview">
-      <div class="statsHeader">
-        <span class="label">Progress overview</span>
-        <strong id="progressPct">0%</strong>
-      </div>
+    <aside class="card statsOverview" aria-label="Progress overview">
+      <div class="statsTop"><span>Progress overview</span><strong id="progressPct">0%</strong></div>
       <div class="progress"><span id="progressBar"></span></div>
       <div class="statsGrid">
         <div><span>Total</span><strong id="totalCount">0</strong></div>
         <div><span>Watched</span><strong id="watchedCount">0</strong></div>
         <div><span>Remaining</span><strong id="remainingCount">0</strong></div>
-        <div><span>Current view</span><strong id="filteredCount">0</strong></div>
+        <div><span>Current view</span><strong id="currentViewCount">0</strong></div>
       </div>
-      <p id="completionText" class="statsSubline">Choose a scope or filter to update the current view.</p>
+      <p id="progressDetail" class="small">Loading progress…</p>
+      <p id="syncStatus" class="small syncStatusInline">Ready.</p>
     </aside>
   </section>
-
 
   <section class="showStrip" id="showStrip"></section>
 
