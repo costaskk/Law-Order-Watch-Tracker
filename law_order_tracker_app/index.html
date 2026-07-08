@@ -31,17 +31,12 @@ button,input,select,.fileBtn{background:linear-gradient(180deg,rgba(255,255,255,
 @supports not (color:color-mix(in srgb,red,blue)){.hero,.ep,.showChip::before{background:var(--panel)}input:focus,select:focus,button:focus-visible{outline-color:rgba(239,68,68,.32)}}
 
 </style>
-  <link rel="stylesheet" href="./styles.css?v=20260708-v2-polish">
+  <link rel="stylesheet" href="./styles.css?v=20260706-pro-polish">
 </head>
 <body>
   <header class="topbar">
     <div class="brandBlock"><div class="badgeLogo">WOLF</div><div><h1>Wolf Universe Watch Tracker</h1><p>Law & Order • One Chicago • FBI • crossovers • specials</p></div></div>
-    <div class="topActions">
-      <button id="syncNowBtn" class="primary smallBtn">Sync with Trakt</button>
-      <button id="pullStatusBtn" class="smallBtn">Pull latest</button>
-      <button id="themeBtn" class="ghost smallBtn">Theme</button>
-      <div id="traktAccountPanel" class="accountMenu"></div>
-    </div>
+    <div class="topActions"><button id="syncNowBtn" class="primary smallBtn">Sync with Trakt</button><button id="pullStatusBtn" class="smallBtn">Pull latest</button><button id="themeBtn" class="ghost smallBtn">Theme</button><div id="traktAccountMenu" class="accountMenu" aria-live="polite"></div></div>
   </header>
 
   <div class="appShell">
@@ -50,19 +45,24 @@ button,input,select,.fileBtn{background:linear-gradient(180deg,rgba(255,255,255,
       <div class="heroText"><span class="label">Next episode</span><h2 id="nextTitle">Loading…</h2><div id="nextMeta" class="heroMeta"></div><p id="nextNotes" class="notes"></p><div class="heroBtns"><button id="markNextWatched" class="primary">Mark next watched</button><button id="jumpNext">Jump to next</button></div></div>
       <div class="posterWrap"><img id="nextPoster" alt="Show artwork" class="poster"></div>
     </div>
-    <div class="card stat"><span>Total</span><strong id="totalCount">0</strong></div>
-    <div class="card stat"><span>Watched</span><strong id="watchedCount">0</strong></div>
-    <div class="card stat"><span>Remaining</span><strong id="remainingCount">0</strong></div>
-    <div class="card stat"><span>Progress</span><strong id="progressPct">0%</strong><div class="progress"><span id="progressBar"></span></div></div>
+    <aside class="card statsOverview" id="statsOverview">
+      <div class="statsHeader">
+        <span class="label">Progress overview</span>
+        <strong id="progressPct">0%</strong>
+      </div>
+      <div class="progress"><span id="progressBar"></span></div>
+      <div class="statsGrid">
+        <div><span>Total</span><strong id="totalCount">0</strong></div>
+        <div><span>Watched</span><strong id="watchedCount">0</strong></div>
+        <div><span>Remaining</span><strong id="remainingCount">0</strong></div>
+        <div><span>Current view</span><strong id="filteredCount">0</strong></div>
+      </div>
+      <p id="completionText" class="statsSubline">Choose a scope or filter to update the current view.</p>
+    </aside>
   </section>
 
-  <section class="syncPanel card">
-    <div><h2>Automatic Trakt status refresh</h2><p id="syncStatus" class="small">Click <strong>Sync with Trakt</strong> to start the secure GitHub Actions sync from inside the website. Click <strong>Pull latest</strong> to reload the current <code>data/watched_status.json</code> after the workflow finishes.</p></div>
-    <label class="toggle"><input type="checkbox" id="autoSync" checked> Auto-sync hourly</label>
-  </section>
 
   <section class="showStrip" id="showStrip"></section>
-  <section class="appNotice card" id="appNotice"><strong>Tip:</strong> Host this folder on GitHub Pages or Vercel for full phone access. Local file mode works for viewing, but auto-sync needs a server.</section>
 
   <section class="controls card">
     <input id="searchBox" placeholder="Search title, show, notes…" autocomplete="off">

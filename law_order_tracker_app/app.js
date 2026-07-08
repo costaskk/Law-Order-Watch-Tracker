@@ -807,6 +807,8 @@ function render() {
   if (bar) bar.style.width = `${percent}%`;
 
   current = scopedEpisodes.filter(matches);
+  setText('filteredCount', current.length);
+  setText('completionText', `${watched}/${total} watched • ${total - watched} remaining • ${current.length} entries in the current view`);
   renderedCount = Math.min(PAGE_SIZE, current.length);
 
   // The hero should follow the active view. If the user filters by show,
@@ -955,7 +957,52 @@ function renderShowStrip(values = getFilterValues()) {
   });
 }
 
-function renderScopeSummary() { /* v2 UI: duplicate lower show rail removed. */ }
+function renderScopeSummary() {
+  const el = document.getElementById('scopeSummary');
+  if (!el) return;
+
+  const scope = getGuideScope();
+  const values = getFilterValues();
+  const summaryValues = { ...values, show: '', status: 'all', hideWatched: false };
+  const summarySource = scopedEpisodes.filter(ep => {
+    if (summaryValues.franchise && String(ep.franchise || ep.era) !== summaryValues.franchise) return false;
+    if (summaryValues.season && String(ep.season) !== String(summaryValues.season)) return false;
+    if (summaryValues.actor && !actorMatchesEpisode(ep, summaryValues.actor)) return false;
+    if (summaryValues.search) {
+      const haystack = `${ep.title} ${ep.show} ${ep.notes} ${ep.code} ${ep.airDate} ${ep.overview} ${ep.connection}`.toLowerCase();
+      if (!haystack.includes(summaryValues.search)) return false;
+    }
+    return true;
+  });
+  const byShow = new Map();
+  for (const ep of summarySource) {
+    if (!byShow.has(ep.show)) byShow.set(ep.show, { total: 0, watched: 0, color: theme(ep.show).primary });
+    const rec = byShow.get(ep.show);
+    rec.total += 1;
+    if (getStatus(ep) === 'Watched') rec.watched += 1;
+  }
+
+  const entries = showSortEntries([...byShow.entries()], scopedEpisodes);
+  el.innerHTML = `
+    <div class="scopeHeader">
+      <div><strong>${esc(GUIDE_SCOPES[scope])}</strong><span>${summarySource.length}/${episodes.length} entries</span></div>
+    </div>
+    <div class="scopeMiniRail">
+      ${entries.map(([show, rec]) => `
+        <button class="scopeMiniChip" data-show="${esc(show)}" style="--showColor:${esc(rec.color)}">
+          <span>${esc(show)}</span>
+          <small>${esc(showYear(show, scopedEpisodes))} · ${rec.watched}/${rec.total}</small>
+        </button>`).join('')}
+    </div>`;
+
+  el.querySelectorAll('.scopeMiniChip').forEach(button => {
+    button.addEventListener('click', () => {
+      document.getElementById('showFilter').value = button.dataset.show;
+      refreshDynamicFilters({ keepShow: true, keepSeason: false, keepFranchise: true, keepActor: true });
+      renderPreservingScroll();
+    });
+  });
+}
 
 function renderList() {
   const list = document.getElementById('episodeList');
@@ -1005,7 +1052,7 @@ function epCard(ep) {
         ${ep.overview ? `<p class="overview">${esc(ep.overview)}</p>` : ''}
       </div>
       <div class="statusBtns">
-        ${statuses.map(status => `<button class="watchStateBtn ${st === status ? 'active' : ''}" data-id="${encodeURIComponent(ep.id)}" data-status="${esc(status)}">${status === 'Watched' ? '✓ Watched' : status === 'Watching' ? '▶ Watching' : '○ Unwatched'}</button>`).join('')}
+        ${statuses.map(status => `<button class="${st === status ? 'active' : ''}" data-id="${encodeURIComponent(ep.id)}" data-status="${esc(status)}">${status === 'Not Started' ? '○ Unwatched' : status === 'Watching' ? '▶ Watching' : '✓ Watched'}</button>`).join('')}
       </div>
     </article>`;
 }
@@ -1119,145 +1166,117 @@ function isLocalHost() {
   return ['localhost', '127.0.0.1', '0.0.0.0'].includes(window.location.hostname) || window.location.hostname.endsWith('.local');
 }
 
-function accountInitial() {
-  return String(traktUser?.username || 'T').slice(0, 1).toUpperCase();
-}
-
-function closeAccountDropdown() {
-  const menu = document.getElementById('traktAccountPanel');
-  if (menu) menu.classList.remove('open');
-}
-
 function ensureTraktAccountPanel() {
-  let panel = document.getElementById('traktAccountPanel');
-  const topActions = document.querySelector('.topActions');
-  if (!panel && topActions) {
-    panel = document.createElement('div');
-    panel.id = 'traktAccountPanel';
-    panel.className = 'accountMenu';
-    topActions.appendChild(panel);
-  }
-  if (!panel || panel.dataset.ready === '1') return;
-  panel.dataset.ready = '1';
-  panel.innerHTML = `
-    <button id="traktAccountToggle" class="accountToggle" type="button" aria-haspopup="true" aria-expanded="false">
-      <span class="accountAvatarWrap"><img id="traktAccountAvatar" class="accountAvatar" alt="Trakt avatar" hidden><span id="traktAccountFallback" class="accountAvatarFallback">T</span></span>
-      <span class="accountToggleText"><strong id="traktAccountTitle">Trakt</strong><small id="traktAccountText">Not connected</small></span>
+  const host = document.getElementById('traktAccountMenu') || document.querySelector('.topActions');
+  if (!host) return;
+  if (document.getElementById('traktAccountButton')) return;
+
+  const wrap = document.createElement('div');
+  wrap.className = 'accountDropdown';
+  wrap.innerHTML = `
+    <button id="traktAccountButton" class="accountButton" type="button" aria-haspopup="menu" aria-expanded="false">
+      <span id="traktAccountAvatar" class="accountAvatar" aria-hidden="true">T</span>
+      <span class="accountCopy"><strong id="traktAccountTitle">Trakt</strong><small id="traktAccountText">Checking…</small></span>
       <span class="accountChevron">▾</span>
     </button>
-    <div id="traktAccountDropdown" class="accountDropdown" role="menu">
+    <div id="traktAccountDropdown" class="accountDropdownMenu" role="menu" hidden>
       <div class="accountDropdownHeader">
-        <span class="accountAvatarWrap large"><img id="traktDropdownAvatar" class="accountAvatar" alt="Trakt avatar" hidden><span id="traktDropdownFallback" class="accountAvatarFallback">T</span></span>
-        <div><strong id="traktDropdownName">Trakt account</strong><small id="traktDropdownMeta">Login to sync progress</small></div>
+        <span id="traktMenuAvatar" class="accountAvatar large">T</span>
+        <div><strong id="traktMenuTitle">Trakt account</strong><small id="traktMenuSub">Not connected</small></div>
       </div>
-      <button id="traktProfileBtn" type="button" role="menuitem" hidden>👤 Profile</button>
-      <button id="traktStatsBtn" type="button" role="menuitem" hidden>📊 Profile statistics</button>
-      <button id="traktMenuSyncBtn" type="button" role="menuitem" hidden>🔄 Sync now</button>
-      <button id="traktLoginBtn" type="button" role="menuitem">🔐 Login / Reconnect Trakt</button>
-      <button id="traktResetLocalBtn" type="button" role="menuitem">🧹 Reset local progress</button>
-      <button id="traktDisconnectBtn" type="button" role="menuitem" hidden>⛓️ Disconnect Trakt</button>
-      <button id="traktLogoutBtn" type="button" role="menuitem" hidden>🚪 Logout</button>
+      <button id="traktProfileBtn" type="button" role="menuitem">👤 Profile</button>
+      <button id="traktStatsBtn" type="button" role="menuitem">📊 Statistics</button>
+      <button id="traktMenuSyncBtn" type="button" role="menuitem">↻ Sync now</button>
+      <label class="accountToggle" role="menuitem"><input type="checkbox" id="autoSync" checked> Hourly auto-sync</label>
+      <button id="traktLoginBtn" type="button" role="menuitem">Reconnect Trakt</button>
+      <button id="traktResetLocalBtn" type="button" role="menuitem">Reset local progress</button>
+      <button id="traktDisconnectBtn" type="button" class="dangerText" role="menuitem">Disconnect Trakt</button>
+      <button id="traktLogoutBtn" type="button" role="menuitem">Logout</button>
     </div>`;
+  host.appendChild(wrap);
 
-  panel.querySelector('#traktAccountToggle')?.addEventListener('click', ev => {
-    ev.stopPropagation();
-    panel.classList.toggle('open');
-    panel.querySelector('#traktAccountToggle')?.setAttribute('aria-expanded', panel.classList.contains('open') ? 'true' : 'false');
-  });
-  panel.querySelector('#traktLoginBtn')?.addEventListener('click', () => { closeAccountDropdown(); loginWithTrakt(); });
-  panel.querySelector('#traktResetLocalBtn')?.addEventListener('click', () => { closeAccountDropdown(); resetLoggedOutProgress(true); });
-  panel.querySelector('#traktProfileBtn')?.addEventListener('click', () => { closeAccountDropdown(); showTraktProfile(); });
-  panel.querySelector('#traktStatsBtn')?.addEventListener('click', () => { closeAccountDropdown(); showTraktProfile(); });
-  panel.querySelector('#traktMenuSyncBtn')?.addEventListener('click', () => { closeAccountDropdown(); triggerCloudSync(); });
-  panel.querySelector('#traktDisconnectBtn')?.addEventListener('click', () => { closeAccountDropdown(); disconnectTraktUser(); });
-  panel.querySelector('#traktLogoutBtn')?.addEventListener('click', () => { closeAccountDropdown(); logoutTraktUser(); });
-  document.addEventListener('click', ev => { if (!panel.contains(ev.target)) closeAccountDropdown(); });
+  const button = wrap.querySelector('#traktAccountButton');
+  const menu = wrap.querySelector('#traktAccountDropdown');
+  const toggleMenu = force => {
+    const open = typeof force === 'boolean' ? force : menu.hidden;
+    menu.hidden = !open;
+    button.setAttribute('aria-expanded', String(open));
+  };
+  button.addEventListener('click', ev => { ev.stopPropagation(); toggleMenu(); });
+  document.addEventListener('click', ev => { if (!wrap.contains(ev.target)) toggleMenu(false); });
+  document.addEventListener('keydown', ev => { if (ev.key === 'Escape') toggleMenu(false); });
+
+  wrap.querySelector('#traktLoginBtn')?.addEventListener('click', loginWithTrakt);
+  wrap.querySelector('#traktResetLocalBtn')?.addEventListener('click', () => resetLoggedOutProgress(true));
+  wrap.querySelector('#traktProfileBtn')?.addEventListener('click', () => showTraktProfile('profile'));
+  wrap.querySelector('#traktStatsBtn')?.addEventListener('click', () => showTraktProfile('stats'));
+  wrap.querySelector('#traktMenuSyncBtn')?.addEventListener('click', triggerCloudSync);
+  wrap.querySelector('#traktDisconnectBtn')?.addEventListener('click', disconnectTraktUser);
+  wrap.querySelector('#traktLogoutBtn')?.addEventListener('click', logoutTraktUser);
+  const autoSync = wrap.querySelector('#autoSync');
+  if (autoSync) {
+    autoSync.checked = localStorage.getItem(AUTOSYNC_KEY) !== '0';
+    autoSync.addEventListener('change', event => setAutoSync(event.target.checked));
+    setAutoSync(autoSync.checked);
+  }
 }
 
-function setAccountAvatar(src = '', initial = 'T') {
-  ['traktAccountAvatar', 'traktDropdownAvatar'].forEach(id => {
-    const img = document.getElementById(id);
-    if (!img) return;
-    if (src) { img.src = src; img.hidden = false; }
-    else { img.removeAttribute('src'); img.hidden = true; }
-  });
-  ['traktAccountFallback', 'traktDropdownFallback'].forEach(id => {
-    const fb = document.getElementById(id);
-    if (fb) fb.textContent = initial || 'T';
-  });
+function setAccountAvatar(el, username = 'T', src = '') {
+  if (!el) return;
+  const initial = String(username || 'T').slice(0, 1).toUpperCase();
+  if (src) {
+    el.innerHTML = `<img src="${esc(src)}" alt="${esc(username)} avatar">`;
+  } else {
+    el.textContent = initial;
+  }
 }
 
 function updateTraktAccountPanel() {
   ensureTraktAccountPanel();
-  const panel = document.getElementById('traktAccountPanel');
   const title = document.getElementById('traktAccountTitle');
   const text = document.getElementById('traktAccountText');
-  const name = document.getElementById('traktDropdownName');
-  const meta = document.getElementById('traktDropdownMeta');
+  const menuTitle = document.getElementById('traktMenuTitle');
+  const menuSub = document.getElementById('traktMenuSub');
+  const avatar = document.getElementById('traktAccountAvatar');
+  const menuAvatar = document.getElementById('traktMenuAvatar');
   const login = document.getElementById('traktLoginBtn');
   const reset = document.getElementById('traktResetLocalBtn');
   const logout = document.getElementById('traktLogoutBtn');
   const profile = document.getElementById('traktProfileBtn');
   const stats = document.getElementById('traktStatsBtn');
-  const menuSync = document.getElementById('traktMenuSyncBtn');
   const disconnect = document.getElementById('traktDisconnectBtn');
+  const sync = document.getElementById('traktMenuSyncBtn');
+  const username = traktUser?.username || 'Trakt';
   const avatarSrc = traktUser?.avatar || traktUser?.profile?.avatar || '';
-  setAccountAvatar(avatarSrc, accountInitial());
-  if (!panel || !title || !text || !login || !logout) return;
 
   if (traktUser?.authenticated) {
-    panel.classList.add('connected');
-    title.textContent = traktUser.username || 'Trakt';
-    text.textContent = traktUser.updated_at ? `Synced ${new Date(traktUser.updated_at).toLocaleDateString()}` : 'Connected';
-    if (name) name.textContent = traktUser.username || 'Trakt profile';
-    if (meta) meta.textContent = traktUser.updated_at ? `Last sync ${new Date(traktUser.updated_at).toLocaleString()}` : 'Personal Supabase sync active';
-    login.textContent = '🔁 Reconnect Trakt';
+    if (title) title.textContent = username;
+    if (text) text.textContent = traktUser.updated_at ? `Synced ${new Date(traktUser.updated_at).toLocaleDateString()}` : 'Connected';
+    if (menuTitle) menuTitle.textContent = username;
+    if (menuSub) menuSub.textContent = traktUser.updated_at ? `Last sync ${new Date(traktUser.updated_at).toLocaleString()}` : 'Personal Supabase sync active';
+    setAccountAvatar(avatar, username, avatarSrc);
+    setAccountAvatar(menuAvatar, username, avatarSrc);
+    if (login) login.textContent = 'Reconnect Trakt';
     if (reset) reset.hidden = true;
     if (profile) profile.hidden = false;
     if (stats) stats.hidden = false;
-    if (menuSync) menuSync.hidden = false;
     if (disconnect) disconnect.hidden = false;
-    logout.hidden = false;
+    if (sync) sync.hidden = false;
+    if (logout) logout.hidden = false;
   } else {
-    panel.classList.remove('connected');
-    title.textContent = 'Trakt';
-    text.textContent = isServerMode() ? 'Login' : 'Local mode';
-    if (name) name.textContent = isServerMode() ? 'Trakt account' : 'Local file mode';
-    if (meta) meta.textContent = isServerMode() ? 'Login to sync your own progress' : 'Open through a server to login';
-    login.textContent = '🔐 Login with Trakt';
+    if (title) title.textContent = 'Trakt';
+    if (text) text.textContent = isServerMode() ? 'Login' : 'Local mode';
+    if (menuTitle) menuTitle.textContent = isServerMode() ? 'Trakt account' : 'Local file mode';
+    if (menuSub) menuSub.textContent = isServerMode() ? 'Login to sync your own account' : 'Use Vercel or local server for sync';
+    setAccountAvatar(avatar, 'T', '');
+    setAccountAvatar(menuAvatar, 'T', '');
+    if (login) login.textContent = 'Login with Trakt';
     if (reset) reset.hidden = false;
     if (profile) profile.hidden = true;
     if (stats) stats.hidden = true;
-    if (menuSync) menuSync.hidden = true;
     if (disconnect) disconnect.hidden = true;
-    logout.hidden = true;
-  }
-}
-
-async function loadTraktUser({ pullStatus = true, quiet = false } = {}) {
-  ensureTraktAccountPanel();
-  if (!isServerMode()) {
-    traktUser = { authenticated: false };
-    updateTraktAccountPanel();
-    return traktUser;
-  }
-  try {
-    const response = await fetch('/api/me/status?ts=' + Date.now(), { cache: 'no-store', credentials: 'include' });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(payload.error || `HTTP ${response.status}`);
-    traktUser = payload.authenticated ? { ...payload, avatar: payload.avatar || payload.user?.avatar || payload.profile?.avatar || '' } : { authenticated: false };
-    updateTraktAccountPanel();
-    if (payload.authenticated) preloadTraktProfile();
-    if (payload.authenticated && pullStatus && (payload.statuses || payload.episodes)) {
-      await importStatusPayload(payload, 'Personal Supabase status', { suppressToast: quiet, silentNoChange: quiet });
-    }
-    startPersonalAutoSync();
-    return traktUser;
-  } catch (err) {
-    traktUser = { authenticated: false };
-    updateTraktAccountPanel();
-    if (!quiet) setText('syncStatus', `Could not check Trakt login: ${err.message}`);
-    return traktUser;
+    if (sync) sync.hidden = true;
+    if (logout) logout.hidden = true;
   }
 }
 
@@ -1301,31 +1320,10 @@ async function resetLoggedOutProgress(ask = true) {
 }
 
 
-async function fetchTraktProfileData() {
-  const response = await fetch('/api/me/profile/?ts=' + Date.now(), { cache: 'no-store', credentials: 'include' });
-  const profile = await response.json().catch(() => ({}));
-  if (!response.ok || profile.ok === false) throw new Error(profile.error || `HTTP ${response.status}`);
-  const user = profile.user || {};
-  const stats = profile.stats || {};
-  traktUser = {
-    ...traktUser,
-    authenticated: true,
-    username: user.username || traktUser?.username || '',
-    avatar: user.avatar || traktUser?.avatar || '',
-    profile: user,
-    updated_at: stats.updated_at || traktUser?.updated_at || null,
-    stats
-  };
-  updateTraktAccountPanel();
-  return { user, stats };
-}
-
-function preloadTraktProfile() {
-  if (!traktUser?.authenticated || traktUser.avatar) return;
-  fetchTraktProfileData().catch(() => {});
-}
-
-async function showTraktProfile() {
+async function showTraktProfile(mode = 'profile') {
+  // If the page just loaded, the profile button can be clicked before the
+  // initial /api/me/status call has finished. Resolve the session first so
+  // the first click works reliably.
   if (!traktUser?.authenticated) {
     await loadTraktUser({ pullStatus: false, quiet: true });
   }
@@ -1334,30 +1332,49 @@ async function showTraktProfile() {
     return;
   }
 
-  const btn = document.getElementById('traktProfileBtn');
-  const previous = btn?.innerHTML || '👤 Profile';
-  if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Loading profile…'; }
+  const btn = document.getElementById(mode === 'stats' ? 'traktStatsBtn' : 'traktProfileBtn');
+  const previous = btn?.textContent || (mode === 'stats' ? '📊 Statistics' : '👤 Profile');
+  if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
 
   try {
-    const { user, stats } = await fetchTraktProfileData();
-    openTraktProfileModal(user, stats);
+    const response = await fetch('/api/me/profile/?ts=' + Date.now(), { cache: 'no-store', credentials: 'include' });
+    const profile = await response.json().catch(() => ({}));
+    if (!response.ok || profile.ok === false) throw new Error(profile.error || `HTTP ${response.status}`);
+    const user = profile.user || {};
+    const stats = profile.stats || {};
+
+    traktUser = {
+      ...traktUser,
+      authenticated: true,
+      username: user.username || traktUser.username || '',
+      avatar: user.avatar || traktUser.avatar || '',
+      profile: user,
+      updated_at: stats.updated_at || traktUser.updated_at || null
+    };
+    updateTraktAccountPanel();
+
+    openTraktProfileModal(user, stats, mode);
   } catch (err) {
     showToast('Profile unavailable', err.message || String(err), 'warning');
   } finally {
-    if (btn) { btn.disabled = false; btn.innerHTML = previous; }
+    if (btn) { btn.disabled = false; btn.textContent = previous; }
   }
 }
 
-function openTraktProfileModal(user = {}, stats = {}) {
+function openTraktProfileModal(user = {}, stats = {}, mode = 'profile') {
   const overlay = document.getElementById('modalOverlay');
   if (!overlay) return;
   const username = user.username || traktUser?.username || 'connected';
   const avatar = user.avatar || traktUser?.avatar || '';
   const initial = esc(String(username || 'T').slice(0, 1).toUpperCase());
   const joined = user.joined_at ? new Date(user.joined_at).toLocaleDateString() : 'Unknown';
-  const synced = stats.updated_at ? new Date(stats.updated_at).toLocaleString() : 'Never';
+  const synced = stats.updated_at ? new Date(stats.updated_at).toLocaleString() : (traktUser?.updated_at ? new Date(traktUser.updated_at).toLocaleString() : 'Never');
   const location = user.location || 'Not public';
   const about = user.about || '';
+  const total = scopedEpisodes.length || episodes.length || 0;
+  const watched = getWatchedCountFromMap();
+  const completion = pct(watched, total);
+  const isStats = mode === 'stats';
   overlay.innerHTML = `
     <div class="modal traktProfileModal" style="--modalColor:#ef4444">
       <div class="traktProfileHeader">
@@ -1365,22 +1382,31 @@ function openTraktProfileModal(user = {}, stats = {}) {
           ${avatar ? `<img class="traktProfileAvatar" src="${esc(avatar)}" alt="${esc(username)} avatar">` : `<div class="traktProfileAvatar fallback">${initial}</div>`}
         </div>
         <div>
-          <p class="label">Trakt profile</p>
+          <p class="label">${isStats ? 'Viewing statistics' : 'Trakt profile'}</p>
           <h2>${esc(username)}</h2>
-          <p class="mutedText">${esc(user.name || 'No public name')} ${user.vip ? '• VIP' : ''}</p>
+          <p class="mutedText">${isStats ? `${watched}/${total} watched in current scope` : `${esc(user.name || 'No public name')} ${user.vip ? '• VIP' : ''}`}</p>
         </div>
       </div>
-      <div class="traktProfileGrid">
-        <div><span>Watched entries</span><strong>${esc(stats.watched_count || 0)}</strong></div>
-        <div><span>Matched rows</span><strong>${esc(stats.matched || 0)}</strong></div>
-        <div><span>Status keys</span><strong>${esc(stats.status_count || 0)}</strong></div>
-        <div><span>Last sync</span><strong>${esc(synced)}</strong></div>
-      </div>
-      <div class="traktProfileMeta">
-        <p><strong>Joined:</strong> ${esc(joined)}</p>
-        <p><strong>Location:</strong> ${esc(location)}</p>
-        ${about ? `<p><strong>About:</strong> ${esc(about)}</p>` : ''}
-      </div>
+      ${isStats ? `
+        <div class="traktProfileGrid statsMode">
+          <div><span>Watched</span><strong>${esc(watched)}</strong></div>
+          <div><span>Total scope</span><strong>${esc(total)}</strong></div>
+          <div><span>Completion</span><strong>${esc(completion)}%</strong></div>
+          <div><span>Matched rows</span><strong>${esc(stats.matched || 0)}</strong></div>
+          <div><span>Status keys</span><strong>${esc(stats.status_count || stats.watched_keys || 0)}</strong></div>
+          <div><span>Last sync</span><strong>${esc(synced)}</strong></div>
+        </div>
+        <div class="progress profileProgress"><span style="width:${Math.max(0, Math.min(100, completion))}%"></span></div>
+        <p class="mutedText">Statistics reflect the active guide scope and the current personal Supabase/Trakt status loaded in this browser.</p>
+      ` : `
+        <div class="traktProfileMeta">
+          <p><strong>Username:</strong> ${esc(username)}</p>
+          <p><strong>Joined:</strong> ${esc(joined)}</p>
+          <p><strong>Location:</strong> ${esc(location)}</p>
+          <p><strong>Last sync:</strong> ${esc(synced)}</p>
+          ${about ? `<p><strong>About:</strong> ${esc(about)}</p>` : ''}
+        </div>
+      `}
       <div class="modalActions">
         <button id="modalOk" class="primary">Close</button>
       </div>
@@ -1435,7 +1461,6 @@ async function fetchPersonalSupabaseStatus(options = {}) {
     if (!response.ok) throw new Error(payload.error || `HTTP ${response.status}`);
     traktUser = payload.authenticated ? { ...payload, avatar: payload.avatar || payload.user?.avatar || payload.profile?.avatar || '' } : { authenticated: false };
     updateTraktAccountPanel();
-    if (payload.authenticated) preloadTraktProfile();
     if (!payload.authenticated) return { ok: false, authenticated: false };
     return await importStatusPayload(payload, options.source || 'Personal Supabase status', options);
   } catch (err) {
@@ -1495,8 +1520,10 @@ async function syncPersonalTrakt(options = {}) {
   }
 
   traktUser = {
+    ...traktUser,
     authenticated: true,
     username: syncPayload.username || traktUser?.username || '',
+    avatar: syncPayload.avatar || traktUser?.avatar || syncPayload.user?.avatar || '',
     updated_at: syncPayload.updated_at || startedAt
   };
   updateTraktAccountPanel();
