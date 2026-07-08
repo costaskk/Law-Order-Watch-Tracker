@@ -2121,7 +2121,6 @@ function bindEvents() {
   document.getElementById('bottomNext')?.addEventListener('click', jump);
 
   document.getElementById('syncNowBtn')?.addEventListener('click', triggerCloudSync);
-  document.getElementById('pullStatusBtn')?.addEventListener('click', fetchHostedStatus);
   document.getElementById('exportJson')?.addEventListener('click', exportJson);
   document.getElementById('exportCsv')?.addEventListener('click', exportCsv);
 
