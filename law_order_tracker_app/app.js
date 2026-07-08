@@ -17,6 +17,8 @@ const THEME_KEY = 'law_order_tracker_theme';
 const AUTOSYNC_KEY = 'law_order_auto_sync';
 const SCOPE_KEY = 'wolf_tracker_scope_v2';
 const PAGE_SIZE = 250;
+const AUTO_SYNC_INTERVAL_MS = 60 * 60 * 1000; // 1 hour; avoids scroll-disrupting constant refreshes
+const PERSONAL_AUTO_SYNC_INTERVAL_MS = 60 * 60 * 1000; // 1 hour Trakt/Supabase background sync
 
 let episodes = Array.isArray(window.LAW_ORDER_EPISODES) ? window.LAW_ORDER_EPISODES : [];
 const themes = window.SHOW_THEMES || {};
@@ -1454,9 +1456,10 @@ async function fetchPersonalSupabaseStatus(options = {}) {
   }
 }
 
-async function syncPersonalTrakt() {
+async function syncPersonalTrakt(options = {}) {
+  const background = Boolean(options.background);
   const startedAt = new Date().toISOString();
-  setText('syncStatus', 'Contacting Trakt, updating Supabase, and waiting for the fresh status row…');
+  if (!background) setText('syncStatus', 'Contacting Trakt, updating Supabase, and waiting for the fresh status row…');
 
   async function runSyncRequest(attempt) {
     if (attempt > 1) {
@@ -1544,7 +1547,7 @@ async function syncPersonalTrakt() {
   const delays = [0, 350, 700, 1200, 1800, 2600];
   for (let i = 0; i < delays.length; i += 1) {
     if (delays[i]) await new Promise(resolve => setTimeout(resolve, delays[i]));
-    setText('syncStatus', `Finalizing personal Trakt sync… checking Supabase update ${i + 1}/${delays.length}.`);
+    if (!background) setText('syncStatus', `Finalizing personal Trakt sync… checking Supabase update ${i + 1}/${delays.length}.`);
     try {
       const retry = await readPersonalStatusDirect(i + 1);
       if (retry && retry.ok !== false) {
@@ -1564,8 +1567,12 @@ async function syncPersonalTrakt() {
   const watched = bestResult?.watched ?? getWatchedCountFromMap();
   const matched = bestResult?.matched ?? 0;
   const serverTail = expectedServerMatches ? ` Server matched ${expectedServerMatches} guide rows.` : '';
-  setText('syncStatus', `Personal Trakt sync complete: ${watched} watched entries loaded, ${matched} browser guide rows matched at ${new Date().toLocaleTimeString()}.${serverTail}`);
-  showToast('Personal Trakt sync complete', `${watched} watched entries loaded.`, 'success', 5200);
+  if (background) {
+    setText('syncStatus', `Hourly background sync complete: ${watched} watched entries loaded at ${new Date().toLocaleTimeString()}.`);
+  } else {
+    setText('syncStatus', `Personal Trakt sync complete: ${watched} watched entries loaded, ${matched} browser guide rows matched at ${new Date().toLocaleTimeString()}.${serverTail}`);
+    showToast('Personal Trakt sync complete', `${watched} watched entries loaded.`, 'success', 5200);
+  }
   return bestResult;
 }
 
@@ -1691,19 +1698,19 @@ async function importStatusPayload(payload, source = 'import', options = {}) {
   if (localChanged) save();
   lastHostedStatusSignature = incomingSignature || lastHostedStatusSignature;
   lastHostedStatusFetchedAt = Date.now();
-  renderPreservingScroll();
+  if (localChanged || options.forceRender) renderPreservingScroll();
 
   const watched = getWatchedCountFromMap();
   const time = new Date().toLocaleTimeString();
 
   if (changed > 0) {
-    setText('syncStatus', `${source}: ${changed} status changes applied, ${matched} guide rows matched, ${watched} watched entries loaded at ${time}.`);
+    if (!options.background) setText('syncStatus', `${source}: ${changed} status changes applied, ${matched} guide rows matched, ${watched} watched entries loaded at ${time}.`);
     if (!options.suppressToast) showToast(source, `${changed} changes applied. ${matched} guide rows matched.`, 'success');
   } else if (options.expectedChange) {
-    setText('syncStatus', `${source}: no updated status file yet. Sync may still be running or waiting for Vercel/GitHub Pages to redeploy. Last check ${time}.`);
+    if (!options.background) setText('syncStatus', `${source}: no updated status file yet. Sync may still be running or waiting for Vercel/GitHub Pages to redeploy. Last check ${time}.`);
     if (!options.suppressToast && !options.silentNoChange) showToast(source, 'No updated status file yet. Try again after the workflow/deploy finishes.', 'info');
   } else {
-    setText('syncStatus', `${source}: already current. ${matched} guide rows matched, ${watched} watched entries loaded at ${time}.`);
+    if (!options.background) setText('syncStatus', `${source}: already current. ${matched} guide rows matched, ${watched} watched entries loaded at ${time}.`);
     if (!options.suppressToast && !options.silentNoChange) showToast(source, `Already current. ${watched} watched entries loaded.`, 'info');
   }
 
@@ -1847,13 +1854,13 @@ function startPersonalAutoSync() {
     if (!traktUser?.authenticated || personalSyncInProgress) return;
     try {
       personalSyncInProgress = true;
-      await syncPersonalTrakt();
+      await syncPersonalTrakt({ background: true });
     } catch (err) {
       console.warn('Background Trakt sync failed:', err);
     } finally {
       personalSyncInProgress = false;
     }
-  }, 30 * 60 * 1000);
+  }, PERSONAL_AUTO_SYNC_INTERVAL_MS);
 }
 
 function setAutoSync(enabled) {
@@ -1861,11 +1868,21 @@ function setAutoSync(enabled) {
   if (autoTimer) clearInterval(autoTimer);
   autoTimer = null;
   stopPersonalAutoSync();
-  if (enabled) {
-    fetchHostedStatus();
-    autoTimer = setInterval(fetchHostedStatus, 5 * 60 * 1000);
-    startPersonalAutoSync();
-  }
+  if (!enabled) return;
+
+  // Do not run an immediate background refresh here. The initial login/status
+  // load already happens on page open, and instant auto-refresh was the main
+  // cause of scroll jumps while browsing. Background work is hourly and quiet.
+  autoTimer = setInterval(() => {
+    fetchHostedStatus({
+      source: 'Hourly background status refresh',
+      suppressToast: true,
+      silentNoChange: true,
+      background: true
+    });
+  }, AUTO_SYNC_INTERVAL_MS);
+
+  startPersonalAutoSync();
 }
 
 function bindEvents() {
