@@ -482,12 +482,52 @@ function castPillHtml(actor) {
     : (count ? `${count} credited episode${count === 1 ? '' : 's'}` : 'Filter appearances');
   const detailLabel = showCount ? `${countLabel} • ${showCount} show${showCount === 1 ? '' : 's'}` : countLabel;
   return `
-    <button class="castPill" type="button" data-actor-key="${esc(key)}" data-actor-name="${esc(actor.name)}" title="Show episodes featuring ${esc(actor.name)}">
-      ${profile ? `<span class="castPortraitPreview"><img src="${esc(profile)}" alt="${esc(actor.name)} portrait" loading="lazy"></span>` : ''}
+    <button class="castPill" type="button" data-actor-key="${esc(key)}" data-actor-name="${esc(actor.name)}" data-actor-profile="${esc(profile)}" title="Show episodes featuring ${esc(actor.name)}">
       <span class="castPillName">${esc(actor.name)}</span>
       ${subtitle ? `<small>${esc(subtitle)}</small>` : ''}
       <em>${esc(detailLabel)}</em>
     </button>`;
+}
+
+let actorPortraitFloatingEl = null;
+
+function ensureActorPortraitFloating() {
+  if (actorPortraitFloatingEl && document.body.contains(actorPortraitFloatingEl)) return actorPortraitFloatingEl;
+  actorPortraitFloatingEl = document.createElement('div');
+  actorPortraitFloatingEl.className = 'actorPortraitFloating';
+  actorPortraitFloatingEl.setAttribute('aria-hidden', 'true');
+  document.body.appendChild(actorPortraitFloatingEl);
+  return actorPortraitFloatingEl;
+}
+
+function hideActorPortraitFloating() {
+  if (!actorPortraitFloatingEl) return;
+  actorPortraitFloatingEl.classList.remove('show');
+  actorPortraitFloatingEl.innerHTML = '';
+}
+
+function positionActorPortraitFloating(anchor) {
+  if (!actorPortraitFloatingEl || !anchor) return;
+  const rect = anchor.getBoundingClientRect();
+  const width = 136;
+  const height = 190;
+  const margin = 14;
+  let left = rect.left + rect.width / 2 - width / 2;
+  left = Math.max(margin, Math.min(left, window.innerWidth - width - margin));
+  let top = rect.top - height - 12;
+  if (top < margin) top = Math.min(window.innerHeight - height - margin, rect.bottom + 12);
+  actorPortraitFloatingEl.style.left = `${left}px`;
+  actorPortraitFloatingEl.style.top = `${top}px`;
+}
+
+function showActorPortraitFloating(button) {
+  const src = button?.dataset?.actorProfile || '';
+  if (!src) return hideActorPortraitFloating();
+  const name = button.dataset.actorName || 'Actor';
+  const el = ensureActorPortraitFloating();
+  el.innerHTML = `<img src="${esc(src)}" alt="${esc(name)} portrait"><span>${esc(name)}</span>`;
+  positionActorPortraitFloating(button);
+  requestAnimationFrame(() => el.classList.add('show'));
 }
 
 function selectActorFromDetail(actorName) {
@@ -711,6 +751,7 @@ function openEpisodeDetail(ep) {
 }
 
 function closeEpisodeDetail() {
+  hideActorPortraitFloating();
   const overlay = document.getElementById('episodeModalOverlay');
   if (!overlay) return;
   overlay.classList.remove('show');
@@ -2176,10 +2217,23 @@ function bindEvents() {
 
   const episodeOverlay = document.getElementById('episodeModalOverlay');
   if (episodeOverlay) {
+    episodeOverlay.addEventListener('mouseover', ev => {
+      const actorButton = ev.target.closest('.castPill[data-actor-key]');
+      if (actorButton) showActorPortraitFloating(actorButton);
+    });
+    episodeOverlay.addEventListener('mousemove', ev => {
+      const actorButton = ev.target.closest('.castPill[data-actor-key]');
+      if (actorButton) positionActorPortraitFloating(actorButton);
+    });
+    episodeOverlay.addEventListener('mouseout', ev => {
+      const actorButton = ev.target.closest('.castPill[data-actor-key]');
+      if (actorButton && !actorButton.contains(ev.relatedTarget)) hideActorPortraitFloating();
+    });
     episodeOverlay.addEventListener('click', ev => {
       const actorButton = ev.target.closest('.castPill[data-actor-key]');
       if (actorButton) {
         ev.preventDefault();
+        hideActorPortraitFloating();
         selectActorFromDetail(actorButton.dataset.actorName || actorButton.textContent || '');
         return;
       }
