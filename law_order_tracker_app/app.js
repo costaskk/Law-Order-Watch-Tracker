@@ -427,6 +427,97 @@ function episodeCastKeys(ep) {
   return getEpisodeCast(ep).map(actor => normText(actor.name)).filter(Boolean);
 }
 
+
+function actorProfileImage(actorOrName) {
+  const name = typeof actorOrName === 'string' ? actorOrName : actorOrName?.name;
+  const direct = typeof actorOrName === 'object' ? (actorOrName.profile || actorOrName.profile_path || actorOrName.image || actorOrName.headshot || '') : '';
+  const rec = actorIndex.get(normText(name)) || null;
+  let src = direct || rec?.profile || '';
+  if (!src) return '';
+  src = String(src).trim();
+  if (!src) return '';
+  if (src.startsWith('//')) return `https:${src}`;
+  if (/^https?:\/\//i.test(src) || src.startsWith('data:')) return src;
+  if (src.startsWith('/')) return `https://image.tmdb.org/t/p/w185${src}`;
+  return src;
+}
+
+function actorEpisodeCredits(actorKey) {
+  if (!actorKey) return [];
+  return episodes.filter(ep => episodeCastKeys(ep).includes(actorKey));
+}
+
+function actorCreditCount(actorName) {
+  const key = normText(actorName);
+  const exact = actorEpisodeCredits(key).length;
+  const aggregate = Number(actorIndex.get(key)?.count || 0);
+  return Math.max(exact, aggregate);
+}
+
+function castPillHtml(actor) {
+  const key = normText(actor.name);
+  const profile = actorProfileImage(actor);
+  const exactCount = actorEpisodeCredits(key).length;
+  const count = actorCreditCount(actor.name);
+  const rec = actorIndex.get(key);
+  const showCount = rec?.shows instanceof Set ? rec.shows.size : 0;
+  const subtitle = actor.character || 'Cast member';
+  const countLabel = exactCount
+    ? `${exactCount} loaded episode${exactCount === 1 ? '' : 's'}`
+    : (count ? `${count} credited episode${count === 1 ? '' : 's'}` : 'Filter appearances');
+  const detailLabel = showCount ? `${countLabel} • ${showCount} show${showCount === 1 ? '' : 's'}` : countLabel;
+  return `
+    <button class="castPill" type="button" data-actor-key="${esc(key)}" data-actor-name="${esc(actor.name)}" title="Show episodes featuring ${esc(actor.name)}">
+      ${profile ? `<span class="castPortraitPreview"><img src="${esc(profile)}" alt="${esc(actor.name)} portrait" loading="lazy"></span>` : ''}
+      <span class="castPillName">${esc(actor.name)}</span>
+      ${subtitle ? `<small>${esc(subtitle)}</small>` : ''}
+      <em>${esc(detailLabel)}</em>
+    </button>`;
+}
+
+function selectActorFromDetail(actorName) {
+  const key = normText(actorName);
+  if (!key) return;
+  closeEpisodeDetail();
+
+  const actorFilter = document.getElementById('actorFilter');
+  if (actorFilter) {
+    let option = [...actorFilter.options].find(opt => opt.value === key);
+    if (!option) {
+      const rec = actorIndex.get(key) || { name: actorName, count: actorCreditCount(actorName) };
+      option = new Option(actorDisplay(rec), key);
+      actorFilter.add(option, actorFilter.options.length > 1 ? actorFilter.options[1] : null);
+    }
+    actorFilter.value = key;
+  }
+
+  const showFilter = document.getElementById('showFilter');
+  const seasonFilter = document.getElementById('seasonFilter');
+  const statusFilter = document.getElementById('statusFilter');
+  const hideWatched = document.getElementById('hideWatched');
+  if (showFilter) showFilter.value = '';
+  if (seasonFilter) seasonFilter.value = '';
+  if (statusFilter) statusFilter.value = 'all';
+  if (hideWatched) hideWatched.checked = false;
+
+  refreshDynamicFilters({ keepShow: false, keepSeason: false, keepFranchise: true, keepActor: true });
+  if (actorFilter) {
+    if (![...actorFilter.options].some(opt => opt.value === key)) {
+      const rec = actorIndex.get(key) || { name: actorName, count: actorCreditCount(actorName) };
+      actorFilter.add(new Option(actorDisplay(rec), key), actorFilter.options.length > 1 ? actorFilter.options[1] : null);
+    }
+    actorFilter.value = key;
+  }
+  renderPreservingScroll();
+  const count = actorCreditCount(actorName);
+  setText('syncStatus', `Actor filter active: ${actorName}${count ? ` • ${count} credited episode${count === 1 ? '' : 's'}` : ''}.`);
+  showToast('Actor filter applied', `Showing episodes featuring ${actorName}.`, 'info');
+  requestAnimationFrame(() => {
+    const target = document.getElementById('episodeList') || document.querySelector('.controls');
+    target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+}
+
 function actorHasExactCreditsInShow(actorKey, show) {
   if (!actorKey || !show) return false;
   const cacheKey = `${actorKey}|${show}`;
@@ -577,8 +668,7 @@ function openEpisodeDetail(ep) {
   const st = getStatus(ep);
   const t = theme(ep.show);
   const cast = getEpisodeCast(ep);
-  const castHtml = cast.length ? cast.slice(0, 24).map(actor => `
-    <span class="castPill"><strong>${esc(actor.name)}</strong>${actor.character ? `<small>${esc(actor.character)}</small>` : ''}</span>`).join('') : '<p class="mutedText">No cast data for this episode yet. Run the cast/artwork fetcher to populate actor data.</p>';
+  const castHtml = cast.length ? cast.slice(0, 36).map(actor => castPillHtml(actor)).join('') : '<p class="mutedText">No cast data for this episode yet. Run the cast/artwork fetcher to populate actor data.</p>';
   overlay.innerHTML = `
     <div class="episodeDetail" style="--showColor:${esc(t.primary)}">
       <button class="episodeDetailClose" type="button" aria-label="Close episode details">×</button>
@@ -2069,6 +2159,12 @@ function bindEvents() {
   const episodeOverlay = document.getElementById('episodeModalOverlay');
   if (episodeOverlay) {
     episodeOverlay.addEventListener('click', ev => {
+      const actorButton = ev.target.closest('.castPill[data-actor-key]');
+      if (actorButton) {
+        ev.preventDefault();
+        selectActorFromDetail(actorButton.dataset.actorName || actorButton.textContent || '');
+        return;
+      }
       const image = ev.target.closest('.js-lightbox-img');
       if (image) {
         openImageLightbox(image.dataset.lightboxSrc || image.src, image.dataset.lightboxTitle || image.alt || 'Artwork');
@@ -2121,6 +2217,7 @@ function bindEvents() {
   document.getElementById('bottomNext')?.addEventListener('click', jump);
 
   document.getElementById('syncNowBtn')?.addEventListener('click', triggerCloudSync);
+  document.getElementById('pullStatusBtn')?.addEventListener('click', fetchHostedStatus);
   document.getElementById('exportJson')?.addEventListener('click', exportJson);
   document.getElementById('exportCsv')?.addEventListener('click', exportCsv);
 
