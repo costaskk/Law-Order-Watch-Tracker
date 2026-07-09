@@ -1,14 +1,14 @@
 {
   "version": 7,
   "source": "trakt",
-  "exportedAt": "2026-07-09T15:37:14Z",
+  "exportedAt": "2026-07-09T20:08:59Z",
   "summary": {
     "guideRowsScanned": 1796,
-    "guideRowsMarkedWatched": 133,
+    "guideRowsMarkedWatched": 134,
     "traktWatchedCountsByShow": {
       "Law & Order": 14,
       "Homicide: Life on the Street": 0,
-      "Law & Order: SVU": 119,
+      "Law & Order: SVU": 120,
       "Criminal Intent": 0,
       "Trial by Jury": 0,
       "Conviction": 0,
@@ -288,7 +288,9 @@
     "Law & Order: SVU|6|2|712": "Watched",
     "Law & Order: SVU|6|2": "Watched",
     "Law & Order: SVU|6|3|717": "Watched",
-    "Law & Order: SVU|6|3": "Watched"
+    "Law & Order: SVU|6|3": "Watched",
+    "Law & Order: SVU|6|4|719": "Watched",
+    "Law & Order: SVU|6|4": "Watched"
   },
   "episodes": [
     {
@@ -1220,6 +1222,13 @@
       "guideShow": "Law & Order: SVU",
       "season": 6,
       "episode": 3,
+      "status": "Watched"
+    },
+    {
+      "show": "Law & Order: SVU",
+      "guideShow": "Law & Order: SVU",
+      "season": 6,
+      "episode": 4,
       "status": "Watched"
     }
   ]
