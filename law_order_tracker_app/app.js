@@ -33,6 +33,9 @@ let deferredInstallPrompt = null;
 let autoTimer = null;
 let actorIndex = new Map();
 let actorDetailShowCache = new Map();
+let episodeCastCache = new Map();
+let episodeCastKeyCache = new Map();
+let actorEpisodeCreditsCache = new Map();
 let renderQueued = false;
 let renderQueuedPreserveScroll = false;
 let syncPollTimer = null;
@@ -382,6 +385,8 @@ function inferEpisodeScope(ep) {
 
 
 function getEpisodeCast(ep) {
+  const cacheId = String(ep?.id || `${ep?.show || ''}|${ep?.season || ''}|${ep?.episode || ''}`);
+  if (episodeCastCache.has(cacheId)) return episodeCastCache.get(cacheId);
   const keys = [
     `${ep.show}|${Number(ep.season) || 0}|${Number(ep.episode) || 0}`,
     `${ep.show}|${ep.season}|${ep.episode}`,
@@ -420,11 +425,16 @@ function getEpisodeCast(ep) {
       out.push({ name, character, profile });
     }
   }
+  episodeCastCache.set(cacheId, out);
   return out;
 }
 
 function episodeCastKeys(ep) {
-  return getEpisodeCast(ep).map(actor => normText(actor.name)).filter(Boolean);
+  const cacheId = String(ep?.id || `${ep?.show || ''}|${ep?.season || ''}|${ep?.episode || ''}`);
+  if (episodeCastKeyCache.has(cacheId)) return episodeCastKeyCache.get(cacheId);
+  const keys = getEpisodeCast(ep).map(actor => normText(actor.name)).filter(Boolean);
+  episodeCastKeyCache.set(cacheId, keys);
+  return keys;
 }
 
 
@@ -444,20 +454,25 @@ function actorProfileImage(actorOrName) {
 
 function actorEpisodeCredits(actorKey) {
   if (!actorKey) return [];
-  return episodes.filter(ep => episodeCastKeys(ep).includes(actorKey));
+  if (actorEpisodeCreditsCache.has(actorKey)) return actorEpisodeCreditsCache.get(actorKey);
+  const credits = episodes.filter(ep => episodeCastKeys(ep).includes(actorKey));
+  actorEpisodeCreditsCache.set(actorKey, credits);
+  return credits;
 }
 
 function actorCreditCount(actorName) {
   const key = normText(actorName);
-  const exact = actorEpisodeCredits(key).length;
   const aggregate = Number(actorIndex.get(key)?.count || 0);
-  return Math.max(exact, aggregate);
+  if (aggregate) return aggregate;
+  const cached = actorEpisodeCreditsCache.get(key);
+  return Array.isArray(cached) ? cached.length : 0;
 }
 
 function castPillHtml(actor) {
   const key = normText(actor.name);
   const profile = actorProfileImage(actor);
-  const exactCount = actorEpisodeCredits(key).length;
+  const cachedCredits = actorEpisodeCreditsCache.get(key);
+  const exactCount = Array.isArray(cachedCredits) ? cachedCredits.length : 0;
   const count = actorCreditCount(actor.name);
   const rec = actorIndex.get(key);
   const showCount = rec?.shows instanceof Set ? rec.shows.size : 0;
@@ -544,6 +559,9 @@ function actorMatchesEpisode(ep, actorKey) {
 function rebuildActorIndex() {
   actorIndex = new Map();
   actorDetailShowCache = new Map();
+  episodeCastCache = new Map();
+  episodeCastKeyCache = new Map();
+  actorEpisodeCreditsCache = new Map();
 
   // Preferred source: generated aggregate TMDB cast index. This makes the actor
   // dropdown useful even before every single episode credit has been fetched.

@@ -401,9 +401,288 @@ img{
 .traktAccountAvatar[hidden],
 .traktDropdownAvatar[hidden]{display:none!important}
 
+/* Wolf Universe v2.4 — compact hero/progress alignment polish
+   Fixes the oversized Up Next card dead space and makes the progress card match its height. */
+.dashboardV22{
+  grid-template-columns:minmax(620px, 820px) minmax(245px, 285px)!important;
+  align-items:stretch!important;
+  gap:14px!important;
+  max-width:1120px!important;
+}
+.dashboardV22 .hero{
+  min-height:0!important;
+  height:auto!important;
+  align-self:stretch!important;
+  grid-template-columns:minmax(0, 1fr) minmax(220px, 32%)!important;
+  gap:18px!important;
+  padding:20px 20px 18px!important;
+  border-radius:22px!important;
+}
+.dashboardV22 .heroText{
+  display:flex!important;
+  flex-direction:column!important;
+  justify-content:center!important;
+  min-width:0!important;
+}
+.dashboardV22 .hero h2{
+  margin:5px 0 10px!important;
+  font-size:clamp(30px, 2.75vw, 48px)!important;
+  line-height:.98!important;
+  max-width:13.5ch!important;
+}
+.dashboardV22 .hero .notes{
+  max-width:54ch!important;
+  display:-webkit-box!important;
+  -webkit-line-clamp:3!important;
+  -webkit-box-orient:vertical!important;
+  overflow:hidden!important;
+}
+.dashboardV22 .heroBtns{
+  margin-top:12px!important;
+}
+.dashboardV22 .posterWrap{
+  align-self:center!important;
+  justify-self:stretch!important;
+}
+.dashboardV22 .poster{
+  height:158px!important;
+  max-height:18vw!important;
+  min-height:135px!important;
+  border-radius:16px!important;
+}
+.dashboardV22 .statsOverview{
+  min-height:0!important;
+  height:auto!important;
+  align-self:stretch!important;
+  padding:16px!important;
+  gap:10px!important;
+  border-radius:22px!important;
+  display:flex!important;
+}
+.dashboardV22 .statsTop{
+  gap:10px!important;
+}
+.dashboardV22 .statsTop strong{
+  font-size:clamp(38px, 3.25vw, 56px)!important;
+}
+.dashboardV22 .statsGrid{
+  gap:8px!important;
+}
+.dashboardV22 .statsGrid>div{
+  padding:10px!important;
+  border-radius:13px!important;
+}
+.dashboardV22 .statsGrid strong{
+  font-size:22px!important;
+}
+.dashboardV22 .syncStatusInline{
+  margin-top:auto!important;
+  line-height:1.35!important;
+  font-size:11px!important;
+}
+
+/* Show chips: reserve room for the colored bullet so title text never overlaps it. */
+.showChip{
+  display:grid!important;
+  grid-template-columns:12px minmax(0, 1fr)!important;
+  grid-template-rows:auto auto!important;
+  column-gap:9px!important;
+  align-items:center!important;
+  min-width:150px!important;
+  max-width:210px!important;
+  padding:8px 12px!important;
+}
+.showChip .dot{
+  grid-row:1 / 3!important;
+  grid-column:1!important;
+  flex:0 0 11px!important;
+}
+.showChipTitle{
+  grid-column:2!important;
+  min-width:0!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+  line-height:1.1!important;
+}
+.showChip small{
+  grid-column:2!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+  line-height:1.15!important;
+}
+
+@media(max-width:1200px){
+  .dashboardV22{
+    grid-template-columns:1fr!important;
+    max-width:980px!important;
+  }
+  .dashboardV22 .hero{
+    grid-template-columns:minmax(0, 1fr) minmax(210px, 30%)!important;
+  }
+  .dashboardV22 .poster{
+    max-height:none!important;
+    height:150px!important;
+  }
+  .dashboardV22 .statsOverview{
+    display:grid!important;
+    grid-template-columns:minmax(170px,.5fr) minmax(0,1fr)!important;
+    align-items:center!important;
+  }
+  .dashboardV22 .statsGrid{
+    grid-template-columns:repeat(4,1fr)!important;
+  }
+}
+@media(max-width:760px){
+  .dashboardV22 .hero{
+    grid-template-columns:1fr!important;
+    padding:16px!important;
+  }
+  .dashboardV22 .hero h2{
+    max-width:none!important;
+    font-size:clamp(28px, 8vw, 38px)!important;
+  }
+  .dashboardV22 .poster{
+    height:170px!important;
+    min-height:0!important;
+  }
+  .dashboardV22 .statsOverview{
+    display:flex!important;
+  }
+  .dashboardV22 .statsGrid{
+    grid-template-columns:1fr 1fr!important;
+  }
+}
+
+
+/* Wolf Universe v2.4.1 — definitive hero/stats grid-row fix
+   The previous v3.5 desktop rule still made .dashboard .hero span 4 grid rows.
+   Because dashboardV22 also has the .dashboard class, the Up Next card kept a huge empty area.
+   These final overrides reset that grid spanning and make the progress card stretch to the exact same row height. */
+@media (min-width:1180px){
+  .dashboard.dashboardV22{
+    display:grid!important;
+    grid-template-columns:minmax(620px, 780px) minmax(250px, 285px)!important;
+    grid-template-rows:auto!important;
+    grid-auto-rows:auto!important;
+    align-items:stretch!important;
+    gap:14px!important;
+    max-width:1120px!important;
+    margin-inline:auto!important;
+  }
+
+  .dashboard.dashboardV22 .hero{
+    grid-row:auto!important;
+    grid-column:auto!important;
+    min-height:300px!important;
+    height:auto!important;
+    max-height:none!important;
+    align-self:stretch!important;
+    align-items:center!important;
+    grid-template-columns:minmax(0, 1fr) 240px!important;
+    gap:18px!important;
+    padding:20px!important;
+  }
+
+  .dashboard.dashboardV22 .heroText{
+    justify-content:center!important;
+    align-self:center!important;
+  }
+
+  .dashboard.dashboardV22 .hero h2{
+    max-width:14.5ch!important;
+    font-size:clamp(30px, 2.45vw, 44px)!important;
+    line-height:1!important;
+    margin:5px 0 10px!important;
+  }
+
+  .dashboard.dashboardV22 .hero .notes{
+    max-width:54ch!important;
+    font-size:14px!important;
+    line-height:1.42!important;
+    -webkit-line-clamp:3!important;
+  }
+
+  .dashboard.dashboardV22 .heroBtns{
+    margin-top:12px!important;
+  }
+
+  .dashboard.dashboardV22 .posterWrap{
+    align-self:center!important;
+    justify-self:stretch!important;
+  }
+
+  .dashboard.dashboardV22 .poster{
+    width:100%!important;
+    height:150px!important;
+    min-height:0!important;
+    max-height:none!important;
+    border-radius:16px!important;
+  }
+
+  .dashboard.dashboardV22 .statsOverview{
+    grid-row:auto!important;
+    grid-column:auto!important;
+    min-height:0!important;
+    height:auto!important;
+    align-self:stretch!important;
+    justify-content:start!important;
+    padding:16px!important;
+    gap:9px!important;
+  }
+
+  .dashboard.dashboardV22 .statsTop strong{
+    font-size:clamp(40px, 3.2vw, 56px)!important;
+  }
+
+  .dashboard.dashboardV22 .statsGrid{
+    grid-template-columns:1fr 1fr!important;
+    gap:8px!important;
+  }
+
+  .dashboard.dashboardV22 .statsGrid > div{
+    padding:9px 10px!important;
+    border-radius:13px!important;
+  }
+
+  .dashboard.dashboardV22 .statsGrid strong{
+    font-size:22px!important;
+  }
+
+  .dashboard.dashboardV22 .syncStatusInline{
+    margin-top:auto!important;
+    font-size:11px!important;
+    line-height:1.35!important;
+  }
+}
+
+@media (min-width:1180px) and (max-width:1350px){
+  .dashboard.dashboardV22{
+    grid-template-columns:minmax(600px, 1fr) 260px!important;
+  }
+  .dashboard.dashboardV22 .hero{
+    grid-template-columns:minmax(0, 1fr) 220px!important;
+  }
+  .dashboard.dashboardV22 .poster{
+    height:140px!important;
+  }
+}
+
 
 /* v2.5 actor interaction and episode detail visibility polish */
 .episodeDetail{scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--showColor,var(--brand)) 52%,#64748b) rgba(15,23,42,.35)}
 .episodeDetailHero{align-items:start}.episodeDetailInfo{padding:8px 4px 0}.episodeDetailInfo .crossover{display:inline-flex;margin:6px 0 10px}.detailGrid{align-items:start}.detailGrid section{background:rgba(15,23,42,.18);border:1px solid rgba(148,163,184,.14);border-radius:20px;padding:14px}.detailGrid h3{font-size:18px;letter-spacing:-.02em}.castGrid{gap:10px}.castPill{appearance:none;text-align:left;position:relative;cursor:pointer;min-width:142px;max-width:260px;padding:10px 12px 11px;border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,.075),rgba(255,255,255,.025)),var(--panel2);border:1px solid color-mix(in srgb,var(--showColor,var(--brand)) 22%,var(--border));color:var(--text);transition:transform .16s ease,border-color .16s ease,background .16s ease,box-shadow .16s ease}.castPill:hover,.castPill:focus-visible{transform:translateY(-2px);border-color:color-mix(in srgb,var(--showColor,var(--brand)) 62%,#fff);background:linear-gradient(180deg,color-mix(in srgb,var(--showColor,var(--brand)) 18%,rgba(255,255,255,.08)),rgba(255,255,255,.035)),var(--panel2);box-shadow:0 16px 42px rgba(0,0,0,.36);outline:none}.castPillName{display:block;font-weight:850;font-size:15px;line-height:1.08}.castPill small{display:block;color:var(--muted);font-size:12px;margin-top:3px;line-height:1.15}.castPill em{display:block;font-style:normal;color:color-mix(in srgb,var(--showColor,var(--brand)) 42%,#cbd5e1);font-size:11px;margin-top:7px;line-height:1.15}.castPortraitPreview{position:absolute;left:50%;bottom:calc(100% + 10px);z-index:20;width:112px;height:150px;transform:translateX(-50%) translateY(6px) scale(.96);opacity:0;pointer-events:none;border-radius:18px;padding:4px;background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.04)),#0f172a;border:1px solid color-mix(in srgb,var(--showColor,var(--brand)) 52%,rgba(255,255,255,.28));box-shadow:0 22px 60px rgba(0,0,0,.58);transition:opacity .16s ease,transform .16s ease}.castPortraitPreview img{width:100%;height:100%;object-fit:cover;border-radius:14px;display:block}.castPill:hover .castPortraitPreview,.castPill:focus-visible .castPortraitPreview{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}.castPill::after{content:'Click to filter episodes';position:absolute;right:10px;bottom:9px;opacity:0;color:var(--muted);font-size:10px;transition:opacity .16s ease}.castPill:hover::after,.castPill:focus-visible::after{opacity:.78}.episodeDetailBackdrop{box-shadow:0 18px 48px rgba(0,0,0,.42)}.detailArtTile{border:1px solid rgba(148,163,184,.16);transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease}.detailArtTile:hover{transform:translateY(-2px);border-color:color-mix(in srgb,var(--showColor,var(--brand)) 52%,#fff);box-shadow:0 14px 34px rgba(0,0,0,.34)}
 @media(max-width:760px){.castPill{min-width:calc(50% - 6px);flex:1 1 calc(50% - 6px)}.castPortraitPreview{display:none}.castPill::after{display:none}.detailGrid section{padding:12px}.episodeDetailInfo h2{font-size:clamp(24px,7vw,34px)}}
 @media(max-width:480px){.castPill{width:100%;min-width:100%;max-width:none}}
+
+
+/* v2.5.1 modal performance and restored compact hero guard */
+.episodeDetail{contain:layout paint;will-change:transform;max-height:min(92vh, 980px);}
+.episodeDetailBackdrop,.detailArtTile img,.castPortraitPreview img{content-visibility:auto;}
+.episodeDetail .castGrid{content-visibility:auto;contain-intrinsic-size:520px;}
+.castPill{transform:translateZ(0);}
+@media (min-width:1180px){
+  .dashboard.dashboardV22 .hero{grid-row:auto!important;min-height:300px!important;max-height:360px!important;}
+  .dashboard.dashboardV22 .statsOverview{grid-row:auto!important;min-height:300px!important;max-height:360px!important;}
+}
