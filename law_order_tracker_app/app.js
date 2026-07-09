@@ -747,11 +747,25 @@ function openEpisodeDetail(ep) {
       </div>
     </div>`;
   overlay.classList.add('show');
+  document.body.classList.add('episode-modal-open');
+  const detail = overlay.querySelector('.episodeDetail');
+  if (detail) {
+    detail.addEventListener('scroll', hideActorPortraitFloating, { passive: true });
+    detail.addEventListener('wheel', ev => ev.stopPropagation(), { passive: true });
+    detail.addEventListener('touchmove', ev => ev.stopPropagation(), { passive: true });
+  }
+  const castGrid = overlay.querySelector('.castGrid');
+  if (castGrid) {
+    castGrid.addEventListener('scroll', hideActorPortraitFloating, { passive: true });
+    castGrid.addEventListener('wheel', ev => ev.stopPropagation(), { passive: true });
+    castGrid.addEventListener('touchmove', ev => ev.stopPropagation(), { passive: true });
+  }
   overlay.querySelector('.episodeDetailClose')?.addEventListener('click', closeEpisodeDetail);
 }
 
 function closeEpisodeDetail() {
   hideActorPortraitFloating();
+  document.body.classList.remove('episode-modal-open');
   const overlay = document.getElementById('episodeModalOverlay');
   if (!overlay) return;
   overlay.classList.remove('show');
