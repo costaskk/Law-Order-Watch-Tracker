@@ -889,12 +889,14 @@ function openEpisodeDetail(ep) {
     <div class="episodeDetail" style="--showColor:${esc(t.primary)}" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="episodeDetailTitle">
       <button class="episodeDetailClose" type="button" aria-label="Close episode details">×</button>
       <div class="episodeDetailHero">
-        <img class="episodeDetailBackdrop js-lightbox-img" src="${esc(src)}" data-lightbox-src="${esc(src)}" data-lightbox-title="${esc(ep.show)} ${esc(ep.code)}${ep.title ? ' — ' + esc(ep.title) : ''}" alt="${esc(ep.show)} artwork">
+        <div class="episodeDetailArtworkWrap">
+          <img class="episodeDetailBackdrop js-lightbox-img" src="${esc(src)}" data-lightbox-src="${esc(src)}" data-lightbox-title="${esc(ep.show)} ${esc(ep.code)}${ep.title ? ' — ' + esc(ep.title) : ''}" alt="${esc(ep.show)} artwork">
+          ${ratingsHtml(ep, 'detailImageRatings')}
+        </div>
         <div class="episodeDetailInfo">
           <span class="detailKicker">${esc(ep.franchise || ep.era || 'Wolf Universe')} • ${esc(GUIDE_SCOPES[ep.scope] || ep.scope || 'guide')}</span>
           <h2 id="episodeDetailTitle">${esc(ep.show)} ${esc(ep.code)}${ep.title ? ` — ${esc(ep.title)}` : ''}</h2>
           <div class="heroMeta"><span class="metaPill">${esc(ep.airDate || 'No date')}</span><span class="metaPill">${esc(episodeLabel(ep))}</span>${ep.runtime ? `<span class="metaPill">${esc(ep.runtime)} min</span>` : ''}<span class="metaPill">${esc(st)}</span></div>
-          ${ratingsHtml(ep, 'detailRatings')}
           ${(ep.connection || ep.notes) ? `<div class="crossover">${esc(ep.connection || ep.notes)}</div>` : ''}
           ${ep.overview ? `<p class="detailOverview">${esc(ep.overview)}</p>` : '<p class="detailOverview mutedText">No summary available yet.</p>'}
         </div>
@@ -1176,29 +1178,76 @@ function getEpisodeRatings(ep = {}) {
 }
 
 function ratingServiceMeta(label) {
+  const iconRoot = 'https://cdn.simpleicons.org';
   const services = {
-    IMDb: { short: 'IMDb', name: 'IMDb' },
-    RT: { short: 'RT', name: 'Rotten Tomatoes' },
-    Metacritic: { short: 'MC', name: 'Metacritic' },
-    Trakt: { short: 'TR', name: 'Trakt' },
-    TMDB: { short: 'TM', name: 'TMDB' },
-    TVDB: { short: 'TV', name: 'TVDB' }
+    IMDb: {
+      short: 'IMDb', name: 'IMDb',
+      logo: `${iconRoot}/imdb/000000`,
+      brandClass: 'imdb'
+    },
+    RT: {
+      short: 'RT', name: 'Rotten Tomatoes',
+      logo: `${iconRoot}/rottentomatoes/FFFFFF`,
+      brandClass: 'rt'
+    },
+    Metacritic: {
+      short: 'MC', name: 'Metacritic',
+      logo: `${iconRoot}/metacritic/FFFFFF`,
+      brandClass: 'metacritic'
+    },
+    Trakt: {
+      short: 'TR', name: 'Trakt',
+      logo: `${iconRoot}/trakt/FFFFFF`,
+      brandClass: 'trakt'
+    },
+    TMDB: {
+      short: 'TM', name: 'The Movie Database',
+      logo: `${iconRoot}/themoviedatabase/FFFFFF`,
+      brandClass: 'tmdb'
+    },
+    TVDB: {
+      short: 'TV', name: 'TheTVDB',
+      logo: `${iconRoot}/thetvdb/FFFFFF`,
+      brandClass: 'tvdb'
+    }
   };
-  return services[label] || { short: String(label || '?').slice(0, 3), name: label || 'Rating' };
+  return services[label] || {
+    short: String(label || '?').slice(0, 3),
+    name: label || 'Rating',
+    logo: '',
+    brandClass: 'generic'
+  };
 }
+
+document.addEventListener('error', event => {
+  const target = event.target;
+  if (target instanceof HTMLImageElement && target.classList.contains('ratingServiceLogo')) {
+    target.hidden = true;
+  }
+}, true);
 
 function ratingBadgeHtml(rating, mode = 'standard') {
   const meta = ratingServiceMeta(rating.label);
-  const compact = mode === 'image' || mode === 'hero';
+  const compactModes = new Set(['image', 'hero', 'heroImage', 'detailImage']);
+  const compact = compactModes.has(mode);
   const detail = mode === 'detail';
   const classNames = [
     'ratingBadge',
     `ratingBadge--${rating.serviceKey}`,
+    `ratingBadge--mode-${mode}`,
     compact ? 'ratingBadge--compact' : '',
     detail ? 'ratingBadge--detail' : ''
   ].filter(Boolean).join(' ');
+
+  const logo = meta.logo
+    ? `<img class="ratingServiceLogo" src="${esc(meta.logo)}" alt="" loading="lazy" decoding="async">`
+    : '';
+
   return `<span class="${classNames}" role="listitem" aria-label="${esc(meta.name)} rating ${esc(rating.value)}">
-    <span class="ratingServiceIcon ratingServiceIcon--${esc(rating.serviceKey)}" aria-hidden="true">${esc(meta.short)}</span>
+    <span class="ratingServiceIcon ratingServiceIcon--${esc(meta.brandClass)}" aria-hidden="true">
+      <span class="ratingServiceFallback">${esc(meta.short)}</span>
+      ${logo}
+    </span>
     ${compact ? '' : `<span class="ratingSourceName">${esc(meta.name)}</span>`}
     <strong class="ratingValue">${esc(rating.value)}</strong>
   </span>`;
@@ -1217,6 +1266,12 @@ function ratingsHtml(ep, className = 'ratingRow') {
   } else if (className === 'heroRatings') {
     mode = 'hero';
     ratings = ratings.slice(0, 4);
+  } else if (className === 'heroImageRatings') {
+    mode = 'heroImage';
+    ratings = ratings.slice(0, 4);
+  } else if (className === 'detailImageRatings') {
+    mode = 'detailImage';
+    ratings = ratings.slice(0, 6);
   }
 
   return `<div class="${esc(className)} ratingsCollection ratingsCollection--${mode}" role="list" aria-label="Episode ratings">${ratings.map(r => ratingBadgeHtml(r, mode)).join('')}</div>`;
@@ -1229,12 +1284,14 @@ function renderNext(next) {
   const nextNotes = document.getElementById('nextNotes');
   const heroCard = document.getElementById('heroCard');
   const poster = document.getElementById('nextPoster');
+  const posterRatings = document.getElementById('nextPosterRatings');
 
   if (!next) {
     if (heroCard) heroCard.dataset.episodeId = '';
     nextTitle.textContent = 'Everything is watched';
     nextMeta.innerHTML = '<span class="metaPill">Your Wolf Universe tracker is complete for this scope.</span>';
     nextNotes.textContent = '';
+    if (posterRatings) posterRatings.innerHTML = '';
     setImageSafe(poster, artwork('Law & Order'), 'Law & Order');
     return;
   }
@@ -1242,7 +1299,8 @@ function renderNext(next) {
   const t = theme(next.show);
   if (heroCard) heroCard.dataset.episodeId = String(next.id || '');
   nextTitle.textContent = `${next.show} ${next.code}${next.title ? ' — ' + next.title : ''}`;
-  nextMeta.innerHTML = `<span class="metaPill">#${esc(next.order)}</span><span class="metaPill">${esc(next.airDate || 'No air date')}</span><span class="metaPill">${episodeLabel(next)}</span>${next.runtime ? `<span class="metaPill">${esc(next.runtime)} min</span>` : ''}${ratingsHtml(next, 'heroRatings')}`;
+  nextMeta.innerHTML = `<span class="metaPill">#${esc(next.order)}</span><span class="metaPill">${esc(next.airDate || 'No air date')}</span><span class="metaPill">${episodeLabel(next)}</span>${next.runtime ? `<span class="metaPill">${esc(next.runtime)} min</span>` : ''}`;
+  if (posterRatings) posterRatings.innerHTML = ratingsHtml(next, 'heroImageRatings');
   nextNotes.textContent = next.overview || next.connection || next.notes || 'Open details for the full episode card, artwork, cast, and ratings.';
   heroCard.style.setProperty('--showColor', t.primary);
   const src = episodeArtwork(next);

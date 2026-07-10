@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'wolf-v3-20260710';
+const CACHE_VERSION = 'wolf-v3-20260710-v304';
 const CORE_CACHE = `${CACHE_VERSION}-core`;
 const DATA_CACHE = `${CACHE_VERSION}-data`;
 const CORE_ASSETS = [
