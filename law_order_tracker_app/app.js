@@ -643,10 +643,11 @@ function castPillHtml(actor) {
     : (count ? `${count} credited episode${count === 1 ? '' : 's'}` : 'Filter appearances');
   const detailLabel = showCount ? `${countLabel} • ${showCount} show${showCount === 1 ? '' : 's'}` : countLabel;
   return `
-    <button class="castPill" type="button" data-actor-key="${esc(key)}" data-actor-name="${esc(actor.name)}" data-actor-profile="${esc(profile)}" title="Show episodes featuring ${esc(actor.name)}">
+    <button class="castPill" type="button" data-actor-key="${esc(key)}" data-actor-name="${esc(actor.name)}" data-actor-profile="${esc(profile)}" aria-label="Show episodes featuring ${esc(actor.name)}">
       <span class="castPillName">${esc(actor.name)}</span>
       ${subtitle ? `<small>${esc(subtitle)}</small>` : ''}
       <em>${esc(detailLabel)}</em>
+      <span class="castPillAction" aria-hidden="true">↗</span>
     </button>`;
 }
 
@@ -885,13 +886,13 @@ function openEpisodeDetail(ep) {
     : '<div class="castLoading" role="status"><span></span><p>Loading episode cast…</p></div>';
   const src = episodeArtwork(ep);
   overlay.innerHTML = `
-    <div class="episodeDetail" style="--showColor:${esc(t.primary)}" tabindex="-1">
+    <div class="episodeDetail" style="--showColor:${esc(t.primary)}" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="episodeDetailTitle">
       <button class="episodeDetailClose" type="button" aria-label="Close episode details">×</button>
       <div class="episodeDetailHero">
         <img class="episodeDetailBackdrop js-lightbox-img" src="${esc(src)}" data-lightbox-src="${esc(src)}" data-lightbox-title="${esc(ep.show)} ${esc(ep.code)}${ep.title ? ' — ' + esc(ep.title) : ''}" alt="${esc(ep.show)} artwork">
         <div class="episodeDetailInfo">
           <span class="detailKicker">${esc(ep.franchise || ep.era || 'Wolf Universe')} • ${esc(GUIDE_SCOPES[ep.scope] || ep.scope || 'guide')}</span>
-          <h2>${esc(ep.show)} ${esc(ep.code)}${ep.title ? ` — ${esc(ep.title)}` : ''}</h2>
+          <h2 id="episodeDetailTitle">${esc(ep.show)} ${esc(ep.code)}${ep.title ? ` — ${esc(ep.title)}` : ''}</h2>
           <div class="heroMeta"><span class="metaPill">${esc(ep.airDate || 'No date')}</span><span class="metaPill">${esc(episodeLabel(ep))}</span>${ep.runtime ? `<span class="metaPill">${esc(ep.runtime)} min</span>` : ''}<span class="metaPill">${esc(st)}</span></div>
           ${ratingsHtml(ep, 'detailRatings')}
           ${(ep.connection || ep.notes) ? `<div class="crossover">${esc(ep.connection || ep.notes)}</div>` : ''}
@@ -1168,13 +1169,57 @@ function getEpisodeRatings(ep = {}) {
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
-  }).slice(0, 6);
+  }).slice(0, 6).map(item => ({
+    ...item,
+    serviceKey: String(item.label || '').toLowerCase().replace(/[^a-z0-9]+/g, '')
+  }));
+}
+
+function ratingServiceMeta(label) {
+  const services = {
+    IMDb: { short: 'IMDb', name: 'IMDb' },
+    RT: { short: 'RT', name: 'Rotten Tomatoes' },
+    Metacritic: { short: 'MC', name: 'Metacritic' },
+    Trakt: { short: 'TR', name: 'Trakt' },
+    TMDB: { short: 'TM', name: 'TMDB' },
+    TVDB: { short: 'TV', name: 'TVDB' }
+  };
+  return services[label] || { short: String(label || '?').slice(0, 3), name: label || 'Rating' };
+}
+
+function ratingBadgeHtml(rating, mode = 'standard') {
+  const meta = ratingServiceMeta(rating.label);
+  const compact = mode === 'image' || mode === 'hero';
+  const detail = mode === 'detail';
+  const classNames = [
+    'ratingBadge',
+    `ratingBadge--${rating.serviceKey}`,
+    compact ? 'ratingBadge--compact' : '',
+    detail ? 'ratingBadge--detail' : ''
+  ].filter(Boolean).join(' ');
+  return `<span class="${classNames}" role="listitem" aria-label="${esc(meta.name)} rating ${esc(rating.value)}">
+    <span class="ratingServiceIcon ratingServiceIcon--${esc(rating.serviceKey)}" aria-hidden="true">${esc(meta.short)}</span>
+    ${compact ? '' : `<span class="ratingSourceName">${esc(meta.name)}</span>`}
+    <strong class="ratingValue">${esc(rating.value)}</strong>
+  </span>`;
 }
 
 function ratingsHtml(ep, className = 'ratingRow') {
-  const ratings = getEpisodeRatings(ep);
+  let ratings = getEpisodeRatings(ep);
   if (!ratings.length) return '';
-  return `<div class="${className}">${ratings.map(r => `<span class="ratingPill"><strong>${esc(r.label)}</strong> ${esc(r.value)}</span>`).join('')}</div>`;
+
+  let mode = 'standard';
+  if (className === 'epImageRatings') {
+    mode = 'image';
+    ratings = ratings.slice(0, 3);
+  } else if (className === 'detailRatings') {
+    mode = 'detail';
+  } else if (className === 'heroRatings') {
+    mode = 'hero';
+    ratings = ratings.slice(0, 4);
+  }
+
+  return `<div class="${esc(className)} ratingsCollection ratingsCollection--${mode}" role="list" aria-label="Episode ratings">${ratings.map(r => ratingBadgeHtml(r, mode)).join('')}</div>`;
 }
 
 function renderNext(next) {
@@ -1345,11 +1390,13 @@ function epCard(ep) {
   return `
     <article class="ep ${st === 'Watched' ? 'watched' : ''}" style="--showColor:${accent}" id="ep-${safeId(ep.order)}" data-episode-id="${esc(ep.id)}">
       <div class="order">#${esc(ep.order)}</div>
-      <img class="epArt js-lightbox-img" src="${esc(imgSrc)}" data-lightbox-src="${esc(imgSrc)}" data-lightbox-title="${esc(ep.show)} ${esc(ep.code)}${title}" alt="${esc(ep.show)} artwork" loading="lazy" onerror="this.src='${esc(artwork(ep.show))}'">
+      <div class="epArtWrap">
+        <img class="epArt js-lightbox-img" src="${esc(imgSrc)}" data-lightbox-src="${esc(imgSrc)}" data-lightbox-title="${esc(ep.show)} ${esc(ep.code)}${title}" alt="${esc(ep.show)} artwork" loading="lazy" onerror="this.src='${esc(artwork(ep.show))}'">
+        ${ratingsHtml(ep, 'epImageRatings')}
+      </div>
       <div class="epMain">
         <h3>${esc(ep.show)} ${esc(ep.code)}${title}</h3>
         <div class="meta">${esc(ep.airDate || 'No date')} • ${esc(episodeLabel(ep))} • <strong>${esc(st)}</strong></div>
-        ${ratingsHtml(ep)}
         <span class="pill">${esc(ep.franchise || ep.era || 'Wolf Universe')}</span>${scopePill}${source}${notes}
         ${ep.overview ? `<p class="overview">${esc(ep.overview)}</p>` : ''}
       </div>

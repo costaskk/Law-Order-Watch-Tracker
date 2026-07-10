@@ -810,3 +810,262 @@ button:disabled,select:disabled{cursor:wait;opacity:.62;transform:none!important
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;}
 }
+
+/* Wolf Universe v3.0.3 — compatibility-safe cast cards and branded ratings
+   Built on the supplied production app.js/styles.css files. */
+
+/* Episode artwork is now the visual home for compact ratings. */
+.epArtWrap{
+  position:relative;
+  width:128px;
+  height:78px;
+  min-width:0;
+  overflow:hidden;
+  isolation:isolate;
+  border-radius:15px;
+  background:var(--panel2);
+  box-shadow:0 12px 24px rgba(0,0,0,.24);
+}
+.epArtWrap::after{
+  content:"";
+  position:absolute;
+  inset:auto 0 0;
+  height:58%;
+  z-index:1;
+  pointer-events:none;
+  background:linear-gradient(180deg,transparent,rgba(2,6,23,.72));
+}
+.epArtWrap .epArt{
+  width:100%!important;
+  height:100%!important;
+  display:block!important;
+  border-radius:inherit!important;
+  box-shadow:none!important;
+}
+
+.ratingsCollection{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  align-items:center;
+}
+.ratingBadge{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  min-width:0;
+  padding:5px 8px 5px 5px;
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:999px;
+  background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.025)),rgba(8,15,28,.88);
+  color:#f8fafc;
+  box-shadow:0 8px 22px rgba(0,0,0,.28);
+  backdrop-filter:blur(10px);
+  font-size:11px;
+  line-height:1;
+  white-space:nowrap;
+}
+.ratingServiceIcon{
+  display:inline-grid;
+  place-items:center;
+  min-width:24px;
+  height:22px;
+  padding:0 5px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.1);
+  color:#fff;
+  font-size:8px;
+  font-weight:950;
+  letter-spacing:.015em;
+  text-transform:uppercase;
+  line-height:1;
+}
+.ratingSourceName{
+  color:var(--muted);
+  font-weight:700;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.ratingValue{
+  color:#fff;
+  font-size:11px;
+  font-weight:900;
+  font-variant-numeric:tabular-nums;
+  letter-spacing:.01em;
+}
+
+/* Provider-specific branded monograms. */
+.ratingBadge--imdb .ratingServiceIcon{background:#f5c518;border-color:#f5c518;color:#111827;}
+.ratingBadge--rt .ratingServiceIcon{background:#ef4444;border-color:#fb7185;color:#fff;}
+.ratingBadge--metacritic .ratingServiceIcon{background:#22c55e;border-color:#4ade80;color:#052e16;}
+.ratingBadge--trakt .ratingServiceIcon{background:#ed1c24;border-color:#fb7185;color:#fff;}
+.ratingBadge--tmdb .ratingServiceIcon{background:linear-gradient(135deg,#01b4e4,#90cea1);border-color:#67e8f9;color:#062333;}
+.ratingBadge--tvdb .ratingServiceIcon{background:#f59e0b;border-color:#fbbf24;color:#1f2937;}
+
+/* Compact ratings live over the lower-right corner of list artwork. */
+.epImageRatings{
+  position:absolute;
+  right:6px;
+  bottom:6px;
+  z-index:2;
+  display:flex;
+  flex-wrap:wrap-reverse;
+  justify-content:flex-end;
+  gap:4px;
+  max-width:calc(100% - 12px);
+  margin:0!important;
+  pointer-events:none;
+}
+.epImageRatings .ratingBadge{
+  gap:3px;
+  padding:2px 5px 2px 3px;
+  background:rgba(3,7,18,.86);
+  border-color:rgba(255,255,255,.18);
+  box-shadow:0 5px 14px rgba(0,0,0,.38);
+  font-size:9px;
+}
+.epImageRatings .ratingServiceIcon{
+  min-width:17px;
+  height:17px;
+  padding:0 3px;
+  font-size:6.8px;
+}
+.epImageRatings .ratingValue{font-size:9px;}
+
+/* Hero ratings use the same language without crowding the hero metadata. */
+.heroRatings{
+  display:inline-flex!important;
+  margin:0!important;
+  gap:5px!important;
+}
+.heroRatings .ratingBadge{
+  padding:3px 6px 3px 3px;
+  gap:4px;
+  background:rgba(10,18,32,.62);
+}
+.heroRatings .ratingServiceIcon{min-width:20px;height:19px;font-size:7px;}
+.heroRatings .ratingValue{font-size:10px;}
+
+/* Full, branded ratings for the episode detail modal. */
+.detailRatings{
+  display:flex!important;
+  flex-wrap:wrap;
+  gap:8px!important;
+  margin:12px 0 10px!important;
+}
+.detailRatings .ratingBadge{
+  min-height:34px;
+  padding:5px 10px 5px 5px;
+  border-color:color-mix(in srgb,var(--showColor,var(--brand)) 22%,rgba(255,255,255,.16));
+  background:linear-gradient(180deg,rgba(255,255,255,.075),rgba(255,255,255,.025)),var(--panel2);
+}
+.detailRatings .ratingServiceIcon{min-width:29px;height:25px;font-size:8px;}
+.detailRatings .ratingSourceName{max-width:132px;}
+.detailRatings .ratingValue{font-size:12px;}
+.light .ratingBadge{background:rgba(255,255,255,.92);color:var(--text);border-color:rgba(15,23,42,.13);box-shadow:0 7px 18px rgba(15,23,42,.12);}
+.light .ratingValue{color:var(--text);}
+.light .epImageRatings .ratingBadge{background:rgba(15,23,42,.84);}
+.light .epImageRatings .ratingValue{color:#fff;}
+
+/* Cast cards are a responsive grid, not text boxes competing for width. */
+.castGrid{
+  display:grid!important;
+  grid-template-columns:repeat(auto-fit,minmax(min(178px,100%),1fr));
+  align-content:start;
+  align-items:stretch;
+  gap:10px!important;
+}
+.castPill{
+  position:relative;
+  display:grid!important;
+  grid-template-rows:auto auto auto;
+  align-content:start;
+  width:100%!important;
+  min-width:0!important;
+  max-width:none!important;
+  min-height:82px;
+  padding:10px 36px 11px 12px!important;
+  overflow:hidden;
+  text-align:left;
+}
+.castPillName,
+.castPill small,
+.castPill em{
+  min-width:0;
+  max-width:100%;
+  overflow-wrap:anywhere;
+  word-break:normal;
+}
+.castPillName{
+  display:-webkit-box!important;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:2;
+  overflow:hidden;
+  line-height:1.13!important;
+}
+.castPill small{
+  display:-webkit-box!important;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:2;
+  overflow:hidden;
+  line-height:1.2!important;
+}
+.castPill em{
+  display:-webkit-box!important;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:2;
+  overflow:hidden;
+  margin-top:7px!important;
+  padding:0!important;
+  line-height:1.2!important;
+}
+/* Disable the obsolete long hover instruction that could cover credit text. */
+.castPill::after{content:none!important;display:none!important;}
+.castPillAction{
+  position:absolute;
+  right:10px;
+  top:10px;
+  display:grid;
+  place-items:center;
+  width:20px;
+  height:20px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.1);
+  background:rgba(255,255,255,.055);
+  color:var(--muted);
+  font-size:11px;
+  line-height:1;
+  transition:transform .16s ease,background .16s ease,color .16s ease,border-color .16s ease;
+}
+.castPill:hover .castPillAction,
+.castPill:focus-visible .castPillAction{
+  transform:translateY(-1px);
+  color:#fff;
+  background:color-mix(in srgb,var(--showColor,var(--brand)) 30%,rgba(255,255,255,.08));
+  border-color:color-mix(in srgb,var(--showColor,var(--brand)) 48%,rgba(255,255,255,.18));
+}
+
+/* Keep modal content and ratings readable on narrow screens. */
+@media (max-width:760px){
+  .epArtWrap{width:96px;height:64px;border-radius:13px;}
+  .epImageRatings{right:4px;bottom:4px;gap:3px;max-width:calc(100% - 8px);}
+  .epImageRatings .ratingBadge{padding:2px 4px 2px 2px;}
+  .epImageRatings .ratingServiceIcon{min-width:15px;height:15px;font-size:6px;}
+  .epImageRatings .ratingValue{font-size:8px;}
+  .detailRatings{gap:6px!important;}
+  .detailRatings .ratingBadge{flex:1 1 auto;max-width:100%;}
+  .detailRatings .ratingSourceName{max-width:105px;}
+  .castGrid{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .castPill{min-height:86px;}
+  .actorPortraitFloating{display:none!important;}
+}
+@media (max-width:480px){
+  .epArtWrap{width:82px;height:58px;border-radius:12px;}
+  .epImageRatings{max-width:calc(100% - 6px);}
+  .epImageRatings .ratingBadge:nth-child(n+3){display:none;}
+  .detailRatings .ratingBadge{width:100%;justify-content:flex-start;}
+  .detailRatings .ratingSourceName{max-width:none;flex:1;}
+  .castGrid{grid-template-columns:1fr;}
+  .castPill{min-height:0;}
+}
