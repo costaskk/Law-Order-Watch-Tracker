@@ -1,9 +1,18 @@
 {
-  "name": "Law & Order Watch Tracker",
-  "short_name": "L&O Tracker",
-  "start_url": "./index.html",
+  "id": "./",
+  "name": "Wolf Universe Watch Tracker",
+  "short_name": "Wolf Tracker",
+  "description": "Chronological Dick Wolf universe tracker with personal Trakt sync.",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
+  "orientation": "any",
   "background_color": "#070b13",
-  "theme_color": "#b91c1c",
-  "icons": []
+  "theme_color": "#111827",
+  "categories": ["entertainment", "utilities"],
+  "icons": [
+    { "src": "./assets/wolf-icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "./assets/wolf-icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "./assets/wolf-icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
 }

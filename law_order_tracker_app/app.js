@@ -22,8 +22,8 @@ const PERSONAL_AUTO_SYNC_INTERVAL_MS = 60 * 60 * 1000; // 1 hour Trakt/Supabase 
 
 let episodes = Array.isArray(window.LAW_ORDER_EPISODES) ? window.LAW_ORDER_EPISODES : [];
 const themes = window.SHOW_THEMES || {};
-const artworkMeta = window.WOLF_ARTWORK || { shows: {}, seasons: {}, episodes: {} };
-const castIndexMeta = window.WOLF_CAST_INDEX || { actors: {}, byEpisode: {} };
+let artworkMeta = window.WOLF_ARTWORK || { shows: {}, seasons: {}, episodes: {} };
+let castIndexMeta = window.WOLF_CAST_INDEX || { actors: {}, byEpisode: {} };
 
 let statusMap = loadStatusMap();
 let current = [];
@@ -50,6 +50,16 @@ let traktStatusLoadInProgress = false;
 let currentNextEpisode = null;
 let personalAutoSyncTimer = null;
 let personalSyncInProgress = false;
+let episodesDataPromise = null;
+let episodeArtworkPromise = null;
+let castIndexPromise = null;
+let episodeArtworkLoaded = Boolean(Object.keys(artworkMeta.episodes || {}).length);
+let castIndexLoaded = Boolean(Object.keys(castIndexMeta.actors || {}).length);
+let currentDetailEpisode = null;
+let pendingCloudStatusUpdates = new Map();
+let cloudStatusTimer = null;
+const CLOUD_STATUS_DEBOUNCE_MS = 550;
+const DATA_VERSION = '20260710-v3';
 
 const GUIDE_SCOPES = {
   core: 'Core Wolf Universe',
@@ -128,6 +138,138 @@ const SHOW_NAME_ALIASES = {
 
 let episodeByExactId = new Map();
 let episodesByNoOrderKey = new Map();
+
+
+async function loadEpisodesData() {
+  if (episodes.length) return episodes;
+  if (episodesDataPromise) return episodesDataPromise;
+  episodesDataPromise = (async () => {
+    const response = await fetch(`./data/episodes.json?v=${DATA_VERSION}`, { cache: 'default' });
+    if (!response.ok) throw new Error(`Episode data returned HTTP ${response.status}`);
+    const payload = await response.json();
+    if (!Array.isArray(payload) || !payload.length) throw new Error('Episode data is empty or invalid');
+    episodes = payload;
+    return episodes;
+  })();
+  return episodesDataPromise;
+}
+
+async function loadEpisodeArtwork() {
+  if (episodeArtworkLoaded) return artworkMeta.episodes || {};
+  if (episodeArtworkPromise) return episodeArtworkPromise;
+  episodeArtworkPromise = (async () => {
+    const response = await fetch(`./data/wolf_episode_artwork.json?v=${DATA_VERSION}`, { cache: 'default' });
+    if (!response.ok) throw new Error(`Episode artwork returned HTTP ${response.status}`);
+    const payload = await response.json();
+    artworkMeta = { ...artworkMeta, episodes: payload || {} };
+    episodeArtworkLoaded = true;
+    refreshVisibleArtwork();
+    return artworkMeta.episodes;
+  })().catch(err => {
+    console.warn('Episode artwork could not be loaded:', err);
+    return {};
+  });
+  return episodeArtworkPromise;
+}
+
+async function loadCastIndex() {
+  if (castIndexLoaded) return castIndexMeta;
+  if (castIndexPromise) return castIndexPromise;
+  castIndexPromise = (async () => {
+    const response = await fetch(`./data/wolf_cast_index.json?v=${DATA_VERSION}`, { cache: 'default' });
+    if (!response.ok) throw new Error(`Actor data returned HTTP ${response.status}`);
+    castIndexMeta = await response.json();
+    castIndexLoaded = true;
+    rebuildActorIndex();
+    refreshDynamicFilters({ keepShow: true, keepSeason: true, keepFranchise: true, keepActor: true });
+    if (currentDetailEpisode) renderDetailCast(currentDetailEpisode);
+    return castIndexMeta;
+  })().catch(err => {
+    console.warn('Actor data could not be loaded:', err);
+    const actorFilter = document.getElementById('actorFilter');
+    if (actorFilter) actorFilter.innerHTML = '<option value="">Actor data unavailable</option>';
+    return castIndexMeta;
+  });
+  return castIndexPromise;
+}
+
+function refreshVisibleArtwork() {
+  if (currentNextEpisode) {
+    const poster = document.getElementById('nextPoster');
+    setImageSafe(poster, episodeArtwork(currentNextEpisode), currentNextEpisode.show);
+  }
+  document.querySelectorAll('.ep[data-episode-id]').forEach(card => {
+    const ep = episodeByExactId.get(String(card.dataset.episodeId));
+    const img = card.querySelector('.epArt');
+    if (ep && img) setImageSafe(img, episodeArtwork(ep), ep.show);
+  });
+  if (currentDetailEpisode) {
+    const backdrop = document.querySelector('#episodeModalOverlay .episodeDetailBackdrop');
+    if (backdrop) {
+      const src = episodeArtwork(currentDetailEpisode);
+      setImageSafe(backdrop, src, currentDetailEpisode.show);
+      backdrop.dataset.lightboxSrc = src;
+    }
+    const gallery = document.querySelector('#episodeModalOverlay .detailArtGrid');
+    if (gallery) gallery.innerHTML = showArtworkGallery(currentDetailEpisode);
+  }
+}
+
+function scheduleDeferredDataLoads() {
+  const run = () => {
+    loadEpisodeArtwork();
+    loadCastIndex();
+  };
+  if ('requestIdleCallback' in window) window.requestIdleCallback(run, { timeout: 1600 });
+  else window.setTimeout(run, 350);
+}
+
+function renderDetailCast(ep) {
+  if (!ep || currentDetailEpisode?.id !== ep.id) return;
+  const castGrid = document.querySelector('#episodeModalOverlay .castGrid');
+  if (!castGrid) return;
+  const cast = getEpisodeCast(ep);
+  castGrid.innerHTML = cast.length
+    ? cast.slice(0, 48).map(actor => castPillHtml(actor)).join('')
+    : '<p class="mutedText">No cast credits are available for this episode yet.</p>';
+}
+
+function queueCloudStatusUpdate(ep, status) {
+  if (!traktUser?.authenticated || !isServerMode() || !ep) return;
+  pendingCloudStatusUpdates.set(String(ep.id), {
+    id: String(ep.id), show: ep.show, season: ep.season, episode: ep.episode,
+    status, traktIds: ep.traktIds || {}
+  });
+  if (cloudStatusTimer) clearTimeout(cloudStatusTimer);
+  cloudStatusTimer = window.setTimeout(flushCloudStatusUpdates, CLOUD_STATUS_DEBOUNCE_MS);
+}
+
+async function flushCloudStatusUpdates() {
+  if (cloudStatusTimer) clearTimeout(cloudStatusTimer);
+  cloudStatusTimer = null;
+  if (!pendingCloudStatusUpdates.size || !traktUser?.authenticated) return;
+  const all = [...pendingCloudStatusUpdates.values()];
+  pendingCloudStatusUpdates.clear();
+  try {
+    for (let i = 0; i < all.length; i += 200) {
+      const updates = all.slice(i, i + 200);
+      const response = await fetch('/api/me/status', {
+        method: 'PUT', credentials: 'include', cache: 'no-store',
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' },
+        body: JSON.stringify({ updates, sync_to_trakt: true })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || payload.ok === false) throw new Error(payload.error || `HTTP ${response.status}`);
+      await importStatusPayload(payload, 'Cloud status save', {
+        authoritative: true, replaceGuideStatuses: true, suppressToast: true,
+        silentNoChange: true, background: true
+      });
+    }
+  } catch (err) {
+    all.forEach(item => pendingCloudStatusUpdates.set(String(item.id), item));
+    showToast('Cloud save delayed', `${err.message}. Your change is still saved in this browser.`, 'warning');
+  }
+}
 
 function loadStatusMap() {
   try {
@@ -218,12 +360,19 @@ function getStatus(ep) {
 }
 
 function setStatus(ep, status, silent = false) {
+  const normalized = normalizeStatus(status) || 'Not Started';
   const previous = getStatus(ep);
-  statusMap[ep.id] = status;
-  statusMap[episodeKey(ep)] = status;
+  if (normalized === 'Not Started') {
+    delete statusMap[ep.id];
+    delete statusMap[episodeKey(ep)];
+  } else {
+    statusMap[ep.id] = normalized;
+    statusMap[episodeKey(ep)] = normalized;
+  }
   save();
   renderPreservingScroll();
-  if (!silent && previous !== status) showToast('Status updated', `${ep.show} ${ep.code} is now ${status}.`, 'success');
+  queueCloudStatusUpdate(ep, normalized);
+  if (!silent && previous !== normalized) showToast('Status updated', `${ep.show} ${ep.code} is now ${normalized}.`, 'success');
 }
 
 function pct(n, d) {
@@ -415,13 +564,25 @@ function getEpisodeCast(ep) {
   const out = [];
   for (const arr of sources) {
     for (const raw of arr) {
-      const name = typeof raw === 'string' ? raw : (raw.name || raw.actor || raw.person?.name || raw.character?.name || '');
+      let name = '';
+      let character = '';
+      let profile = '';
+      if (Array.isArray(raw) && castIndexMeta.format === 3) {
+        const person = (castIndexMeta.people || [])[Number(raw[0])] || [];
+        name = person[0] || '';
+        profile = person[1] || '';
+        character = raw[1] || '';
+      } else if (typeof raw === 'string') {
+        name = raw;
+      } else if (raw && typeof raw === 'object') {
+        name = raw.name || raw.actor || raw.person?.name || raw.character?.name || '';
+        character = raw.character || raw.role || raw.characters?.[0] || '';
+        profile = raw.profile || raw.profile_path || raw.image || raw.headshot || '';
+      }
       if (!name) continue;
       const key = normText(name);
       if (!key || seen.has(key)) continue;
       seen.add(key);
-      const character = typeof raw === 'object' ? (raw.character || raw.role || raw.characters?.[0] || '') : '';
-      const profile = typeof raw === 'object' ? (raw.profile || raw.profile_path || raw.image || raw.headshot || '') : '';
       out.push({ name, character, profile });
     }
   }
@@ -602,6 +763,7 @@ function rebuildActorIndex() {
   episodeCastCache = new Map();
   episodeCastKeyCache = new Map();
   actorEpisodeCreditsCache = new Map();
+  if (!castIndexLoaded && !episodes.some(ep => Array.isArray(ep.cast) && ep.cast.length)) return;
 
   // Preferred source: generated aggregate TMDB cast index. This makes the actor
   // dropdown useful even before every single episode credit has been fetched.
@@ -713,29 +875,24 @@ function showArtworkGallery(ep) {
 
 function openEpisodeDetail(ep) {
   const overlay = document.getElementById('episodeModalOverlay');
-  if (!overlay) return;
-  const values = getFilterValues();
-  if (values.actor) {
-    const castKeys = getEpisodeCast(ep).map(actor => normText(actor.name));
-    if (!castKeys.includes(values.actor)) {
-      const rec = actorIndex.get(values.actor);
-      const showMatch = rec && rec.shows && rec.shows.has(ep.show);
-      if (!showMatch) return false;
-    }
-  }
+  if (!overlay || !ep) return;
+  currentDetailEpisode = ep;
   const st = getStatus(ep);
   const t = theme(ep.show);
-  const cast = getEpisodeCast(ep);
-  const castHtml = cast.length ? cast.slice(0, 36).map(actor => castPillHtml(actor)).join('') : '<p class="mutedText">No cast data for this episode yet. Run the cast/artwork fetcher to populate actor data.</p>';
+  const initialCast = castIndexLoaded ? getEpisodeCast(ep) : [];
+  const castHtml = initialCast.length
+    ? initialCast.slice(0, 48).map(actor => castPillHtml(actor)).join('')
+    : '<div class="castLoading" role="status"><span></span><p>Loading episode cast…</p></div>';
+  const src = episodeArtwork(ep);
   overlay.innerHTML = `
-    <div class="episodeDetail" style="--showColor:${esc(t.primary)}">
+    <div class="episodeDetail" style="--showColor:${esc(t.primary)}" tabindex="-1">
       <button class="episodeDetailClose" type="button" aria-label="Close episode details">×</button>
       <div class="episodeDetailHero">
-        <img class="episodeDetailBackdrop js-lightbox-img" src="${esc(episodeArtwork(ep))}" data-lightbox-src="${esc(episodeArtwork(ep))}" data-lightbox-title="${esc(ep.show)} ${esc(ep.code)}${ep.title ? ' — ' + esc(ep.title) : ''}" alt="${esc(ep.show)} artwork">
+        <img class="episodeDetailBackdrop js-lightbox-img" src="${esc(src)}" data-lightbox-src="${esc(src)}" data-lightbox-title="${esc(ep.show)} ${esc(ep.code)}${ep.title ? ' — ' + esc(ep.title) : ''}" alt="${esc(ep.show)} artwork">
         <div class="episodeDetailInfo">
-          <span class="detailKicker">${esc(ep.franchise || ep.era || 'Wolf Universe')} • ${esc(ep.scope || 'guide')}</span>
+          <span class="detailKicker">${esc(ep.franchise || ep.era || 'Wolf Universe')} • ${esc(GUIDE_SCOPES[ep.scope] || ep.scope || 'guide')}</span>
           <h2>${esc(ep.show)} ${esc(ep.code)}${ep.title ? ` — ${esc(ep.title)}` : ''}</h2>
-          <div class="heroMeta"><span class="metaPill">${esc(ep.airDate || 'No date')}</span><span class="metaPill">${esc(episodeLabel(ep))}</span><span class="metaPill">${esc(st)}</span></div>
+          <div class="heroMeta"><span class="metaPill">${esc(ep.airDate || 'No date')}</span><span class="metaPill">${esc(episodeLabel(ep))}</span>${ep.runtime ? `<span class="metaPill">${esc(ep.runtime)} min</span>` : ''}<span class="metaPill">${esc(st)}</span></div>
           ${ratingsHtml(ep, 'detailRatings')}
           ${(ep.connection || ep.notes) ? `<div class="crossover">${esc(ep.connection || ep.notes)}</div>` : ''}
           ${ep.overview ? `<p class="detailOverview">${esc(ep.overview)}</p>` : '<p class="detailOverview mutedText">No summary available yet.</p>'}
@@ -749,22 +906,19 @@ function openEpisodeDetail(ep) {
   overlay.classList.add('show');
   document.body.classList.add('episode-modal-open');
   const detail = overlay.querySelector('.episodeDetail');
-  if (detail) {
-    detail.addEventListener('scroll', hideActorPortraitFloating, { passive: true });
-    detail.addEventListener('wheel', ev => ev.stopPropagation(), { passive: true });
-    detail.addEventListener('touchmove', ev => ev.stopPropagation(), { passive: true });
-  }
-  const castGrid = overlay.querySelector('.castGrid');
-  if (castGrid) {
-    castGrid.addEventListener('scroll', hideActorPortraitFloating, { passive: true });
-    castGrid.addEventListener('wheel', ev => ev.stopPropagation(), { passive: true });
-    castGrid.addEventListener('touchmove', ev => ev.stopPropagation(), { passive: true });
-  }
+  detail?.focus({ preventScroll: true });
+  detail?.addEventListener('scroll', hideActorPortraitFloating, { passive: true });
   overlay.querySelector('.episodeDetailClose')?.addEventListener('click', closeEpisodeDetail);
+  Promise.allSettled([loadCastIndex(), loadEpisodeArtwork()]).then(() => {
+    if (currentDetailEpisode?.id !== ep.id) return;
+    renderDetailCast(ep);
+    refreshVisibleArtwork();
+  });
 }
 
 function closeEpisodeDetail() {
   hideActorPortraitFloating();
+  currentDetailEpisode = null;
   document.body.classList.remove('episode-modal-open');
   const overlay = document.getElementById('episodeModalOverlay');
   if (!overlay) return;
@@ -829,7 +983,7 @@ function inScope(ep, scope = getGuideScope()) {
   const s = ep.scope || inferEpisodeScope(ep);
   if (scope === 'core') return s === 'core';
   if (scope === 'connected') return s === 'core' || s === 'connected';
-  if (scope === 'adjacent') return s === 'adjacent';
+  if (scope === 'adjacent') return s === 'adjacent' || s === 'complete';
   return true;
 }
 
@@ -905,14 +1059,10 @@ function initOptions() {
 
 function refreshDynamicFilters({ keepShow = true, keepSeason = true, keepFranchise = true, keepActor = true } = {}) {
   scopedEpisodes = getBaseScopedEpisodes();
-
   const showFilter = document.getElementById('showFilter');
   const franchiseFilter = document.getElementById('franchiseFilter');
   const seasonFilter = document.getElementById('seasonFilter');
   const actorFilter = document.getElementById('actorFilter');
-  const bulkShow = document.getElementById('bulkShow');
-  const bulkSeason = document.getElementById('bulkSeason');
-
   const prevShow = keepShow ? showFilter?.value || '' : '';
   const prevSeason = keepSeason ? seasonFilter?.value || '' : '';
   const prevFranchise = keepFranchise ? franchiseFilter?.value || '' : '';
@@ -920,38 +1070,27 @@ function refreshDynamicFilters({ keepShow = true, keepSeason = true, keepFranchi
 
   const franchises = uniqueValues(scopedEpisodes, ep => ep.franchise || ep.era || 'Wolf Universe');
   fillSelect(franchiseFilter, franchises, 'All franchises', prevFranchise);
-
   const afterFranchise = scopedEpisodes.filter(ep => !franchiseFilter?.value || String(ep.franchise || ep.era) === franchiseFilter.value);
   const shows = uniqueValues(afterFranchise, ep => ep.show);
   fillSelect(showFilter, shows, 'All shows', prevShow);
-
   const afterShow = afterFranchise.filter(ep => !showFilter?.value || ep.show === showFilter.value);
   fillSelect(seasonFilter, uniqueSeasons(afterShow), 'All seasons', prevSeason);
 
   if (actorFilter) {
-    const actorOptions = [...actorIndex.entries()]
-      .map(([key, rec]) => ({ key, ...rec }))
-      .filter(rec => rec.count >= 10)
-      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
-      .map(rec => ({ value: rec.key, label: actorDisplay(rec) }));
-    actorFilter.innerHTML = '';
-    actorFilter.add(new Option(actorOptions.length ? 'All regular actors' : 'No actor data yet', ''));
-    actorOptions.forEach(rec => actorFilter.add(new Option(rec.label, rec.value)));
-    if (prevActor && actorOptions.some(rec => rec.value === prevActor)) actorFilter.value = prevActor;
-  }
-
-  if (bulkShow) {
-    const bulkPrev = bulkShow.value;
-    bulkShow.innerHTML = '';
-    shows.forEach(show => bulkShow.add(new Option(show, show)));
-    if (bulkPrev && shows.includes(bulkPrev)) bulkShow.value = bulkPrev;
-  }
-
-  if (bulkSeason) {
-    const bulkSelectedShow = bulkShow?.value || shows[0] || '';
-    const seasons = uniqueSeasons(scopedEpisodes.filter(ep => ep.show === bulkSelectedShow));
-    bulkSeason.innerHTML = '';
-    seasons.forEach(season => bulkSeason.add(new Option(`Season ${season}`, season)));
+    if (!castIndexLoaded) {
+      actorFilter.innerHTML = '<option value="">Loading regular actors…</option>';
+      actorFilter.disabled = true;
+    } else {
+      const actorOptions = [...actorIndex.entries()]
+        .map(([key, rec]) => ({ key, ...rec }))
+        .filter(rec => rec.count >= 10)
+        .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+      actorFilter.disabled = false;
+      actorFilter.innerHTML = '';
+      actorFilter.add(new Option(actorOptions.length ? 'All regular actors' : 'No actor data available', ''));
+      actorOptions.forEach(rec => actorFilter.add(new Option(actorDisplay(rec), rec.key)));
+      if (prevActor && actorOptions.some(rec => rec.key === prevActor)) actorFilter.value = prevActor;
+    }
   }
 }
 
@@ -1058,7 +1197,7 @@ function renderNext(next) {
   const t = theme(next.show);
   if (heroCard) heroCard.dataset.episodeId = String(next.id || '');
   nextTitle.textContent = `${next.show} ${next.code}${next.title ? ' — ' + next.title : ''}`;
-  nextMeta.innerHTML = `<span class="metaPill">#${esc(next.order)}</span><span class="metaPill">${esc(next.airDate || 'No air date')}</span><span class="metaPill">${episodeLabel(next)}</span>${ratingsHtml(next, 'heroRatings')}`;
+  nextMeta.innerHTML = `<span class="metaPill">#${esc(next.order)}</span><span class="metaPill">${esc(next.airDate || 'No air date')}</span><span class="metaPill">${episodeLabel(next)}</span>${next.runtime ? `<span class="metaPill">${esc(next.runtime)} min</span>` : ''}${ratingsHtml(next, 'heroRatings')}`;
   nextNotes.textContent = next.overview || next.connection || next.notes || 'Open details for the full episode card, artwork, cast, and ratings.';
   heroCard.style.setProperty('--showColor', t.primary);
   const src = episodeArtwork(next);
@@ -1242,9 +1381,15 @@ async function markBulk(scope, status) {
 
   let changed = 0;
   targets.forEach(ep => {
-    if (statusMap[ep.id] !== status) changed++;
-    statusMap[ep.id] = status;
-    statusMap[episodeKey(ep)] = status;
+    if (getStatus(ep) !== status) changed++;
+    if (status === 'Not Started') {
+      delete statusMap[ep.id];
+      delete statusMap[episodeKey(ep)];
+    } else {
+      statusMap[ep.id] = status;
+      statusMap[episodeKey(ep)] = status;
+    }
+    queueCloudStatusUpdate(ep, status);
   });
   save();
   renderPreservingScroll();
@@ -1429,7 +1574,7 @@ function setAvatarElements(src, username = 'Trakt') {
 async function loadTraktProfileSilently() {
   if (!isServerMode() || !traktUser?.authenticated || traktUser.avatar) return;
   try {
-    const response = await fetch('/api/me/profile/?ts=' + Date.now(), { cache: 'no-store', credentials: 'include' });
+    const response = await fetch('/api/me/profile?ts=' + Date.now(), { cache: 'no-store', credentials: 'include' });
     const profile = await response.json().catch(() => ({}));
     if (!response.ok || profile.ok === false) return;
     const user = profile.user || {};
@@ -1517,15 +1662,19 @@ async function loadTraktUser({ pullStatus = true, quiet = false } = {}) {
     const response = await fetch('/api/me/status?ts=' + Date.now(), { cache: 'no-store', credentials: 'include' });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload.error || `HTTP ${response.status}`);
-    traktUser = payload.authenticated ? { ...payload, avatar: payload.avatar || payload.user?.avatar || payload.profile?.avatar || '' } : { authenticated: false };
+    traktUser = payload.authenticated ? payload : { authenticated: false };
+    if (payload.avatar) setAvatarElements(payload.avatar, payload.username || 'Trakt');
     updateTraktAccountPanel();
+    if (payload.authenticated && pullStatus && (payload.statuses || payload.episodes)) {
+      await importStatusPayload(payload, 'Personal Supabase status', {
+        authoritative: true, replaceGuideStatuses: true,
+        suppressToast: quiet, silentNoChange: quiet, background: quiet
+      });
+    }
     if (payload.authenticated) {
+      startPersonalAutoSync();
       loadTraktProfileSilently();
     }
-    if (payload.authenticated && pullStatus && (payload.statuses || payload.episodes)) {
-      await importStatusPayload(payload, 'Personal Supabase status', { suppressToast: quiet, silentNoChange: quiet });
-    }
-    startPersonalAutoSync();
     return traktUser;
   } catch (err) {
     traktUser = { authenticated: false };
@@ -1589,7 +1738,7 @@ async function showTraktProfile() {
   if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
 
   try {
-    const response = await fetch('/api/me/profile/?ts=' + Date.now(), { cache: 'no-store', credentials: 'include' });
+    const response = await fetch('/api/me/profile?ts=' + Date.now(), { cache: 'no-store', credentials: 'include' });
     const profile = await response.json().catch(() => ({}));
     if (!response.ok || profile.ok === false) throw new Error(profile.error || `HTTP ${response.status}`);
     const user = profile.user || {};
@@ -1730,12 +1879,15 @@ async function fetchPersonalSupabaseStatus(options = {}) {
     const response = await fetch('/api/me/status?ts=' + Date.now(), { cache: 'no-store', credentials: 'include' });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload.error || `HTTP ${response.status}`);
-    traktUser = payload.authenticated ? { ...payload, avatar: payload.avatar || payload.user?.avatar || payload.profile?.avatar || '' } : { authenticated: false };
+    traktUser = payload.authenticated ? payload : { authenticated: false };
+    if (payload.avatar) setAvatarElements(payload.avatar, payload.username || 'Trakt');
     updateTraktAccountPanel();
     if (!payload.authenticated) return { ok: false, authenticated: false };
-    return await importStatusPayload(payload, options.source || 'Personal Supabase status', options);
+    return await importStatusPayload(payload, options.source || 'Personal Supabase status', {
+      ...options, authoritative: true, replaceGuideStatuses: true
+    });
   } catch (err) {
-    setText('syncStatus', `Personal status refresh failed: ${err.message}`);
+    if (!options.background) setText('syncStatus', `Personal status refresh failed: ${err.message}`);
     if (!options.suppressToast) showToast('Personal sync warning', err.message, 'warning');
     return { ok: false, error: err.message };
   } finally {
@@ -1745,122 +1897,35 @@ async function fetchPersonalSupabaseStatus(options = {}) {
 
 async function syncPersonalTrakt(options = {}) {
   const background = Boolean(options.background);
-  const startedAt = new Date().toISOString();
-  if (!background) setText('syncStatus', 'Contacting Trakt, updating Supabase, and waiting for the fresh status row…');
-
-  async function runSyncRequest(attempt) {
-    if (attempt > 1) {
-      setText('syncStatus', `Trakt returned an empty first response. Retrying sync request ${attempt}/4…`);
-      await new Promise(resolve => setTimeout(resolve, attempt === 2 ? 1200 : 2200));
-    }
-
-    const response = await fetch('/api/sync/trakt/', {
-      method: 'POST',
-      credentials: 'include',
-      cache: 'no-store',
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache'
-      },
-      body: JSON.stringify({ source: 'wolf-universe-tracker', ts: Date.now(), attempt })
+  if (!background) setText('syncStatus', 'Syncing your Trakt history…');
+  let payload = null;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const response = await fetch('/api/sync/trakt', {
+      method: 'POST', credentials: 'include', cache: 'no-store',
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' },
+      body: JSON.stringify({ source: 'wolf-universe-tracker', force: !background, attempt })
     });
-
-    const payload = await response.json().catch(() => ({}));
-    if (response.status === 202 && payload.retryable) return { retryable: true, payload };
+    payload = await response.json().catch(() => ({}));
+    if (response.status === 202 && payload.retryable && attempt < 3) {
+      await new Promise(resolve => setTimeout(resolve, 700 * attempt));
+      continue;
+    }
     if (!response.ok || payload.ok === false) throw new Error(payload.error || `HTTP ${response.status}`);
-    return { retryable: false, payload };
+    break;
   }
-
-  let syncPayload = null;
-  let lastRetryablePayload = null;
-  for (let attempt = 1; attempt <= 4; attempt += 1) {
-    const result = await runSyncRequest(attempt);
-    if (!result.retryable) {
-      syncPayload = result.payload;
-      break;
-    }
-    lastRetryablePayload = result.payload;
-  }
-
-  if (!syncPayload) {
-    const previousCount = Number(lastRetryablePayload?.watched_count || lastRetryablePayload?.status_count || 0);
-    if (lastRetryablePayload && previousCount > 0) {
-      await importStatusPayload(lastRetryablePayload, 'Previous Supabase status', { suppressToast: true, silentNoChange: true });
-    }
-    throw new Error(lastRetryablePayload?.error || 'Trakt returned an empty watched-status build after retries. Supabase was not overwritten; try again shortly.');
-  }
-
-  traktUser = {
-    authenticated: true,
-    username: syncPayload.username || traktUser?.username || '',
-    updated_at: syncPayload.updated_at || startedAt
-  };
+  if (!payload?.ok) throw new Error(payload?.error || 'Trakt sync did not return a valid result');
+  traktUser = { ...traktUser, ...payload, authenticated: true };
+  if (payload.avatar) setAvatarElements(payload.avatar, payload.username || 'Trakt');
   updateTraktAccountPanel();
-
-  const expectedUpdatedAt = syncPayload.updated_at || startedAt;
-  const expectedKeys = Number(syncPayload.watched_keys || syncPayload.status_count || Object.keys(syncPayload.statuses || {}).length || (Array.isArray(syncPayload.episodes) ? syncPayload.episodes.length : 0) || 0);
-  const expectedServerMatches = Number(syncPayload.matched || syncPayload.guide_matches || syncPayload.debug?.watchedShows?.guideMatches || syncPayload.debug?.history?.guideMatches || 0);
-
-  let bestResult = await importStatusPayload(
-    syncPayload,
-    'Personal Trakt sync',
-    { suppressToast: true, silentNoChange: true }
-  );
-
-  async function readPersonalStatusDirect(attempt) {
-    const url = `/api/me/status?ts=${Date.now()}&after=${encodeURIComponent(expectedUpdatedAt)}&attempt=${attempt}`;
-    const r = await fetch(url, {
-      cache: 'no-store',
-      credentials: 'include',
-      headers: { 'Cache-Control': 'no-cache' }
-    });
-    const payload = await r.json().catch(() => ({}));
-    if (!r.ok || payload.ok === false) throw new Error(payload.error || `HTTP ${r.status}`);
-    traktUser = payload.authenticated ? payload : { authenticated: false };
-    updateTraktAccountPanel();
-    const imported = await importStatusPayload(
-      payload,
-      'Personal Supabase status',
-      { suppressToast: true, silentNoChange: true }
-    );
-    imported.updated_at = payload.updated_at || null;
-    imported.status_count = payload.status_count || Object.keys(payload.statuses || {}).length;
-    return imported;
-  }
-
-  // Important: Vercel/Supabase can be read-after-write delayed for a short moment.
-  // Do not report success from the first stale row. Keep reading until the row is
-  // at least as new as this sync call, or until we have imported a useful status map.
-  const delays = [0, 350, 700, 1200, 1800, 2600];
-  for (let i = 0; i < delays.length; i += 1) {
-    if (delays[i]) await new Promise(resolve => setTimeout(resolve, delays[i]));
-    if (!background) setText('syncStatus', `Finalizing personal Trakt sync… checking Supabase update ${i + 1}/${delays.length}.`);
-    try {
-      const retry = await readPersonalStatusDirect(i + 1);
-      if (retry && retry.ok !== false) {
-        if (!bestResult || retry.matched >= (bestResult.matched || 0) || retry.watched >= (bestResult.watched || 0)) {
-          bestResult = retry;
-        }
-        const rowIsFresh = !retry.updated_at || !expectedUpdatedAt || new Date(retry.updated_at).getTime() >= new Date(expectedUpdatedAt).getTime() - 1500;
-        const hasExpectedSize = !expectedKeys || retry.status_count >= Math.max(1, Math.floor(expectedKeys * 0.95));
-        const hasExpectedMatches = !expectedServerMatches || retry.matched >= Math.max(1, Math.floor(expectedServerMatches * 0.95));
-        if (rowIsFresh && hasExpectedSize && (hasExpectedMatches || retry.watched > 0)) break;
-      }
-    } catch (err) {
-      if (i === delays.length - 1) throw err;
-    }
-  }
-
-  const watched = bestResult?.watched ?? getWatchedCountFromMap();
-  const matched = bestResult?.matched ?? 0;
-  const serverTail = expectedServerMatches ? ` Server matched ${expectedServerMatches} guide rows.` : '';
-  if (background) {
-    setText('syncStatus', `Hourly background sync complete: ${watched} watched entries loaded at ${new Date().toLocaleTimeString()}.`);
-  } else {
-    setText('syncStatus', `Personal Trakt sync complete: ${watched} watched entries loaded, ${matched} browser guide rows matched at ${new Date().toLocaleTimeString()}.${serverTail}`);
-    showToast('Personal Trakt sync complete', `${watched} watched entries loaded.`, 'success', 5200);
-  }
-  return bestResult;
+  const result = await importStatusPayload(payload, 'Personal Trakt sync', {
+    authoritative: true, replaceGuideStatuses: true,
+    suppressToast: background, silentNoChange: background, background
+  });
+  const watched = payload.watched_count ?? result.watched ?? getWatchedCountFromMap();
+  const matched = payload.matched ?? result.matched ?? 0;
+  setText('syncStatus', `${background ? 'Hourly background sync' : 'Personal Trakt sync'} complete: ${watched} watched, ${matched} matched at ${new Date().toLocaleTimeString()}.`);
+  if (!background) showToast('Trakt sync complete', `${watched} watched episodes loaded.`, 'success');
+  return result;
 }
 
 
@@ -1909,6 +1974,12 @@ async function importStatusPayload(payload, source = 'import', options = {}) {
   const incomingSignature = statusSignatureFromPayload(payload);
   let changed = 0;
   let matched = 0;
+  if (options.replaceGuideStatuses) {
+    for (const ep of episodes) {
+      delete statusMap[ep.id];
+      delete statusMap[episodeKey(ep)];
+    }
+  }
 
   function applyToEpisode(ep, status) {
     status = normalizeStatus(status);
@@ -1921,9 +1992,11 @@ async function importStatusPayload(payload, source = 'import', options = {}) {
 
     // Never let a stale "Not Started" payload downgrade a freshly imported
     // watched status for the same guide row. Watched always wins.
-    const finalStatus = statusRank(status) >= Math.max(statusRank(existingId), statusRank(existingKey))
+    const finalStatus = options.authoritative
       ? status
-      : (statusRank(existingId) >= statusRank(existingKey) ? existingId : existingKey);
+      : (statusRank(status) >= Math.max(statusRank(existingId), statusRank(existingKey))
+        ? status
+        : (statusRank(existingId) >= statusRank(existingKey) ? existingId : existingKey));
 
     if (normalizeStatus(statusMap[ep.id]) !== finalStatus) {
       statusMap[ep.id] = finalStatus;
@@ -2087,9 +2160,13 @@ async function triggerCloudSync() {
       return;
     }
 
+    const localSyncToken = local ? (localStorage.getItem('wolf_local_sync_token') || '') : '';
     const response = await fetch('/api/trigger-sync', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(localSyncToken ? { 'X-Local-Sync-Token': localSyncToken } : {})
+      },
       body: JSON.stringify({ source: 'wolf-universe-tracker', ts: Date.now() })
     });
     let payload = {};
@@ -2138,7 +2215,7 @@ function startPersonalAutoSync() {
   stopPersonalAutoSync();
   if (!traktUser?.authenticated || localStorage.getItem(AUTOSYNC_KEY) === '0') return;
   personalAutoSyncTimer = setInterval(async () => {
-    if (!traktUser?.authenticated || personalSyncInProgress) return;
+    if (!traktUser?.authenticated || personalSyncInProgress || document.visibilityState !== 'visible' || !navigator.onLine) return;
     try {
       personalSyncInProgress = true;
       await syncPersonalTrakt({ background: true });
@@ -2173,10 +2250,12 @@ function setAutoSync(enabled) {
 }
 
 function bindEvents() {
-  ['searchBox', 'showFilter', 'franchiseFilter', 'actorFilter', 'seasonFilter', 'statusFilter', 'hideWatched', 'scopeFilter'].forEach(id => {
+  const filterIds = ['searchBox', 'showFilter', 'franchiseFilter', 'actorFilter', 'seasonFilter', 'statusFilter', 'hideWatched', 'scopeFilter'];
+  let searchTimer = null;
+  filterIds.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
-    const handler = () => {
+    const run = () => {
       if (id === 'scopeFilter') {
         setGuideScope(el.value);
         refreshDynamicFilters({ keepShow: false, keepSeason: false, keepFranchise: false, keepActor: true });
@@ -2187,8 +2266,14 @@ function bindEvents() {
       }
       scheduleRender(true);
     };
-    el.addEventListener('input', handler);
-    el.addEventListener('change', handler);
+    if (id === 'searchBox') {
+      el.addEventListener('input', () => {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(run, 160);
+      });
+    } else {
+      el.addEventListener('change', run);
+    }
   });
 
   const list = document.getElementById('episodeList');
@@ -2368,14 +2453,24 @@ window.addEventListener('beforeinstallprompt', event => {
 });
 
 window.loadTraktUser = loadTraktUser;
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   if (localStorage.getItem(THEME_KEY) === 'light') document.body.classList.add('light');
-  if (!episodes.length) {
-    setText('syncStatus', 'Episode data did not load. Make sure data/episodes.js is next to index.html.');
-  }
-  initOptions();
   ensureTraktAccountPanel();
   bindEvents();
-  render();
-  loadTraktUser({ pullStatus: true, quiet: true });
+  setText('syncStatus', 'Loading the Wolf Universe guide…');
+  try {
+    await loadEpisodesData();
+    initOptions();
+    render();
+    setText('syncStatus', `Guide ready: ${episodes.length} entries.`);
+    scheduleDeferredDataLoads();
+    loadTraktUser({ pullStatus: true, quiet: true });
+  } catch (err) {
+    console.error(err);
+    setText('syncStatus', `Episode data did not load: ${err.message}`);
+    showModal({ title: 'Guide failed to load', message: err.message, type: 'error', confirmText: 'OK' });
+  }
+  if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
+    navigator.serviceWorker.register('./service-worker.js').catch(err => console.warn('Service worker registration failed:', err));
+  }
 });

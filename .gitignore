@@ -1,13 +1,32 @@
-trakt_config.json
-trakt_token.json
-.env.local
-__pycache__/
-*.pyc
-Law_Order_Professional_Watch_Tracker_Trakt_Synced.xlsx
-
-# local/private secrets
+# Secrets and local credentials
 .env
 .env.local
 .env.*.local
 trakt_config.json
 trakt_token.json
+
+# Generated/local caches
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+node_modules/
+.vercel/
+_wolf_patch_backups/
+*.bak
+
+# Large local-only metadata caches and reports
+law_order_tracker_app/data/tmdb_cache.json
+law_order_tracker_app/data/ratings_cache.json
+law_order_tracker_app/data/*_debug.json
+law_order_tracker_app/data/*_changes.csv
+
+# Optional generated legacy workbook
+Law_Order_Professional_Watch_Tracker_Trakt_Synced.xlsx
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

@@ -741,3 +741,72 @@ body.episode-modal-open{overflow:hidden!important;touch-action:none;}
   .episodeDetail{max-height:calc(100dvh - 18px)!important;}
   .castGrid{max-height:48vh;}
 }
+
+/* Wolf Universe v3 — consolidated final production layer */
+:root{--content-width:1120px;--transition-fast:160ms ease;}
+html{scroll-padding-top:78px;}
+body{overflow-x:hidden;}
+button,select,input,.fileBtn{transition:transform var(--transition-fast),filter var(--transition-fast),border-color var(--transition-fast),background var(--transition-fast),box-shadow var(--transition-fast);}
+button:disabled,select:disabled{cursor:wait;opacity:.62;transform:none!important;filter:none!important;}
+.noscriptNotice{max-width:760px;margin:30px auto;padding:20px;border:1px solid var(--border);border-radius:18px;background:var(--panel);color:var(--text);}
+
+/* The main row always uses natural content height; no inherited grid-row spans. */
+.dashboard.dashboardV22{align-items:stretch!important;}
+.dashboard.dashboardV22 .hero,.dashboard.dashboardV22 .statsOverview{grid-row:auto!important;align-self:stretch!important;}
+.dashboard.dashboardV22 .hero{overflow:hidden!important;}
+.dashboard.dashboardV22 .heroText{min-width:0;}
+.dashboard.dashboardV22 .poster{aspect-ratio:16/9;height:auto!important;max-height:190px!important;}
+.statsOverview{overflow:hidden;}
+.syncStatusInline{overflow-wrap:anywhere;}
+
+.castLoading{min-height:150px;display:grid;place-items:center;align-content:center;gap:12px;color:var(--muted);}
+.castLoading span{width:34px;height:34px;border:3px solid rgba(148,163,184,.25);border-top-color:var(--showColor,var(--brand));border-radius:50%;animation:wolfSpin .8s linear infinite;}
+.castLoading p{margin:0;}
+@keyframes wolfSpin{to{transform:rotate(360deg)}}
+
+.episodeModalOverlay{position:fixed;inset:0;z-index:80;display:none;padding:16px;background:rgba(2,6,12,.82);backdrop-filter:blur(12px);}
+.episodeModalOverlay.show{display:flex;align-items:center;justify-content:center;}
+.episodeDetail{width:min(1180px,100%);background:var(--panel);border:1px solid color-mix(in srgb,var(--showColor,var(--brand)) 45%,var(--border));border-radius:24px;box-shadow:var(--shadow);padding:22px;}
+.episodeDetailHero{display:grid;grid-template-columns:minmax(300px,.92fr) minmax(0,1fr);gap:22px;}
+.episodeDetailBackdrop{width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:20px;border:1px solid var(--border);}
+.episodeDetailClose{position:sticky;float:right;top:0;z-index:5;width:48px;height:48px;border-radius:50%;padding:0;font-size:30px;line-height:1;background:#0b111c;color:#fff;}
+.detailGrid{display:grid;grid-template-columns:minmax(320px,.8fr) minmax(0,1.2fr);gap:18px;margin-top:18px;}
+.detailArtGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
+.detailArtTile{position:relative;padding:0;overflow:hidden;border-radius:16px;min-height:120px;}
+.detailArtTile img{width:100%;height:100%;min-height:120px;object-fit:cover;display:block;}
+.detailArtTile span{position:absolute;left:8px;bottom:8px;padding:4px 8px;border-radius:999px;background:rgba(0,0,0,.68);color:#fff;font-size:11px;}
+.castGrid{display:flex;flex-wrap:wrap;align-content:flex-start;}
+
+.ratingRow,.detailRatings{display:flex;flex-wrap:wrap;gap:7px;margin:8px 0;}
+.ratingPill{display:inline-flex;gap:5px;align-items:center;padding:5px 9px;border-radius:999px;background:rgba(96,165,250,.11);border:1px solid rgba(96,165,250,.25);font-size:12px;color:var(--muted);}
+.ratingPill strong{color:var(--text);}
+
+.controls{align-items:center;}
+.controls select:disabled{background-image:none;}
+.showStrip{scroll-snap-type:x proximity;overscroll-behavior-inline:contain;}
+.showChip{scroll-snap-align:start;isolation:isolate;}
+.showChip::before{z-index:-1;}
+.showChipTitle,.showChip small{padding-left:0!important;}
+
+.accountDropdown{max-height:min(72vh,620px);overflow:auto;overscroll-behavior:contain;}
+.accountMenuButton{min-height:42px;}
+.accountAvatarFallback,.traktAccountAvatar,.traktDropdownAvatar{flex:0 0 auto;}
+
+@media (max-width:900px){
+  .episodeDetailHero,.detailGrid{grid-template-columns:1fr;}
+  .episodeDetailBackdrop{max-height:350px;}
+  .detailArtGrid{grid-template-columns:repeat(3,minmax(120px,1fr));overflow-x:auto;}
+}
+@media (max-width:760px){
+  .topbar{position:sticky;align-items:center;}
+  .topActions{flex-direction:row;flex-wrap:wrap;justify-content:flex-end;}
+  .dashboard.dashboardV22 .hero,.dashboard.dashboardV22 .statsOverview{max-height:none!important;}
+  .episodeModalOverlay{padding:6px;}
+  .episodeDetail{padding:14px;border-radius:18px;}
+  .episodeDetailHero{gap:14px;}
+  .episodeDetailClose{width:44px;height:44px;font-size:26px;}
+  .detailArtGrid{grid-template-columns:repeat(3,145px);}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;}
+}

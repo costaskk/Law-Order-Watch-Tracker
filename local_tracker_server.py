@@ -6,7 +6,10 @@ This replaces `serve`/`python -m http.server` when you want the website's
 "Sync with Trakt" button to work locally over LAN/Tailscale.
 
 Run from the project root:
-    python local_tracker_server.py --host 0.0.0.0 --port 8080
+    python local_tracker_server.py --port 8080
+
+For LAN/Tailscale access, explicitly add --host 0.0.0.0 and set
+ALLOW_LAN_SYNC=1 plus LOCAL_SYNC_TOKEN in .env.local.
 
 Then open:
     http://YOUR_TAILSCALE_IP:8080/law_order_tracker_app/
@@ -62,9 +65,6 @@ def json_response(handler: SimpleHTTPRequestHandler, status: int, payload: dict)
     handler.send_header("Content-Type", "application/json; charset=utf-8")
     handler.send_header("Content-Length", str(len(body)))
     handler.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
-    handler.send_header("Access-Control-Allow-Origin", "*")
-    handler.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-    handler.send_header("Access-Control-Allow-Headers", "Content-Type")
     handler.end_headers()
     handler.wfile.write(body)
 
@@ -84,7 +84,7 @@ def run_local_sync() -> Tuple[int, dict]:
         cwd=str(ROOT),
         capture_output=True,
         text=True,
-        timeout=300,
+        timeout=900,
     )
 
     watched_path = ROOT / "law_order_tracker_app" / "data" / "watched_status.json"
@@ -166,10 +166,20 @@ class TrackerHandler(SimpleHTTPRequestHandler):
         json_response(self, 200, {"ok": True})
 
     def do_POST(self) -> None:  # noqa: N802
-        if self.path.split("?", 1)[0] not in ("/api/trigger-sync", "/api/trigger-trakt-sync"):
+        if self.path.split("?", 1)[0] != "/api/trigger-sync":
             return json_response(self, 404, {"ok": False, "error": f"Unknown API route: {self.path}"})
 
         load_dotenv(ROOT / ".env.local")
+        client_ip = self.client_address[0]
+        is_loopback = client_ip in ("127.0.0.1", "::1")
+        allow_lan = os.environ.get("ALLOW_LAN_SYNC", "0") == "1"
+        expected_token = os.environ.get("LOCAL_SYNC_TOKEN", "").strip()
+        supplied_token = self.headers.get("X-Local-Sync-Token", "").strip()
+        if not is_loopback:
+            if not allow_lan:
+                return json_response(self, 403, {"ok": False, "error": "LAN sync is disabled. Set ALLOW_LAN_SYNC=1 explicitly."})
+            if not expected_token or supplied_token != expected_token:
+                return json_response(self, 403, {"ok": False, "error": "Missing or invalid X-Local-Sync-Token."})
         mode = os.environ.get("LOCAL_SYNC_MODE", "local").strip().lower()
 
         if mode == "github":
@@ -196,7 +206,7 @@ class TrackerHandler(SimpleHTTPRequestHandler):
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--host", default="0.0.0.0")
+    parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8080)
     args = parser.parse_args()
 
@@ -205,7 +215,7 @@ def main() -> int:
 
     server = ThreadingHTTPServer((args.host, args.port), TrackerHandler)
     print(f"Serving Law & Order tracker at http://{args.host}:{args.port}/law_order_tracker_app/")
-    print("POST /api/trigger-sync is enabled locally.")
+    print("POST /api/trigger-sync is enabled for localhost. LAN access requires ALLOW_LAN_SYNC=1 and LOCAL_SYNC_TOKEN.")
     print("Press Ctrl+C to stop.")
     try:
         server.serve_forever()

@@ -1,7 +1,14 @@
 {
+  "name": "wolf-universe-watch-tracker",
+  "private": true,
+  "version": "3.0.0",
+  "type": "module",
   "scripts": {
     "dev": "vercel dev",
-    "start": "python -m http.server 8000 --directory law_order_tracker_app"
-  },
-  "devDependencies": {}
+    "start": "python local_tracker_server.py",
+    "build:data": "python wolf_build_web_data.py",
+    "audit": "python scripts/audit_project.py",
+    "test": "node scripts/check-js.mjs && python scripts/audit_project.py",
+    "release": "python scripts/build_release.py"
+  }
 }

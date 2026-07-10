@@ -9,10 +9,37 @@ import {
   getPublicBaseUrl,
   exchangeTraktCode,
   getTraktSettings,
-  encryptToken
+  getTraktUserProfile,
+  extractTraktProfile,
+  encryptToken,
+  setApiSecurityHeaders,
+  setNoStore
 } from '../../_wolf_auth.js';
 
+async function upsertUser(payload, profileFields) {
+  const modern = { ...payload, ...profileFields };
+  try {
+    const rows = await supabaseFetch('/trakt_users?on_conflict=trakt_username', {
+      method: 'POST',
+      prefer: 'resolution=merge-duplicates,return=representation',
+      body: JSON.stringify(modern)
+    });
+    return Array.isArray(rows) ? rows[0] : rows;
+  } catch (err) {
+    const message = String(err.message || '').toLowerCase();
+    if (!message.includes('avatar_url') && !message.includes('profile_json') && err.code !== '42703') throw err;
+    const rows = await supabaseFetch('/trakt_users?on_conflict=trakt_username', {
+      method: 'POST',
+      prefer: 'resolution=merge-duplicates,return=representation',
+      body: JSON.stringify(payload)
+    });
+    return Array.isArray(rows) ? rows[0] : rows;
+  }
+}
+
 export default async function handler(req, res) {
+  setNoStore(res);
+  setApiSecurityHeaders(res);
   try {
     const { code, state, error } = req.query || {};
     if (error) throw new Error(String(error));
@@ -26,32 +53,36 @@ export default async function handler(req, res) {
     const redirectUri = getOauthRedirectFromCookie(req) || getRedirectUri(req);
     const token = await exchangeTraktCode({ code, redirectUri });
     const settings = await getTraktSettings(token.access_token);
+    const initial = extractTraktProfile(settings, {});
+    let fullProfile = {};
+    try { fullProfile = await getTraktUserProfile(token.access_token, initial.username || initial.slug || 'me'); } catch (_) {}
+    const profile = extractTraktProfile(settings, fullProfile);
+    const username = profile.username || profile.slug || 'trakt-user';
+    const now = new Date().toISOString();
 
-    const username = settings?.user?.username || settings?.user?.ids?.slug || 'trakt-user';
     const payload = {
       trakt_username: username,
-      trakt_user_slug: settings?.user?.ids?.slug || username,
+      trakt_user_slug: profile.slug || username,
       trakt_access_token: encryptToken(token.access_token),
       trakt_refresh_token: encryptToken(token.refresh_token),
       token_expires_at: new Date(Date.now() + Number(token.expires_in || 7776000) * 1000).toISOString(),
-      updated_at: new Date().toISOString()
+      updated_at: now
+    };
+    const profileFields = {
+      display_name: profile.name || '',
+      avatar_url: profile.avatar || '',
+      profile_json: profile,
+      profile_updated_at: now
     };
 
-    const users = await supabaseFetch('/trakt_users?on_conflict=trakt_username', {
-      method: 'POST',
-      prefer: 'resolution=merge-duplicates,return=representation',
-      body: JSON.stringify(payload)
-    });
-    const user = Array.isArray(users) ? users[0] : users;
-    if (!user?.id) throw new Error('Supabase did not return a user id. Check the trakt_users table schema.');
+    const user = await upsertUser(payload, profileFields);
+    if (!user?.id) throw new Error('Supabase did not return a user id. Run the current SQL migration.');
 
     const sessionId = await createSession(user.id);
-    const sessionCookieBeforeClear = [];
     setSessionCookie(res, sessionId);
     const existing = res.getHeader('Set-Cookie');
-    if (Array.isArray(existing)) sessionCookieBeforeClear.push(...existing);
-    else if (existing) sessionCookieBeforeClear.push(existing);
-    res.setHeader('Set-Cookie', [...sessionCookieBeforeClear, ...clearOAuthCookies()]);
+    const cookies = Array.isArray(existing) ? existing : existing ? [existing] : [];
+    res.setHeader('Set-Cookie', [...cookies, ...clearOAuthCookies()]);
 
     return res.redirect(302, `${getPublicBaseUrl(req)}/law_order_tracker_app/?trakt=connected`);
   } catch (err) {

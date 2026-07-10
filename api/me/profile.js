@@ -1,18 +1,37 @@
-import { getSessionUser, refreshTraktTokenIfNeeded, getTraktSettings, getTraktUserProfile, supabaseFetch, statusesToGuideEpisodes } from '../_wolf_auth.js';
+import {
+  getSessionUser,
+  refreshTraktTokenIfNeeded,
+  getTraktSettings,
+  getTraktUserProfile,
+  extractTraktProfile,
+  supabaseFetch,
+  readWatchStatusRow,
+  mergeStatusLayers,
+  statusesToGuideEpisodes,
+  uniqueStatusCounts,
+  loadGuideEpisodes,
+  setNoStore,
+  setApiSecurityHeaders
+} from '../_wolf_auth.js';
 
-function noStore(res) {
-  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
-  res.setHeader('Pragma', 'no-cache');
-  res.setHeader('Expires', '0');
-}
-
-function countWatched(statuses) {
-  if (!statuses || typeof statuses !== 'object') return 0;
-  return Object.values(statuses).filter(v => String(v).toLowerCase() === 'watched').length;
+function cachedProfile(user) {
+  const json = user?.profile_json && typeof user.profile_json === 'object' ? user.profile_json : {};
+  return {
+    username: json.username || user?.trakt_username || '',
+    slug: json.slug || user?.trakt_user_slug || '',
+    name: json.name || user?.display_name || '',
+    vip: Boolean(json.vip),
+    private: Boolean(json.private),
+    joined_at: json.joined_at || null,
+    location: json.location || '',
+    about: json.about || '',
+    avatar: json.avatar || user?.avatar_url || ''
+  };
 }
 
 export default async function handler(req, res) {
-  noStore(res);
+  setNoStore(res);
+  setApiSecurityHeaders(res);
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
     return res.status(405).json({ ok: false, error: 'Method not allowed' });
@@ -21,41 +40,54 @@ export default async function handler(req, res) {
   try {
     let user = await getSessionUser(req);
     if (!user) return res.status(200).json({ ok: true, authenticated: false });
-    user = await refreshTraktTokenIfNeeded(user);
+    user = await refreshTraktTokenIfNeeded(user, req);
+    let profile = cachedProfile(user);
+    const cacheAge = user.profile_updated_at ? Date.now() - new Date(user.profile_updated_at).getTime() : Infinity;
+    const shouldRefresh = req.query?.refresh === '1' || !profile.avatar || cacheAge > 24 * 60 * 60 * 1000;
 
-    let settings = {};
-    let fullProfile = {};
-    try { settings = await getTraktSettings(user.trakt_access_token); } catch (_) {}
-    try { fullProfile = await getTraktUserProfile(user.trakt_access_token, user.trakt_username || settings?.user?.username); } catch (_) {}
+    if (shouldRefresh) {
+      try {
+        const settings = await getTraktSettings(user.trakt_access_token);
+        let full = {};
+        try { full = await getTraktUserProfile(user.trakt_access_token, user.trakt_username || 'me'); } catch (_) {}
+        profile = extractTraktProfile(settings, full);
+        const now = new Date().toISOString();
+        try {
+          await supabaseFetch(`/trakt_users?id=eq.${encodeURIComponent(user.id)}`, {
+            method: 'PATCH', prefer: 'return=minimal',
+            body: JSON.stringify({ display_name: profile.name || '', avatar_url: profile.avatar || '', profile_json: profile, profile_updated_at: now, updated_at: now })
+          });
+        } catch (_) {}
+      } catch (_) {
+        // Cached profile is still useful when Trakt is temporarily unavailable.
+      }
+    }
 
-    const rows = await supabaseFetch(
-      `/watch_status?user_id=eq.${encodeURIComponent(user.id)}&select=status,updated_at&order=updated_at.desc&limit=1`,
-      { method: 'GET' }
-    );
-    const row = Array.isArray(rows) ? rows[0] : null;
-    const statuses = row?.status && typeof row.status === 'object' ? row.status : {};
-    const episodes = statusesToGuideEpisodes(statuses);
-    const trakt = { ...(settings?.user || {}), ...(fullProfile || {}) };
-    const avatar = trakt.images?.avatar?.full || trakt.images?.avatar?.medium || trakt.images?.avatar?.thumb || trakt.images?.avatar?.original || '';
+    const guide = loadGuideEpisodes();
+    const row = await readWatchStatusRow(user.id);
+    const statuses = mergeStatusLayers(row?.status || {}, row?.manual_status || {}, guide);
+    const episodes = statusesToGuideEpisodes(statuses, guide);
+    const counts = uniqueStatusCounts(statuses, guide);
+    const byShow = {};
+    for (const item of episodes) {
+      byShow[item.show] = byShow[item.show] || { total: 0, watched: 0, watching: 0, skipped: 0 };
+      byShow[item.show].total += 1;
+      if (item.status === 'Watched') byShow[item.show].watched += 1;
+      else if (item.status === 'Watching') byShow[item.show].watching += 1;
+      else if (item.status === 'Skipped') byShow[item.show].skipped += 1;
+    }
 
     return res.status(200).json({
-      ok: true,
-      authenticated: true,
-      user: {
-        username: trakt.username || user.trakt_username,
-        name: trakt.name || '',
-        vip: Boolean(trakt.vip),
-        private: Boolean(trakt.private),
-        joined_at: trakt.joined_at || null,
-        location: trakt.location || '',
-        about: trakt.about || '',
-        avatar
-      },
+      ok: true, authenticated: true, user: profile,
       stats: {
         updated_at: row?.updated_at || null,
-        watched_count: countWatched(statuses),
+        trakt_synced_at: row?.trakt_synced_at || user.last_sync_at || null,
+        watched_count: counts.watched,
+        watching_count: counts.watching,
+        skipped_count: counts.skipped,
         matched: episodes.length,
-        status_count: Object.keys(statuses).length
+        status_count: Object.keys(statuses).length,
+        by_show: byShow
       }
     });
   } catch (err) {
