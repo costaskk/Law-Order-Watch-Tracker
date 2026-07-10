@@ -19,13 +19,14 @@ function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
 async function buildWithRetry(accessToken) {
   const attempts = [];
+  let lastBuilt = { statuses: {}, episodes: [], matched: 0, debug: {} };
   for (const delay of [0, 650, 1400]) {
     if (delay) await sleep(delay);
-    const built = await buildWatchedStatusesForGuide(accessToken);
-    attempts.push({ matched: built.matched || 0, status_keys: Object.keys(built.statuses || {}).length, debug: built.debug || {} });
-    if ((built.matched || 0) > 0) return { built, attempts };
+    lastBuilt = await buildWatchedStatusesForGuide(accessToken);
+    attempts.push({ matched: lastBuilt.matched || 0, status_keys: Object.keys(lastBuilt.statuses || {}).length, debug: lastBuilt.debug || {} });
+    if ((lastBuilt.matched || 0) > 0) return { built: lastBuilt, attempts };
   }
-  return { built: { statuses: {}, episodes: [], matched: 0, debug: {} }, attempts };
+  return { built: lastBuilt, attempts };
 }
 
 export default async function handler(req, res) {
@@ -65,17 +66,21 @@ export default async function handler(req, res) {
 
     const { built, attempts } = await buildWithRetry(user.trakt_access_token);
     const freshTrakt = cleanStatusMap(built.statuses || {});
-    if ((built.matched || 0) === 0) {
+    if ((built.matched || 0) === 0 || Object.keys(freshTrakt).length === 0) {
       const merged = mergeStatusLayers(previousTrakt, manualStatus);
       const rows = statusesToGuideEpisodes(merged);
       const counts = uniqueStatusCounts(merged);
+      const rawItems = Number(built.debug?.rawTraktItems || 0);
+      const reason = rawItems > 0
+        ? `Trakt returned ${rawItems} watched/history items, but none matched the bundled Wolf Universe guide.`
+        : 'Trakt returned no watched episode items for this account.';
       return res.status(202).json({
         ok: false, retryable: true, authenticated: true, username: user.trakt_username,
         updated_at: previous?.updated_at || null, trakt_synced_at: previous?.trakt_synced_at || null,
         status_count: Object.keys(merged).length, watched_count: counts.watched, matched: rows.length,
         statuses: merged, episodes: rows,
-        error: 'Trakt returned an empty watched-history response. Existing cloud progress was kept safely.',
-        debug: { empty_build_guard: true, attempts }
+        error: `${reason} Existing cloud progress was kept safely and was not overwritten.`,
+        debug: { empty_build_guard: true, guide_count: loadGuideEpisodes().length, attempts }
       });
     }
 

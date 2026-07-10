@@ -1,6 +1,5 @@
 import crypto from 'crypto';
-import fs from 'fs';
-import path from 'path';
+import { GUIDE_EPISODES } from './_guide_index.js';
 
 const COOKIE_NAME = 'wolf_session';
 const OAUTH_STATE_COOKIE = 'wolf_oauth_state';
@@ -474,25 +473,22 @@ export function episodeKey(ep) {
 }
 
 export function loadGuideEpisodes() {
-  const candidates = [
-    path.join(process.cwd(), 'law_order_tracker_app', 'data', 'episodes.js'),
-    path.join(process.cwd(), 'data', 'episodes.js')
-  ];
-  const file = candidates.find(candidate => fs.existsSync(candidate));
-  if (!file) return [];
-  const source = fs.readFileSync(file, 'utf8');
-  const match = source.match(/window\.LAW_ORDER_EPISODES\s*=\s*(\[[\s\S]*?\])\s*;?\s*$/);
-  if (!match) return [];
-  try { return JSON.parse(match[1]); } catch (_) { return []; }
+  // Do not read the browser data file with fs here. Vercel's serverless file
+  // tracing can omit dynamically-read files from a function bundle. A static
+  // module import guarantees that every API route receives the same guide.
+  return GUIDE_EPISODES;
 }
 
 export function normalizeStatusValue(value) {
-  if (value && typeof value === 'object') value = value.status ?? value.value ?? value.state ?? '';
-  const v = String(value ?? '').trim().toLowerCase();
+  if (value === undefined || value === null) return '';
+  if (value && typeof value === 'object') value = value.status ?? value.value ?? value.state;
+  if (value === undefined || value === null) return '';
+  const v = String(value).trim().toLowerCase();
+  if (!v) return '';
   if (['watched', 'complete', 'completed', 'yes', 'true', '1'].includes(v)) return 'Watched';
   if (['watching', 'in progress', 'started'].includes(v)) return 'Watching';
   if (['skipped', 'skip'].includes(v)) return 'Skipped';
-  if (['not started', 'todo', 'unwatched', 'false', '0', ''].includes(v)) return 'Not Started';
+  if (['not started', 'todo', 'unwatched', 'false', '0'].includes(v)) return 'Not Started';
   return '';
 }
 
@@ -520,16 +516,13 @@ export function statusesToGuideEpisodes(statuses = {}, guideEpisodes = loadGuide
 }
 
 export function canonicalizeStatuses(statuses = {}, guideEpisodes = loadGuideEpisodes()) {
-  const output = cleanStatusMap(statuses, { includeNotStarted: true });
+  const source = cleanStatusMap(statuses, { includeNotStarted: true });
+  const output = {};
   for (const ep of guideEpisodes || []) {
     const id = String(ep.id);
     const key = episodeKey(ep);
-    const status = normalizeStatusValue(output[id]) || normalizeStatusValue(output[key]);
-    if (!status || status === 'Not Started') {
-      delete output[id];
-      delete output[key];
-      continue;
-    }
+    const status = normalizeStatusValue(source[id]) || normalizeStatusValue(source[key]);
+    if (!status || status === 'Not Started') continue;
     output[id] = status;
     output[key] = status;
   }
@@ -705,6 +698,10 @@ export function buildWatchedStatusesFromHistory(historyItems = [], guideEpisodes
 
 export async function buildWatchedStatusesForGuide(accessToken) {
   const guideEpisodes = loadGuideEpisodes();
+  if (!Array.isArray(guideEpisodes) || guideEpisodes.length < 1000) {
+    throw new Error(`Server guide bundle is unavailable or incomplete (${guideEpisodes?.length || 0} rows). Refusing to overwrite progress.`);
+  }
+
   const watchedShows = await traktFetch('/sync/watched/shows?extended=full', accessToken);
   const primary = buildWatchedStatusesFromTrakt(watchedShows, guideEpisodes);
   let history = { statuses: {}, debug: { source: 'history', traktItems: 0, guideMatches: 0, statusKeys: 0, skipped: true } };
@@ -714,8 +711,10 @@ export async function buildWatchedStatusesForGuide(accessToken) {
   } catch (err) {
     history.debug = { ...history.debug, error: err.message || String(err) };
   }
+
   const statuses = canonicalizeStatuses({ ...primary.statuses, ...history.statuses }, guideEpisodes);
   const episodes = statusesToGuideEpisodes(statuses, guideEpisodes);
+  const rawTraktItems = Number(primary.debug?.traktItems || 0) + Number(history.debug?.traktItems || 0);
   return {
     statuses,
     episodes,
@@ -723,6 +722,8 @@ export async function buildWatchedStatusesForGuide(accessToken) {
     guide_matches: episodes.length,
     debug: {
       guideEpisodes: guideEpisodes.length,
+      rawTraktItems,
+      watchedShowRecords: Array.isArray(watchedShows) ? watchedShows.length : 0,
       watchedShows: primary.debug,
       history: history.debug,
       finalStatusKeys: Object.keys(statuses).length,

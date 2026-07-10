@@ -40,6 +40,22 @@ def main() -> int:
     if len(web) != len(episodes): errors += fail('episodes.json is out of sync with episodes.js')
     if web != episodes: errors += fail('episodes.json content differs from canonical episodes.js')
 
+
+    api_guide_path = ROOT / 'api' / '_guide_index.js'
+    if not api_guide_path.exists():
+        errors += fail('api/_guide_index.js is missing')
+    else:
+        api_text = api_guide_path.read_text(encoding='utf-8')
+        api_match = re.search(r'export const GUIDE_EPISODES\s*=\s*(\[.*\]);\s*export default', api_text, re.S)
+        if not api_match:
+            errors += fail('Could not parse api/_guide_index.js')
+        else:
+            api_guide = json.loads(api_match.group(1))
+            if len(api_guide) != len(episodes):
+                errors += fail('api/_guide_index.js is out of sync with episodes.js')
+            elif [str(ep.get('id')) for ep in api_guide] != ids:
+                errors += fail('api/_guide_index.js episode ids differ from episodes.js')
+
     cast_path = DATA / 'wolf_cast_index.json'
     art_path = DATA / 'wolf_episode_artwork.json'
     if not cast_path.exists(): errors += fail('wolf_cast_index.json is missing')

@@ -30,6 +30,7 @@ function responsePayload(user, row, guideEpisodes) {
     avatar: user.avatar_url || '',
     updated_at: row?.updated_at || null,
     trakt_synced_at: row?.trakt_synced_at || null,
+    guide_count: Array.isArray(guideEpisodes) ? guideEpisodes.length : 0,
     status_count: Object.keys(statuses).length,
     watched_keys: Object.keys(statuses).length,
     watched_count: counts.watched,

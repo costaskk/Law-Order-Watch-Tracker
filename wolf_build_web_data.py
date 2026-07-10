@@ -6,6 +6,7 @@ Outputs:
 - law_order_tracker_app/data/wolf_artwork_base.js
 - law_order_tracker_app/data/wolf_episode_artwork.json
 - law_order_tracker_app/data/wolf_cast_index.json
+- api/_guide_index.js
 
 It also enriches episodes.js with locally cached TMDB episode metadata (ratings,
 missing summaries, runtimes and air dates) without making network requests.
@@ -28,6 +29,7 @@ EPISODE_ART_JSON = DATA / "wolf_episode_artwork.json"
 CAST_JS = DATA / "wolf_cast_index.js"
 CAST_JSON = DATA / "wolf_cast_index.json"
 TMDB_CACHE = DATA / "tmdb_cache.json"
+API_GUIDE_INDEX = ROOT / "api" / "_guide_index.js"
 
 
 def parse_window_assignment(path: Path, variable: str):
@@ -44,6 +46,31 @@ def write_window_assignment(path: Path, variable: str, value) -> None:
         encoding="utf-8",
     )
 
+
+
+def write_api_guide_index(episodes: list[dict]) -> None:
+    """Write the minimal guide statically imported by Vercel API functions."""
+    rows = []
+    for ep in episodes:
+        row = {
+            "id": str(ep.get("id") or ""),
+            "show": ep.get("show") or "",
+            "season": ep.get("season"),
+            "episode": ep.get("episode"),
+        }
+        for key in ("titleShow", "traktIds", "showTraktIds", "traktSlug", "showSlug"):
+            if ep.get(key):
+                row[key] = ep[key]
+        rows.append(row)
+    API_GUIDE_INDEX.parent.mkdir(parents=True, exist_ok=True)
+    API_GUIDE_INDEX.write_text(
+        "// Generated from law_order_tracker_app/data/episodes.json.\n"
+        "// Statically imported so Vercel bundles the guide with API functions.\n"
+        "export const GUIDE_EPISODES = "
+        + json.dumps(rows, ensure_ascii=False, separators=(",", ":"))
+        + ";\nexport default GUIDE_EPISODES;\n",
+        encoding="utf-8",
+    )
 
 def enrich_episodes(episodes: list[dict], cache: dict) -> dict:
     changed = 0
@@ -117,55 +144,72 @@ def main() -> None:
     EPISODES_JSON.write_text(
         json.dumps(episodes, ensure_ascii=False, separators=(",", ":")), encoding="utf-8"
     )
+    write_api_guide_index(episodes)
 
-    artwork = parse_window_assignment(ARTWORK_JS, "WOLF_ARTWORK")
-    base = {key: value for key, value in artwork.items() if key != "episodes"}
-    base["note"] = "Optimized base artwork. Episode stills load asynchronously from wolf_episode_artwork.json."
-    write_window_assignment(ARTWORK_BASE_JS, "WOLF_ARTWORK", base)
-    EPISODE_ART_JSON.write_text(
-        json.dumps(artwork.get("episodes") or {}, ensure_ascii=False, separators=(",", ":")),
-        encoding="utf-8",
-    )
+    if ARTWORK_JS.exists():
+        artwork = parse_window_assignment(ARTWORK_JS, "WOLF_ARTWORK")
+        base = {key: value for key, value in artwork.items() if key != "episodes"}
+        base["note"] = "Optimized base artwork. Episode stills load asynchronously from wolf_episode_artwork.json."
+        write_window_assignment(ARTWORK_BASE_JS, "WOLF_ARTWORK", base)
+        EPISODE_ART_JSON.write_text(
+            json.dumps(artwork.get("episodes") or {}, ensure_ascii=False, separators=(",", ":")),
+            encoding="utf-8",
+        )
+    else:
+        # Clean release archives intentionally omit the large raw artwork source.
+        # Reuse the already optimized deployment files instead of failing.
+        base = parse_window_assignment(ARTWORK_BASE_JS, "WOLF_ARTWORK")
+        episode_art = json.loads(EPISODE_ART_JSON.read_text(encoding="utf-8"))
+        artwork = {**base, "episodes": episode_art}
 
-    cast = parse_window_assignment(CAST_JS, "WOLF_CAST_INDEX")
-    # Compact v3 format: actor portraits/names are deduplicated into a people
-    # table; episode credits reference a numeric person index. The browser
-    # decodes only the episode being opened instead of expanding 70k+ objects.
-    people = []
-    people_index = {}
-    compact_by_episode = {}
-    for episode_key, credits in (cast.get("byEpisode") or {}).items():
-        compact_credits = []
-        for raw in credits or []:
-            if not isinstance(raw, dict):
-                continue
-            name = raw.get("name") or raw.get("actor") or ""
-            if not name:
-                continue
-            profile = raw.get("profile") or raw.get("profile_path") or raw.get("image") or ""
-            person_key = (name, profile)
-            if person_key not in people_index:
-                people_index[person_key] = len(people)
-                people.append([name, profile])
-            character = raw.get("character") or raw.get("role") or ""
-            item = [people_index[person_key]]
-            if character:
-                item.append(character)
-            compact_credits.append(item)
-        compact_by_episode[episode_key] = compact_credits
-    compact_cast = {
-        "format": 3,
-        "generatedAt": cast.get("generatedAt"),
-        "minEpisodes": cast.get("minEpisodes"),
-        "actorCount": cast.get("actorCount"),
-        "actors": cast.get("actors") or {},
-        "people": people,
-        "byEpisode": compact_by_episode,
-        "note": "Compact actor index. Episode credits reference people by numeric index."
-    }
-    CAST_JSON.write_text(
-        json.dumps(compact_cast, ensure_ascii=False, separators=(",", ":")), encoding="utf-8"
-    )
+    if CAST_JS.exists():
+        cast = parse_window_assignment(CAST_JS, "WOLF_CAST_INDEX")
+        # Compact v3 format: actor portraits/names are deduplicated into a people
+        # table; episode credits reference a numeric person index. The browser
+        # decodes only the episode being opened instead of expanding 70k+ objects.
+        people = []
+        people_index = {}
+        compact_by_episode = {}
+        for episode_key, credits in (cast.get("byEpisode") or {}).items():
+            compact_credits = []
+            for raw in credits or []:
+                if not isinstance(raw, dict):
+                    continue
+                name = raw.get("name") or raw.get("actor") or ""
+                if not name:
+                    continue
+                profile = raw.get("profile") or raw.get("profile_path") or raw.get("image") or ""
+                person_key = (name, profile)
+                if person_key not in people_index:
+                    people_index[person_key] = len(people)
+                    people.append([name, profile])
+                character = raw.get("character") or raw.get("role") or ""
+                item = [people_index[person_key]]
+                if character:
+                    item.append(character)
+                compact_credits.append(item)
+            compact_by_episode[episode_key] = compact_credits
+        compact_cast = {
+            "format": 3,
+            "generatedAt": cast.get("generatedAt"),
+            "minEpisodes": cast.get("minEpisodes"),
+            "actorCount": cast.get("actorCount"),
+            "actors": cast.get("actors") or {},
+            "people": people,
+            "byEpisode": compact_by_episode,
+            "note": "Compact actor index. Episode credits reference people by numeric index."
+        }
+        CAST_JSON.write_text(
+            json.dumps(compact_cast, ensure_ascii=False, separators=(",", ":")), encoding="utf-8"
+        )
+    else:
+        # Clean release archives keep only the compact cast index.
+        compact_cast = json.loads(CAST_JSON.read_text(encoding="utf-8"))
+        people = compact_cast.get("people") or []
+        cast = {
+            "actors": compact_cast.get("actors") or {},
+            "byEpisode": compact_cast.get("byEpisode") or {},
+        }
 
     report.update({
         "generated_at": datetime.now(timezone.utc).isoformat(),
