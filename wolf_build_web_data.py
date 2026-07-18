@@ -58,7 +58,10 @@ def write_api_guide_index(episodes: list[dict]) -> None:
             "season": ep.get("season"),
             "episode": ep.get("episode"),
         }
-        for key in ("titleShow", "traktIds", "showTraktIds", "traktSlug", "showSlug"):
+        for key in (
+            "titleShow", "traktIds", "showTraktIds", "traktSlug", "showSlug",
+            "isMovie", "isSpecial", "airDate", "order", "scope", "franchise", "unaired",
+        ):
             if ep.get(key):
                 row[key] = ep[key]
         rows.append(row)
@@ -135,6 +138,12 @@ def main() -> None:
     args = parser.parse_args()
 
     episodes = parse_window_assignment(EPISODES_JS, "LAW_ORDER_EPISODES")
+    guide_shows = {str(ep.get("show") or "") for ep in episodes}
+    guide_seasons = {f"{ep.get('show')}|{int(ep.get('season') or 0)}" for ep in episodes}
+    guide_episode_keys = {
+        f"{ep.get('show')}|{int(ep.get('season') or 0)}|{int(ep.get('episode') or 0)}"
+        for ep in episodes
+    }
     report = {}
     if not args.no_enrich and TMDB_CACHE.exists():
         cache = json.loads(TMDB_CACHE.read_text(encoding="utf-8"))
@@ -148,6 +157,9 @@ def main() -> None:
 
     if ARTWORK_JS.exists():
         artwork = parse_window_assignment(ARTWORK_JS, "WOLF_ARTWORK")
+        artwork["shows"] = {key: value for key, value in (artwork.get("shows") or {}).items() if key in guide_shows}
+        artwork["seasons"] = {key: value for key, value in (artwork.get("seasons") or {}).items() if key in guide_seasons}
+        artwork["episodes"] = {key: value for key, value in (artwork.get("episodes") or {}).items() if key in guide_episode_keys}
         base = {key: value for key, value in artwork.items() if key != "episodes"}
         base["note"] = "Optimized base artwork. Episode stills load asynchronously from wolf_episode_artwork.json."
         write_window_assignment(ARTWORK_BASE_JS, "WOLF_ARTWORK", base)
@@ -161,6 +173,9 @@ def main() -> None:
         base = parse_window_assignment(ARTWORK_BASE_JS, "WOLF_ARTWORK")
         episode_art = json.loads(EPISODE_ART_JSON.read_text(encoding="utf-8"))
         artwork = {**base, "episodes": episode_art}
+        artwork["shows"] = {key: value for key, value in (artwork.get("shows") or {}).items() if key in guide_shows}
+        artwork["seasons"] = {key: value for key, value in (artwork.get("seasons") or {}).items() if key in guide_seasons}
+        artwork["episodes"] = {key: value for key, value in (artwork.get("episodes") or {}).items() if key in guide_episode_keys}
 
     if CAST_JS.exists():
         cast = parse_window_assignment(CAST_JS, "WOLF_CAST_INDEX")
@@ -171,6 +186,8 @@ def main() -> None:
         people_index = {}
         compact_by_episode = {}
         for episode_key, credits in (cast.get("byEpisode") or {}).items():
+            if episode_key not in guide_episode_keys:
+                continue
             compact_credits = []
             for raw in credits or []:
                 if not isinstance(raw, dict):
@@ -189,12 +206,24 @@ def main() -> None:
                     item.append(character)
                 compact_credits.append(item)
             compact_by_episode[episode_key] = compact_credits
+        compact_actors = {}
+        for actor_key, actor in (cast.get("actors") or {}).items():
+            if not isinstance(actor, dict):
+                continue
+            raw_shows = actor.get("shows") or {}
+            if isinstance(raw_shows, dict):
+                kept_shows = {show: count for show, count in raw_shows.items() if show in guide_shows}
+                if not kept_shows:
+                    continue
+                actor = {**actor, "shows": kept_shows, "count": sum(int(value or 0) for value in kept_shows.values())}
+            compact_actors[actor_key] = actor
+
         compact_cast = {
             "format": 3,
             "generatedAt": cast.get("generatedAt"),
             "minEpisodes": cast.get("minEpisodes"),
             "actorCount": cast.get("actorCount"),
-            "actors": cast.get("actors") or {},
+            "actors": compact_actors,
             "people": people,
             "byEpisode": compact_by_episode,
             "note": "Compact actor index. Episode credits reference people by numeric index."
@@ -205,6 +234,10 @@ def main() -> None:
     else:
         # Clean release archives keep only the compact cast index.
         compact_cast = json.loads(CAST_JSON.read_text(encoding="utf-8"))
+        compact_cast["byEpisode"] = {
+            key: value for key, value in (compact_cast.get("byEpisode") or {}).items()
+            if key in guide_episode_keys
+        }
         people = compact_cast.get("people") or []
         cast = {
             "actors": compact_cast.get("actors") or {},

@@ -59,7 +59,8 @@ let currentDetailEpisode = null;
 let pendingCloudStatusUpdates = new Map();
 let cloudStatusTimer = null;
 const CLOUD_STATUS_DEBOUNCE_MS = 550;
-const DATA_VERSION = '20260710-v3';
+const DATA_VERSION = '20260718-v401';
+const TODAY_ISO = new Date().toISOString().slice(0, 10);
 
 const GUIDE_SCOPES = {
   core: 'Core Wolf Universe',
@@ -104,8 +105,6 @@ const ADJACENT_SHOWS = new Set([
   'Players',
   'New York News',
   'Arrest & Trial',
-  'Dragnet',
-  'Dragnet (1950s)',
   'L.A. Dragnet',
   'Cold Justice',
   'Blood & Money',
@@ -447,14 +446,15 @@ function showModal({ title, message, type = 'info', confirmText = 'OK', cancelTe
   return new Promise(resolve => {
     const overlay = document.getElementById('modalOverlay');
     if (!overlay) return resolve(true);
+    const previousFocus = document.activeElement;
 
     const colors = { success: '#28c76f', error: '#ef4444', warning: '#f6ad3d', danger: '#ef4444', info: '#60a5fa' };
     const icon = type === 'success' ? '✓' : type === 'error' || type === 'danger' || type === 'warning' ? '!' : 'i';
     overlay.innerHTML = `
-      <div class="modal" style="--modalColor:${colors[type] || colors.info}">
+      <div class="modal" style="--modalColor:${colors[type] || colors.info}" role="${danger ? 'alertdialog' : 'dialog'}" aria-labelledby="confirmationModalTitle" aria-describedby="confirmationModalMessage">
         <div class="modalIcon">${icon}</div>
-        <h2>${esc(title || 'Confirm')}</h2>
-        <p>${esc(message || '')}</p>
+        <h2 id="confirmationModalTitle">${esc(title || 'Confirm')}</h2>
+        <p id="confirmationModalMessage">${esc(message || '')}</p>
         <div class="modalActions">
           ${cancelText ? `<button id="modalCancel" class="ghost">${esc(cancelText)}</button>` : ''}
           <button id="modalOk" class="${danger ? 'primary danger' : 'primary'}">${esc(confirmText)}</button>
@@ -462,21 +462,28 @@ function showModal({ title, message, type = 'info', confirmText = 'OK', cancelTe
       </div>`;
     overlay.classList.add('show');
 
+    let outside = null;
+    const onKey = event => { if (event.key === 'Escape') close(false); };
     const close = result => {
+      document.removeEventListener('keydown', onKey);
+      if (outside) overlay.removeEventListener('click', outside);
       overlay.classList.remove('show');
       overlay.innerHTML = '';
+      if (previousFocus instanceof HTMLElement) previousFocus.focus({ preventScroll: true });
       resolve(result);
     };
     overlay.querySelector('#modalOk').addEventListener('click', () => close(true));
     const cancel = overlay.querySelector('#modalCancel');
     if (cancel) cancel.addEventListener('click', () => close(false));
 
-    overlay.addEventListener('click', function outside(ev) {
+    outside = function (ev) {
       if (ev.target === overlay) {
-        overlay.removeEventListener('click', outside);
         close(false);
       }
-    });
+    };
+    overlay.addEventListener('click', outside);
+    document.addEventListener('keydown', onKey);
+    overlay.querySelector('#modalOk')?.focus();
   });
 }
 
@@ -896,11 +903,14 @@ function openEpisodeDetail(ep) {
         <div class="episodeDetailInfo">
           <span class="detailKicker">${esc(ep.franchise || ep.era || 'Wolf Universe')} • ${esc(GUIDE_SCOPES[ep.scope] || ep.scope || 'guide')}</span>
           <h2 id="episodeDetailTitle">${esc(ep.show)} ${esc(ep.code)}${ep.title ? ` — ${esc(ep.title)}` : ''}</h2>
-          <div class="heroMeta"><span class="metaPill">${esc(ep.airDate || 'No date')}</span><span class="metaPill">${esc(episodeLabel(ep))}</span>${ep.runtime ? `<span class="metaPill">${esc(ep.runtime)} min</span>` : ''}<span class="metaPill">${esc(st)}</span></div>
+          <div class="heroMeta"><span class="metaPill">${esc(ep.airDate || (ep.unaired ? 'Unaired' : 'No date'))}</span><span class="metaPill">${esc(episodeLabel(ep))}</span>${ep.runtime ? `<span class="metaPill">${esc(ep.runtime)} min</span>` : ''}<span class="metaPill">${esc(st)}</span>${availabilityBadgeHtml(ep)}</div>
+          ${episodeRelationshipBadges(ep, 3)}
           ${(ep.connection || ep.notes) ? `<div class="crossover">${esc(ep.connection || ep.notes)}</div>` : ''}
           ${ep.overview ? `<p class="detailOverview">${esc(ep.overview)}</p>` : '<p class="detailOverview mutedText">No summary available yet.</p>'}
+          ${safeExternalUrl(ep.sourceWatch) ? `<a class="sourceLink" href="${esc(safeExternalUrl(ep.sourceWatch))}" target="_blank" rel="noopener noreferrer">Open catalogue source ↗</a>` : ''}
         </div>
       </div>
+      ${episodeRoleDetailsHtml(ep)}
       <div class="detailGrid">
         <section><h3>Artwork</h3><div class="detailArtGrid">${showArtworkGallery(ep)}</div></section>
         <section><h3>Cast</h3><div class="castGrid">${castHtml}</div></section>
@@ -949,6 +959,10 @@ function normalizeEpisodes() {
         sourceWatch: ep.sourceWatch || ep.source_watch || '',
         overview: ep.overview || '',
         connection: ep.connection || '',
+        relationships: Array.isArray(ep.relationships) ? ep.relationships.filter(Boolean) : (ep.relationship ? [ep.relationship] : []),
+        sortDate: ep.sortDate || ep.airDate || ep.air_date || '',
+        unaired: Boolean(ep.unaired),
+        airDateStatus: ep.airDateStatus || '',
         isSpecial: Boolean(ep.isSpecial || Number(ep.season) === 0),
         isMovie: Boolean(ep.isMovie)
       };
@@ -956,8 +970,8 @@ function normalizeEpisodes() {
       return normalized;
     })
     .sort((a, b) => {
-      const ad = a.airDate || '9999-12-31';
-      const bd = b.airDate || '9999-12-31';
+      const ad = a.sortDate || a.airDate || '9999-12-31';
+      const bd = b.sortDate || b.airDate || '9999-12-31';
       if (ad !== bd) return ad.localeCompare(bd);
       return (Number(a.order) || 0) - (Number(b.order) || 0);
     });
@@ -1002,6 +1016,7 @@ function getFilterValues() {
     franchise: document.getElementById('franchiseFilter')?.value || '',
     actor: document.getElementById('actorFilter')?.value || '',
     season: document.getElementById('seasonFilter')?.value || '',
+    role: document.getElementById('roleFilter')?.value || '',
     status: document.getElementById('statusFilter')?.value || 'unwatched',
     hideWatched: Boolean(document.getElementById('hideWatched')?.checked)
   };
@@ -1011,8 +1026,10 @@ function matchesNonShowFilters(ep, values = getFilterValues()) {
   if (values.franchise && String(ep.franchise || ep.era) !== values.franchise) return false;
   if (values.season && String(ep.season) !== String(values.season)) return false;
   if (values.actor && !actorMatchesEpisode(ep, values.actor)) return false;
+  if (values.role && !(ep.relationships || []).some(item => item.type === values.role)) return false;
   if (values.search) {
-    const haystack = `${ep.title} ${ep.show} ${ep.notes} ${ep.code} ${ep.airDate} ${ep.overview} ${ep.connection}`.toLowerCase();
+    const relationshipText = (ep.relationships || []).map(item => `${item.label || ''} ${item.event || ''} ${item.role || ''}`).join(' ');
+    const haystack = `${ep.title} ${ep.show} ${ep.notes} ${ep.code} ${ep.airDate} ${ep.overview} ${ep.connection} ${relationshipText}`.toLowerCase();
     if (!haystack.includes(values.search)) return false;
   }
   const st = getStatus(ep);
@@ -1299,7 +1316,7 @@ function renderNext(next) {
   const t = theme(next.show);
   if (heroCard) heroCard.dataset.episodeId = String(next.id || '');
   nextTitle.textContent = `${next.show} ${next.code}${next.title ? ' — ' + next.title : ''}`;
-  nextMeta.innerHTML = `<span class="metaPill">#${esc(next.order)}</span><span class="metaPill">${esc(next.airDate || 'No air date')}</span><span class="metaPill">${episodeLabel(next)}</span>${next.runtime ? `<span class="metaPill">${esc(next.runtime)} min</span>` : ''}`;
+  nextMeta.innerHTML = `<span class="metaPill">#${esc(next.order)}</span><span class="metaPill">${esc(next.airDate || (next.unaired ? 'Unaired' : 'No air date'))}</span><span class="metaPill">${episodeLabel(next)}</span>${next.runtime ? `<span class="metaPill">${esc(next.runtime)} min</span>` : ''}${availabilityBadgeHtml(next)}${(next.relationships || []).slice(0, 1).map(relationshipBadgeHtml).join('')}`;
   if (posterRatings) posterRatings.innerHTML = ratingsHtml(next, 'heroImageRatings');
   nextNotes.textContent = next.overview || next.connection || next.notes || 'Open details for the full episode card, artwork, cast, and ratings.';
   heroCard.style.setProperty('--showColor', t.primary);
@@ -1315,6 +1332,65 @@ function episodeLabel(ep) {
   return `Season ${ep.season}, Episode ${ep.episode}`;
 }
 
+function isUpcomingEpisode(ep) {
+  return Boolean(ep?.airDate && ep.airDate > TODAY_ISO);
+}
+
+function availabilityBadgeHtml(ep) {
+  if (ep?.unaired) return '<span class="availabilityBadge availabilityBadge--unaired">Unaired</span>';
+  if (isUpcomingEpisode(ep)) return '<span class="availabilityBadge availabilityBadge--upcoming">Upcoming</span>';
+  return '';
+}
+
+function safeExternalUrl(value) {
+  try {
+    const url = new URL(String(value || ''));
+    return url.protocol === 'https:' ? url.href : '';
+  } catch (_) {
+    return '';
+  }
+}
+
+function relationshipPartText(item = {}) {
+  const part = Number(item.part || 0);
+  const total = Number(item.totalParts || 0);
+  if (!part) return '';
+  return total ? `Part ${part} of ${total}` : `Part ${part}`;
+}
+
+function relationshipBadgeHtml(item = {}) {
+  const part = relationshipPartText(item);
+  const label = item.label || 'Episode role';
+  return `<span class="roleBadge roleBadge--${esc(item.type || 'other')}" title="${esc([item.event, part].filter(Boolean).join(' • '))}">${esc(label)}${part ? ` · ${esc(part)}` : ''}</span>`;
+}
+
+function episodeRelationshipBadges(ep, limit = 2) {
+  const items = (ep.relationships || []).slice(0, limit);
+  return items.length ? `<div class="roleBadges" aria-label="Episode roles">${items.map(relationshipBadgeHtml).join('')}</div>` : '';
+}
+
+function episodeRoleDetailsHtml(ep) {
+  const items = ep.relationships || [];
+  if (!items.length && !ep.airDateStatus) return '';
+  const cards = items.map(item => {
+    const part = relationshipPartText(item);
+    const source = safeExternalUrl(item.source);
+    const related = (item.related || []).map(other => `
+      <button class="relatedEpisodeLink" type="button" data-related-show="${esc(other.show)}" data-related-season="${esc(other.season)}" data-related-episode="${esc(other.episode)}">
+        ${esc(other.show)} ${esc(buildCode(other))}${other.title ? ` — ${esc(other.title)}` : ''}
+      </button>`).join('');
+    return `<article class="episodeRoleCard roleCard--${esc(item.type || 'other')}">
+      <div class="episodeRoleHead">${relationshipBadgeHtml(item)}${item.curated === false ? '<span class="inferencePill">Title-inferred</span>' : '<span class="verifiedPill">Curated</span>'}</div>
+      <h4>${esc(item.event || item.label || 'Episode role')}</h4>
+      <p>${esc(item.role || '')}${part ? ` <strong>${esc(part)}.</strong>` : ''}</p>
+      ${related ? `<div class="relatedEpisodes"><span>Continue with</span>${related}</div>` : ''}
+      ${source ? `<a class="sourceLink" href="${esc(source)}" target="_blank" rel="noopener noreferrer">Open role source ↗</a>` : ''}
+    </article>`;
+  }).join('');
+  const dateNote = ep.airDateStatus ? `<p class="airDateNote"><strong>Date note:</strong> ${esc(ep.airDateStatus)}</p>` : '';
+  return `<section class="episodeRoles"><div class="sectionHeading"><h3>Episode role</h3><span>${items.length || 1} annotation${items.length === 1 ? '' : 's'}</span></div>${dateNote}<div class="episodeRoleGrid">${cards}</div></section>`;
+}
+
 function renderShowStrip(values = getFilterValues()) {
   const strip = document.getElementById('showStrip');
   if (!strip) return;
@@ -1325,8 +1401,10 @@ function renderShowStrip(values = getFilterValues()) {
     if (railValues.franchise && String(ep.franchise || ep.era) !== railValues.franchise) return false;
     if (railValues.season && String(ep.season) !== String(railValues.season)) return false;
     if (railValues.actor && !actorMatchesEpisode(ep, railValues.actor)) return false;
+    if (railValues.role && !(ep.relationships || []).some(item => item.type === railValues.role)) return false;
     if (railValues.search) {
-      const haystack = `${ep.title} ${ep.show} ${ep.notes} ${ep.code} ${ep.airDate} ${ep.overview} ${ep.connection}`.toLowerCase();
+      const roleText = (ep.relationships || []).map(item => `${item.label || ''} ${item.event || ''} ${item.role || ''}`).join(' ');
+      const haystack = `${ep.title} ${ep.show} ${ep.notes} ${ep.code} ${ep.airDate} ${ep.overview} ${ep.connection} ${roleText}`.toLowerCase();
       if (!haystack.includes(railValues.search)) return false;
     }
     return true;
@@ -1373,40 +1451,29 @@ function renderScopeSummary() {
     if (summaryValues.franchise && String(ep.franchise || ep.era) !== summaryValues.franchise) return false;
     if (summaryValues.season && String(ep.season) !== String(summaryValues.season)) return false;
     if (summaryValues.actor && !actorMatchesEpisode(ep, summaryValues.actor)) return false;
+    if (summaryValues.role && !(ep.relationships || []).some(item => item.type === summaryValues.role)) return false;
     if (summaryValues.search) {
-      const haystack = `${ep.title} ${ep.show} ${ep.notes} ${ep.code} ${ep.airDate} ${ep.overview} ${ep.connection}`.toLowerCase();
+      const roleText = (ep.relationships || []).map(item => `${item.label || ''} ${item.event || ''} ${item.role || ''}`).join(' ');
+      const haystack = `${ep.title} ${ep.show} ${ep.notes} ${ep.code} ${ep.airDate} ${ep.overview} ${ep.connection} ${roleText}`.toLowerCase();
       if (!haystack.includes(summaryValues.search)) return false;
     }
     return true;
   });
-  const byShow = new Map();
-  for (const ep of summarySource) {
-    if (!byShow.has(ep.show)) byShow.set(ep.show, { total: 0, watched: 0, color: theme(ep.show).primary });
-    const rec = byShow.get(ep.show);
-    rec.total += 1;
-    if (getStatus(ep) === 'Watched') rec.watched += 1;
-  }
-
-  const entries = showSortEntries([...byShow.entries()], scopedEpisodes);
+  const titles = new Set(summarySource.map(ep => ep.show));
+  const tagged = summarySource.filter(ep => (ep.relationships || []).length);
+  const crossovers = summarySource.filter(ep => (ep.relationships || []).some(item => item.type === 'crossover'));
+  const launchPilots = summarySource.filter(ep => (ep.relationships || []).some(item => item.type === 'backdoor_pilot'));
   el.innerHTML = `
     <div class="scopeHeader">
       <div><strong>${esc(GUIDE_SCOPES[scope])}</strong><span>${summarySource.length}/${episodes.length} entries</span></div>
     </div>
-    <div class="scopeMiniRail">
-      ${entries.map(([show, rec]) => `
-        <button class="scopeMiniChip" data-show="${esc(show)}" style="--showColor:${esc(rec.color)}">
-          <span>${esc(show)}</span>
-          <small>${esc(showYear(show, scopedEpisodes))} · ${rec.watched}/${rec.total}</small>
-        </button>`).join('')}
+    <div class="scopeFacts">
+      <span><strong>${titles.size}</strong> titles</span>
+      <span><strong>${crossovers.length}</strong> crossover parts</span>
+      <span><strong>${launchPilots.length}</strong> launch pilots</span>
+      <span><strong>${tagged.length}</strong> role-tagged entries</span>
+      <span class="sourceCoverage"><strong>100%</strong> supplied-source coverage</span>
     </div>`;
-
-  el.querySelectorAll('.scopeMiniChip').forEach(button => {
-    button.addEventListener('click', () => {
-      document.getElementById('showFilter').value = button.dataset.show;
-      refreshDynamicFilters({ keepShow: true, keepSeason: false, keepFranchise: true, keepActor: true });
-      renderPreservingScroll();
-    });
-  });
 }
 
 function renderList() {
@@ -1439,7 +1506,8 @@ function epCard(ep) {
   const t = theme(ep.show);
   const accent = esc(t.primary);
   const title = ep.title ? ` — ${esc(ep.title)}` : '';
-  const source = ep.sourceWatch ? `<span class="pill">Watch #${esc(ep.sourceWatch)}</span>` : '';
+  const sourceUrl = safeExternalUrl(ep.sourceWatch);
+  const source = sourceUrl ? `<a class="pill sourcePill" href="${esc(sourceUrl)}" target="_blank" rel="noopener noreferrer">Source ↗</a>` : '';
   const notesText = ep.connection || ep.notes || '';
   const notes = notesText ? `<div class="crossover">${esc(notesText)}</div>` : '';
   const scopePill = ep.scope ? `<span class="pill">${esc(GUIDE_SCOPES[ep.scope] || ep.scope)}</span>` : '';
@@ -1454,7 +1522,8 @@ function epCard(ep) {
       </div>
       <div class="epMain">
         <h3>${esc(ep.show)} ${esc(ep.code)}${title}</h3>
-        <div class="meta">${esc(ep.airDate || 'No date')} • ${esc(episodeLabel(ep))} • <strong>${esc(st)}</strong></div>
+        <div class="meta">${esc(ep.airDate || (ep.unaired ? 'Unaired' : 'No date'))} • ${esc(episodeLabel(ep))} • <strong>${esc(st)}</strong> ${availabilityBadgeHtml(ep)}</div>
+        ${episodeRelationshipBadges(ep)}
         <span class="pill">${esc(ep.franchise || ep.era || 'Wolf Universe')}</span>${scopePill}${source}${notes}
         ${ep.overview ? `<p class="overview">${esc(ep.overview)}</p>` : ''}
       </div>
@@ -1513,8 +1582,17 @@ function exportJson() {
 }
 
 function exportCsv() {
-  const rows = [['Order', 'Scope', 'Status', 'Air Date', 'Show', 'Franchise', 'Season', 'Episode', 'Code', 'Title', 'Notes', 'Overview']];
-  current.forEach(ep => rows.push([ep.order, ep.scope, getStatus(ep), ep.airDate, ep.show, ep.franchise, ep.season, ep.episode, ep.code, ep.title, ep.notes || ep.connection, ep.overview]));
+  const rows = [['Order', 'Scope', 'Status', 'Air Date', 'Show', 'Franchise', 'Season', 'Episode', 'Code', 'Title', 'Role', 'Event', 'Part', 'Notes', 'Overview']];
+  current.forEach(ep => {
+    const roles = ep.relationships || [];
+    rows.push([
+      ep.order, ep.scope, getStatus(ep), ep.airDate, ep.show, ep.franchise, ep.season, ep.episode, ep.code, ep.title,
+      roles.map(item => item.label || item.type).join(' | '),
+      roles.map(item => item.event || '').filter(Boolean).join(' | '),
+      roles.map(relationshipPartText).filter(Boolean).join(' | '),
+      ep.notes || ep.connection, ep.overview
+    ]);
+  });
   const csv = rows.map(row => row.map(value => `"${String(value ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
   downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8' }), 'wolf_universe_current_view.csv');
   showToast('Export ready', 'Current view CSV downloaded.', 'success');
@@ -1579,6 +1657,170 @@ function isLocalHost() {
   return ['localhost', '127.0.0.1', '0.0.0.0'].includes(window.location.hostname) || window.location.hostname.endsWith('.local');
 }
 
+function hasSupportedTraktIds(ids = {}) {
+  return Number(ids.trakt || 0) > 0 || Number(ids.tmdb || 0) > 0 || Number(ids.tvdb || 0) > 0 || /^tt\d+$/i.test(String(ids.imdb || ''));
+}
+
+function traktListShowRecords() {
+  const records = new Map();
+  for (const ep of episodes) {
+    if (!records.has(ep.show)) records.set(ep.show, { show: ep.show, episodes: 0, traktEpisodes: 0, hasTrakt: false, isMovie: Boolean(ep.isMovie), scope: ep.scope, firstDate: ep.sortDate || ep.airDate || '9999-12-31' });
+    const rec = records.get(ep.show);
+    rec.episodes += 1;
+    rec.traktEpisodes += hasSupportedTraktIds(ep.traktIds) ? 1 : 0;
+    rec.hasTrakt = rec.hasTrakt || hasSupportedTraktIds(ep.showTraktIds) || hasSupportedTraktIds(ep.traktIds);
+    rec.firstDate = [rec.firstDate, ep.sortDate || ep.airDate || '9999-12-31'].sort()[0];
+  }
+  return [...records.values()].sort((a, b) => a.firstDate.localeCompare(b.firstDate) || a.show.localeCompare(b.show));
+}
+
+async function openTraktListBuilder() {
+  if (!isServerMode() || isLocalHost()) {
+    await showModal({
+      title: 'Hosted Trakt login required',
+      message: 'Creating a personal Trakt list uses your connected account on the hosted Vercel app. Local and file modes cannot save lists to Trakt.',
+      type: 'info', confirmText: 'OK'
+    });
+    return;
+  }
+  if (!traktUser?.authenticated) {
+    const login = await showModal({
+      title: 'Login with Trakt first',
+      message: 'Trakt calls playlists “lists.” Connect your account, then choose shows and save the result directly to that account.',
+      type: 'info', confirmText: 'Login with Trakt', cancelText: 'Cancel'
+    });
+    if (login) loginWithTrakt();
+    return;
+  }
+
+  const overlay = document.getElementById('modalOverlay');
+  if (!overlay) return;
+  const records = traktListShowRecords();
+  const activeShow = document.getElementById('showFilter')?.value || '';
+  const scopeShows = new Set(getBaseScopedEpisodes().map(ep => ep.show));
+  const defaults = activeShow ? new Set([activeShow]) : scopeShows;
+  overlay.innerHTML = `
+    <form class="modal traktListBuilder" id="traktListForm" aria-labelledby="traktListTitle">
+      <div class="builderHeader">
+        <div><span class="builderKicker">Connected as ${esc(traktUser.username || 'Trakt user')}</span><h2 id="traktListTitle">Create a Trakt list</h2><p>Choose titles here and this tracker will save the list directly to your connected Trakt account.</p></div>
+        <button class="builderClose" id="traktListClose" type="button" aria-label="Close">×</button>
+      </div>
+      <div class="builderGrid">
+        <section class="builderSettings">
+          <label>List name<input id="traktListName" name="name" maxlength="100" value="Wolf Universe Watch Order" required></label>
+          <label>Description<textarea id="traktListDescription" name="description" maxlength="1000" rows="3">Created with Wolf Universe Watch Tracker v4.0.1 — verified chronology and selected Dick Wolf titles.</textarea></label>
+          <label>Privacy<select id="traktListPrivacy" name="privacy"><option value="private">Private</option><option value="friends">Friends</option><option value="public">Public</option></select></label>
+          <fieldset class="builderModes"><legend>List contents</legend>
+            <label><input type="radio" name="traktListMode" value="shows" checked><span><strong>Shows & movies</strong><small>One Trakt item per selected title. Recommended.</small></span></label>
+            <label><input type="radio" name="traktListMode" value="episodes"><span><strong>Chronological episodes</strong><small>Every matched episode in guide order.</small></span></label>
+          </fieldset>
+          <label class="builderSpecials"><input id="traktIncludeSpecials" type="checkbox"><span>Include season-zero specials in episode mode</span></label>
+          <label class="builderSpecials"><input id="traktIncludeUnreleased" type="checkbox"><span>Include scheduled or unaired entries in episode mode</span></label>
+          <div class="builderEstimate" id="traktListEstimate" aria-live="polite"></div>
+        </section>
+        <section class="builderShows">
+          <div class="builderShowsHead"><div><h3>Select shows</h3><span id="traktSelectedCount">0 selected</span></div><input id="traktShowSearch" type="search" placeholder="Filter shows…" aria-label="Filter selectable shows"></div>
+          <div class="builderSelectTools"><button type="button" data-list-select="scope">Current scope</button><button type="button" data-list-select="all">All</button><button type="button" data-list-select="none">None</button></div>
+          <div class="builderShowList" id="traktShowList">
+            ${records.map(rec => `<label class="builderShowOption" data-show-search="${esc(rec.show.toLowerCase())}">
+              <input type="checkbox" name="traktShow" value="${esc(rec.show)}" ${defaults.has(rec.show) ? 'checked' : ''}>
+              <span class="builderShowMark" style="--showColor:${esc(theme(rec.show).primary)}"></span>
+              <span><strong>${esc(rec.show)}</strong><small>${rec.isMovie ? 'Movie / special' : `${rec.episodes} guide episodes`} · ${rec.hasTrakt ? 'Trakt matched' : 'ID incomplete'}</small></span>
+            </label>`).join('')}
+          </div>
+        </section>
+      </div>
+      <div id="traktListStatus" class="builderStatus" role="status" aria-live="polite"></div>
+      <div class="modalActions builderActions"><button id="traktListCancel" class="ghost" type="button">Cancel</button><button id="traktListSubmit" class="primary" type="submit">Create on Trakt</button></div>
+    </form>`;
+  overlay.classList.add('show');
+  document.body.classList.add('builder-modal-open');
+
+  const form = overlay.querySelector('#traktListForm');
+  const checks = () => [...form.querySelectorAll('input[name="traktShow"]')];
+  let escapeHandler = null;
+  const close = () => {
+    if (escapeHandler) document.removeEventListener('keydown', escapeHandler);
+    overlay.classList.remove('show');
+    overlay.innerHTML = '';
+    document.body.classList.remove('builder-modal-open');
+  };
+  const updateEstimate = () => {
+    const selected = new Set(checks().filter(input => input.checked).map(input => input.value));
+    const mode = form.querySelector('input[name="traktListMode"]:checked')?.value || 'shows';
+    const includeSpecials = form.querySelector('#traktIncludeSpecials').checked;
+    const includeUnreleased = form.querySelector('#traktIncludeUnreleased').checked;
+    const selectedRows = episodes.filter(ep => selected.has(ep.show)
+      && (includeSpecials || ep.isMovie || (Number(ep.season) !== 0 && !ep.isSpecial))
+      && (includeUnreleased || (!ep.unaired && !isUpcomingEpisode(ep))));
+    const itemEstimate = mode === 'shows'
+      ? records.filter(rec => selected.has(rec.show) && rec.hasTrakt).length
+      : selectedRows.filter(ep => hasSupportedTraktIds(ep.traktIds)).length;
+    const skipped = mode === 'episodes' ? selectedRows.length - itemEstimate : selected.size - itemEstimate;
+    form.querySelector('#traktSelectedCount').textContent = `${selected.size} selected`;
+    form.querySelector('#traktListEstimate').innerHTML = `<strong>${itemEstimate.toLocaleString()} Trakt item${itemEstimate === 1 ? '' : 's'}</strong><span>${mode === 'shows' ? 'Shows and movies' : 'Chronological episodes'}${skipped ? ` · ${skipped.toLocaleString()} without usable IDs will be reported` : ''}</span>${itemEstimate > 1000 ? '<em>Large lists may require Trakt VIP limits or fewer selected shows.</em>' : ''}`;
+    form.querySelector('#traktListSubmit').disabled = selected.size === 0 || itemEstimate === 0;
+  };
+
+  form.addEventListener('change', updateEstimate);
+  form.querySelector('#traktShowSearch').addEventListener('input', event => {
+    const query = event.target.value.toLowerCase().trim();
+    form.querySelectorAll('.builderShowOption').forEach(option => { option.hidden = Boolean(query && !option.dataset.showSearch.includes(query)); });
+  });
+  form.querySelector('.builderSelectTools').addEventListener('click', event => {
+    const button = event.target.closest('button[data-list-select]');
+    if (!button) return;
+    const action = button.dataset.listSelect;
+    checks().forEach(input => { input.checked = action === 'all' || (action === 'scope' && scopeShows.has(input.value)); });
+    updateEstimate();
+  });
+  form.querySelector('#traktListClose').addEventListener('click', close);
+  form.querySelector('#traktListCancel').addEventListener('click', close);
+  overlay.addEventListener('click', function outside(event) {
+    if (event.target === overlay) { overlay.removeEventListener('click', outside); close(); }
+  });
+  escapeHandler = event => { if (event.key === 'Escape') close(); };
+  document.addEventListener('keydown', escapeHandler);
+
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    const submit = form.querySelector('#traktListSubmit');
+    const status = form.querySelector('#traktListStatus');
+    const selected = checks().filter(input => input.checked).map(input => input.value);
+    submit.disabled = true;
+    submit.textContent = 'Creating securely…';
+    status.className = 'builderStatus working';
+    status.textContent = 'Creating the list and adding matched items. Keep this window open.';
+    try {
+      const response = await fetch('/api/lists/trakt', {
+        method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.querySelector('#traktListName').value,
+          description: form.querySelector('#traktListDescription').value,
+          privacy: form.querySelector('#traktListPrivacy').value,
+          mode: form.querySelector('input[name="traktListMode"]:checked')?.value || 'shows',
+          include_specials: form.querySelector('#traktIncludeSpecials').checked,
+          include_unreleased: form.querySelector('#traktIncludeUnreleased').checked,
+          shows: selected
+        })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || payload.ok === false) throw new Error(payload.error || `HTTP ${response.status}`);
+      status.className = 'builderStatus success';
+      status.innerHTML = `<strong>List created with ${Number(payload.item_count || 0).toLocaleString()} items.</strong>${payload.skipped_count ? `<span>${Number(payload.skipped_count).toLocaleString()} unmatched guide entries were skipped.</span>` : ''}<a href="${esc(safeExternalUrl(payload.list?.url))}" target="_blank" rel="noopener noreferrer">Open ${esc(payload.list?.name || 'list')} on Trakt ↗</a>`;
+      submit.textContent = 'Created';
+      showToast('Trakt list created', `${payload.item_count} items saved to your account.`, 'success', 6000);
+    } catch (err) {
+      status.className = 'builderStatus error';
+      status.textContent = err.message || String(err);
+      submit.disabled = false;
+      submit.textContent = 'Try again';
+    }
+  });
+  updateEstimate();
+  form.querySelector('#traktListName').focus();
+}
+
 function ensureTraktAccountPanel() {
   if (document.getElementById('traktAccountPanel')) return;
   const topActions = document.querySelector('.topActions') || document.querySelector('.topbar');
@@ -1603,6 +1845,7 @@ function ensureTraktAccountPanel() {
         <button id="traktProfileBtn" type="button">👤 Profile</button>
         <button id="traktStatsBtn" type="button">📊 Statistics</button>
         <button id="traktDropdownSyncBtn" type="button">↻ Sync now</button>
+        <button id="traktCreateListBtn" type="button">＋ Create watch list</button>
         <button id="traktLoginBtn" type="button">🔗 Login / Reconnect</button>
         <label class="accountToggle"><span>Hourly auto-sync</span><input type="checkbox" id="autoSync" checked></label>
         <button id="traktResetLocalBtn" type="button">🧹 Reset local progress</button>
@@ -1634,6 +1877,7 @@ function ensureTraktAccountPanel() {
     if (target.id === 'traktProfileBtn') { ev.preventDefault(); showTraktProfile(); }
     if (target.id === 'traktStatsBtn') { ev.preventDefault(); showTraktStats(); }
     if (target.id === 'traktDropdownSyncBtn') { ev.preventDefault(); close(); triggerCloudSync(); }
+    if (target.id === 'traktCreateListBtn') { ev.preventDefault(); close(); openTraktListBuilder(); }
     if (target.id === 'traktDisconnectBtn') { ev.preventDefault(); close(); disconnectTraktUser(); }
     if (target.id === 'traktLogoutBtn') { ev.preventDefault(); close(); logoutTraktUser(); }
   });
@@ -1710,6 +1954,7 @@ function updateTraktAccountPanel() {
   const stats = document.getElementById('traktStatsBtn');
   const disconnect = document.getElementById('traktDisconnectBtn');
   const sync = document.getElementById('traktDropdownSyncBtn');
+  const createList = document.getElementById('traktCreateListBtn');
   if (!title || !text) return;
 
   if (traktUser?.authenticated) {
@@ -1726,6 +1971,7 @@ function updateTraktAccountPanel() {
     if (stats) stats.hidden = false;
     if (disconnect) disconnect.hidden = false;
     if (sync) sync.hidden = false;
+    if (createList) createList.hidden = false;
     if (logout) logout.hidden = false;
   } else if (!isServerMode()) {
     title.textContent = 'Local';
@@ -1739,6 +1985,7 @@ function updateTraktAccountPanel() {
     if (stats) stats.hidden = true;
     if (disconnect) disconnect.hidden = true;
     if (sync) sync.hidden = true;
+    if (createList) createList.hidden = true;
     if (logout) logout.hidden = true;
   } else {
     title.textContent = 'Trakt';
@@ -1752,6 +1999,7 @@ function updateTraktAccountPanel() {
     if (stats) stats.hidden = true;
     if (disconnect) disconnect.hidden = true;
     if (sync) sync.hidden = true;
+    if (createList) createList.hidden = true;
     if (logout) logout.hidden = true;
   }
 }
@@ -2355,7 +2603,7 @@ function setAutoSync(enabled) {
 }
 
 function bindEvents() {
-  const filterIds = ['searchBox', 'showFilter', 'franchiseFilter', 'actorFilter', 'seasonFilter', 'statusFilter', 'hideWatched', 'scopeFilter'];
+  const filterIds = ['searchBox', 'showFilter', 'franchiseFilter', 'actorFilter', 'seasonFilter', 'roleFilter', 'statusFilter', 'hideWatched', 'scopeFilter'];
   let searchTimer = null;
   filterIds.forEach(id => {
     const el = document.getElementById(id);
@@ -2384,6 +2632,7 @@ function bindEvents() {
   const list = document.getElementById('episodeList');
   if (list) {
     list.addEventListener('click', event => {
+      if (event.target.closest('a')) return;
       const image = event.target.closest('.js-lightbox-img');
       if (image) {
         openImageLightbox(image.dataset.lightboxSrc || image.src, image.dataset.lightboxTitle || image.alt || 'Artwork');
@@ -2421,19 +2670,25 @@ function bindEvents() {
 
   const episodeOverlay = document.getElementById('episodeModalOverlay');
   if (episodeOverlay) {
-    episodeOverlay.addEventListener('mouseover', ev => {
-      const actorButton = ev.target.closest('.castPill[data-actor-key]');
-      if (actorButton) showActorPortraitFloating(actorButton);
-    });
     episodeOverlay.addEventListener('mousemove', ev => {
       const actorButton = ev.target.closest('.castPill[data-actor-key]');
-      if (actorButton) positionActorPortraitFloating(actorButton);
+      if (actorButton) showActorPortraitFloating(actorButton);
     });
     episodeOverlay.addEventListener('mouseout', ev => {
       const actorButton = ev.target.closest('.castPill[data-actor-key]');
       if (actorButton && !actorButton.contains(ev.relatedTarget)) hideActorPortraitFloating();
     });
     episodeOverlay.addEventListener('click', ev => {
+      const related = ev.target.closest('.relatedEpisodeLink[data-related-show]');
+      if (related) {
+        ev.preventDefault();
+        const target = episodes.find(item => item.show === related.dataset.relatedShow
+          && Number(item.season) === Number(related.dataset.relatedSeason)
+          && Number(item.episode) === Number(related.dataset.relatedEpisode));
+        if (target) openEpisodeDetail(target);
+        return;
+      }
+      if (ev.target.closest('a')) return;
       const actorButton = ev.target.closest('.castPill[data-actor-key]');
       if (actorButton) {
         ev.preventDefault();
@@ -2493,6 +2748,7 @@ function bindEvents() {
   document.getElementById('bottomNext')?.addEventListener('click', jump);
 
   document.getElementById('syncNowBtn')?.addEventListener('click', triggerCloudSync);
+  document.getElementById('createTraktListBtn')?.addEventListener('click', openTraktListBuilder);
   document.getElementById('pullStatusBtn')?.addEventListener('click', fetchHostedStatus);
   document.getElementById('exportJson')?.addEventListener('click', exportJson);
   document.getElementById('exportCsv')?.addEventListener('click', exportCsv);
@@ -2503,6 +2759,7 @@ function bindEvents() {
     document.getElementById('franchiseFilter').value = '';
     if (document.getElementById('actorFilter')) document.getElementById('actorFilter').value = '';
     document.getElementById('seasonFilter').value = '';
+    document.getElementById('roleFilter').value = '';
     document.getElementById('statusFilter').value = 'unwatched';
     document.getElementById('hideWatched').checked = true;
     refreshDynamicFilters({ keepShow: false, keepSeason: false, keepFranchise: false, keepActor: true });

@@ -23,13 +23,20 @@ python wolf_build_web_data.py
 
 This also enriches locally available TMDB episode ratings, summaries, runtimes, titles, and dates from `tmdb_cache.json`.
 
+For a clean v4 baseline, apply the deterministic catalogue/role corrections first:
+
+```powershell
+python scripts/apply_v4_catalog_and_roles.py
+python wolf_build_web_data.py
+```
+
 ## Catalog update
 
 ```powershell
 python wolf_universe_catalog_update.py
 ```
 
-Review its report before committing. The unrelated 1992 `CIA` title must not be reintroduced; the project uses `CIA (2026)`.
+Review its report before committing. The updater is idempotent for movies and removes configured false-positive IDs before matching. The unrelated 1992 `CIA`, 1951 `Dragnet`, 1981 `Blood & Money`, 2006 `South Beach`, and 2000 `The Invisible Man` must not be reintroduced. See `CATALOGUE_AUDIT_V4.md` for the canonical replacements.
 
 ## Cast and portraits
 
@@ -80,4 +87,4 @@ npm test
 npm run release
 ```
 
-The archive deliberately excludes secrets, local tokens, Git history, caches, workbooks, backup files, debug exports, and historic patch scripts.
+The archive deliberately excludes secrets, local tokens, Git history, caches, obsolete workbook variants, backup files, debug exports, and historic patch scripts. The one canonical v4 workbook is retained.

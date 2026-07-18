@@ -9,16 +9,17 @@
   <meta name="application-name" content="Wolf Universe Watch Tracker">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="manifest" href="./manifest.webmanifest?v=20260710-v3">
-  <link rel="preload" href="./data/episodes.json?v=20260710-v3" as="fetch" crossorigin>
+  <link rel="manifest" href="./manifest.webmanifest?v=20260718-v401">
+  <link rel="preload" href="./data/episodes.json?v=20260718-v401" as="fetch" crossorigin>
   <link rel="icon" type="image/svg+xml" href="./assets/wolf-favicon.svg">
   <link rel="alternate icon" href="./assets/wolf-favicon.png">
   <link rel="apple-touch-icon" href="./assets/wolf-apple-touch-icon.png">
-  <link rel="stylesheet" href="./styles.css?v=20260710-v304">
+  <link rel="stylesheet" href="./styles.css?v=20260718-v402">
 </head>
 <body>
+  <a class="skipLink" href="#episodeList">Skip to episode guide</a>
   <header class="topbar">
-    <div class="brandBlock"><div class="badgeLogo">WOLF</div><div><h1>Wolf Universe Watch Tracker</h1><p>Law & Order • One Chicago • FBI • crossovers • specials</p></div></div>
+    <div class="brandBlock"><div class="badgeLogo">WOLF</div><div><h1>Wolf Universe Watch Tracker</h1><p>Verified chronology • crossovers • arcs • specials <span class="versionPill">v4.0.1</span></p></div></div>
     <div class="topActions"><button id="syncNowBtn" class="primary smallBtn">Sync with Trakt</button><button id="themeBtn" class="ghost smallBtn">Theme</button></div>
   </header>
 
@@ -45,18 +46,27 @@
   <section class="showStrip" id="showStrip"></section>
 
   <section class="controls card">
-    <input id="searchBox" placeholder="Search title, show, notes…" autocomplete="off">
-    <select id="showFilter"><option value="">All shows</option></select>
-    <select id="franchiseFilter"><option value="">All franchises</option></select>
-    <select id="actorFilter"><option value="">All regular actors</option></select>
-    <select id="seasonFilter"><option value="">All seasons</option></select>
+    <input id="searchBox" aria-label="Search guide" placeholder="Search title, show, role, notes…" autocomplete="off">
+    <select id="showFilter" aria-label="Show"><option value="">All shows</option></select>
+    <select id="franchiseFilter" aria-label="Franchise"><option value="">All franchises</option></select>
+    <select id="actorFilter" aria-label="Regular actor"><option value="">All regular actors</option></select>
+    <select id="seasonFilter" aria-label="Season"><option value="">All seasons</option></select>
     <select id="scopeFilter" aria-label="Guide scope">
       <option value="core">Core Wolf Universe</option>
       <option value="connected" selected>Core + Crossover Relevant</option>
       <option value="adjacent">Adjacent / Archive Only</option>
       <option value="complete">Complete Dick Wolf Universe</option>
     </select>
-    <select id="statusFilter">
+    <select id="roleFilter" aria-label="Episode role">
+      <option value="">All episode roles</option>
+      <option value="crossover">Crossovers</option>
+      <option value="story_arc">Multi-episode arcs</option>
+      <option value="backdoor_pilot">Backdoor / launch pilots</option>
+      <option value="character_bridge">Character bridges</option>
+      <option value="continuation">Series continuations</option>
+      <option value="unaired">Unaired entries</option>
+    </select>
+    <select id="statusFilter" aria-label="Watch status">
       <option value="unwatched">Only unwatched</option>
       <option value="all">Show all</option>
       <option value="watched">Only watched</option>
@@ -66,9 +76,10 @@
     <label class="toggle"><input type="checkbox" id="hideWatched" checked> Hide watched</label>
   </section>
 
+  <section id="scopeSummary" class="scopeSummary card" aria-label="Active guide scope"></section>
 
   <section class="actions card">
-    <button id="exportJson">Export Status JSON</button><label class="fileBtn">Import Status JSON<input id="importJson" type="file" accept="application/json"></label><button id="exportCsv">Export Current View CSV</button><button id="installBtn">Install app</button><button id="resetFilters" class="ghost">Reset filters</button>
+    <button id="createTraktListBtn" class="primary">Create Trakt list</button><button id="exportJson">Export Status JSON</button><label class="fileBtn">Import Status JSON<input id="importJson" type="file" accept="application/json"></label><button id="exportCsv">Export Current View CSV</button><button id="installBtn">Install app</button><button id="resetFilters" class="ghost">Reset filters</button>
   </section>
 
   <main id="episodeList" class="episodeList"></main>
@@ -79,8 +90,8 @@
   <div id="lightboxOverlay" class="lightboxOverlay" aria-modal="true" role="dialog"></div>
   <nav class="bottomNav"><button data-status="unwatched">Unwatched</button><button data-status="all">All</button><button data-status="watched">Watched</button><button id="bottomNext">Next</button></nav>
   <noscript><p class="noscriptNotice">JavaScript is required to use the Wolf Universe Watch Tracker.</p></noscript>
-  <script defer src="./data/show_themes.js?v=20260710-v3"></script>
-  <script defer src="./data/wolf_artwork_base.js?v=20260710-v3"></script>
-  <script defer src="./app.js?v=20260710-v304"></script>
+  <script defer src="./data/show_themes.js?v=20260718-v401"></script>
+  <script defer src="./data/wolf_artwork_base.js?v=20260718-v401"></script>
+  <script defer src="./app.js?v=20260718-v402"></script>
 </body>
 </html>

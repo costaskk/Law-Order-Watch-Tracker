@@ -17,7 +17,7 @@ export default async function handler(req, res) {
       method: 'POST',
       headers: {
         Accept: 'application/vnd.github+json', Authorization: `Bearer ${token}`,
-        'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'Wolf-Universe-Watch-Tracker/3.0'
+        'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'Wolf-Universe-Watch-Tracker/4.0.1'
       },
       body: JSON.stringify({ ref })
     });

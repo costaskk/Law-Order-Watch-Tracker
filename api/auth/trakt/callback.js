@@ -86,6 +86,8 @@ export default async function handler(req, res) {
 
     return res.redirect(302, `${getPublicBaseUrl(req)}/law_order_tracker_app/?trakt=connected`);
   } catch (err) {
-    return res.status(500).send(`Trakt login failed: ${err.message || String(err)}`);
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    const message = String(err.message || err || 'Unknown error').replace(/[\u0000-\u001f\u007f]/g, ' ').slice(0, 500);
+    return res.status(500).send(`Trakt login failed: ${message}`);
   }
 }

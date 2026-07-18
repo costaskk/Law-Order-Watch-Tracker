@@ -67,7 +67,7 @@ export function withDecryptedTokens(user) {
 }
 
 function traktUserAgent() {
-  return optionalEnv('TRAKT_USER_AGENT', 'Wolf-Universe-Watch-Tracker/3.0 (+https://law-and-order-watch-tracker1.vercel.app)');
+  return optionalEnv('TRAKT_USER_AGENT', 'Wolf-Universe-Watch-Tracker/4.0.1 (+https://law-and-order-watch-tracker1.vercel.app)');
 }
 
 function traktBaseHeaders(accessToken = '') {

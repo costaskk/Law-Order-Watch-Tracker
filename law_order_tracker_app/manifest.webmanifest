@@ -2,7 +2,7 @@
   "id": "./",
   "name": "Wolf Universe Watch Tracker",
   "short_name": "Wolf Tracker",
-  "description": "Chronological Dick Wolf universe tracker with personal Trakt sync.",
+  "description": "Verified Dick Wolf universe chronology with episode roles, personal progress sync, and Trakt list creation.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

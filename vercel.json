@@ -35,6 +35,7 @@
   ],
   "functions": {
     "api/sync/trakt.js": { "maxDuration": 60 },
+    "api/lists/trakt.js": { "maxDuration": 60 },
     "api/me/profile.js": { "maxDuration": 30 }
   }
 }

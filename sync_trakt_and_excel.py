@@ -28,7 +28,7 @@ EPISODES_JS = ROOT / "law_order_tracker_app" / "data" / "episodes.js"
 APP_STATUS_PATH = ROOT / "law_order_tracker_app" / "data" / "watched_status.json"
 ROOT_STATUS_PATH = ROOT / "law_order_watch_status_from_trakt.json"
 DEBUG_PATH = ROOT / "law_order_tracker_app" / "data" / "trakt_sync_debug.json"
-USER_AGENT = "Wolf-Universe-Watch-Tracker/3.0"
+USER_AGENT = "Wolf-Universe-Watch-Tracker/4.0"
 
 
 def norm_text(value: Any) -> str:

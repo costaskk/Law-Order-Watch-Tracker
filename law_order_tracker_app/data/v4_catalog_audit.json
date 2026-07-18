@@ -1,0 +1,32 @@
+{
+  "version": "20260718-v4.0.1",
+  "originalRows": 3905,
+  "finalRows": 3571,
+  "removedRows": 354,
+  "correctedRowsAdded": 20,
+  "shows": 46,
+  "relationshipRows": 91,
+  "relationshipTags": 91,
+  "curatedRelationshipTags": 77,
+  "relationshipTypes": {
+    "unaired": 1,
+    "crossover": 67,
+    "backdoor_pilot": 5,
+    "continuation": 2,
+    "story_arc": 14,
+    "character_bridge": 2
+  },
+  "suppliedIMDbMissing": [],
+  "suppliedFandomMissing": [],
+  "excludedFalseMatches": [
+    "Dragnet (1951; unrelated — L.A. Dragnet 2003 remains)",
+    "Blood & Money (1981; replaced by 2023 Dick Wolf series)",
+    "South Beach (2006; replaced by 1993 Dick Wolf series)",
+    "The Invisible Man (2000; replaced by 1998 Dick Wolf television movie/pilot)"
+  ],
+  "sources": {
+    "imdbList": "https://www.imdb.com/list/ls563325462/",
+    "wolfUniverse": "https://one-chicago-fbi.fandom.com/wiki/Wolf_Universe",
+    "crossovers": "https://one-chicago-fbi.fandom.com/wiki/Crossovers_and_Milestones"
+  }
+}

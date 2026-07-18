@@ -32,7 +32,7 @@ PUBLIC_BASE_URL=https://YOUR-VERCEL-DOMAIN
 TRAKT_REDIRECT_URI=https://YOUR-VERCEL-DOMAIN/api/auth/trakt/callback
 TRAKT_CLIENT_ID=<your Trakt app client ID>
 TRAKT_CLIENT_SECRET=<your Trakt app client secret>
-TRAKT_USER_AGENT=Wolf-Universe-Watch-Tracker/3.0 (+https://YOUR-VERCEL-DOMAIN)
+TRAKT_USER_AGENT=Wolf-Universe-Watch-Tracker/4.0.1 (+https://YOUR-VERCEL-DOMAIN)
 SUPABASE_URL=https://YOUR-PROJECT.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=<server-only service-role key>
 SESSION_SECRET=<long random secret>
@@ -65,7 +65,7 @@ From the project folder:
 npm test
 ```
 
-Expected results include 3,905 guide rows, 47 shows, no duplicate IDs, no 1992 CIA, and zero unset scopes.
+Expected results include 3,571 guide rows, 46 titles, all supplied-source titles, at least 70 curated episode-role tags, no known same-title false matches, no duplicate IDs, no 1992 CIA, and zero unset scopes.
 
 ## 6. Push an existing repository
 
@@ -74,7 +74,7 @@ cd "R:\Law_Order_Professional_Watch_Tracker_Package"
 
 git status
 git add -A
-git commit -m "Upgrade Wolf Universe tracker to professional v3"
+git commit -m "Upgrade Wolf Universe tracker to professional v4"
 git pull --rebase origin main
 git push origin main
 ```

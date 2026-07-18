@@ -1,5 +1,16 @@
 # Changelog
 
+## 4.0.0 — Verified catalogue, episode roles, and Trakt lists
+
+- Reconciled the guide against the supplied IMDb and Wolf Universe catalogues.
+- Corrected Blood & Money (2023), South Beach (1993), and The Invisible Man (1998), removed the unrelated 1951 Dragnet, and retained L.A. Dragnet (2003).
+- Collapsed duplicate movie rows and fixed the catalogue updater so movie refreshes remain idempotent.
+- Added 91 episode-role annotations with crossover parts, backdoor pilots, character bridges, continuations, unaired entries, related episodes, and source links.
+- Added episode-role search/filtering and richer episode details/CSV exports.
+- Added a connected-account Trakt list builder for selected shows, movies, or chronological episodes, with server-side validation, account-limit checks, chunked insertion, and rollback.
+- Added accessible focus behavior, reduced-motion support, a skip link, improved source handling, current-scope summary, and corrected archive artwork labels.
+- Reduced the deployed guide to 3,571 canonical entries across 46 titles and pruned unused cast/artwork rows during builds.
+
 ## 3.0.0 — Professional architecture release
 
 ### Authentication and sync

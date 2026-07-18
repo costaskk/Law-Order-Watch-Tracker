@@ -2,7 +2,7 @@
 
 A responsive watch-order and progress tracker for the connected Dick Wolf television universe: **Law & Order**, **One Chicago**, **FBI**, crossover-relevant titles, specials, and optional archive/adjacent productions.
 
-Version 3 modernizes the application around personal Trakt OAuth, Supabase-backed progress, asynchronous catalog data, a compact PWA shell, and a complete 3,905-entry guide.
+Version 4.0.1 adds a source-audited 3,571-entry guide across 46 titles, structured crossover/arc roles, corrected title identifiers, and transactional Trakt list creation on top of the personal OAuth and Supabase progress system.
 
 ## Highlights
 
@@ -11,6 +11,11 @@ Version 3 modernizes the application around personal Trakt OAuth, Supabase-backe
 - One-click Trakt import with an authoritative response—no second sync click or page reload.
 - Manual `Unwatched`, `Watching`, `Watched`, and `Skipped` states saved to Supabase.
 - Four guide scopes: Core, Core + crossover relevant, Adjacent/archive only, and Complete.
+- All titles from the supplied IMDb and Wolf Universe catalogues, with known same-title false matches explicitly blocked.
+- 91 episode-role annotations for crossovers, parts, backdoor pilots, character bridges, continuations, unaired entries, and multi-episode arcs.
+- A role filter and detailed “Episode role” section with event order, narrative purpose, related episodes, and source links.
+- Create a private, friends-only, or public Trakt list from selected shows, movies, or chronological episodes.
+- Scheduled/unaired list items require explicit opt-in, and incomplete Trakt additions are rolled back rather than reported as successful.
 - Search and filters update in place while preserving scroll position.
 - Up Next follows the current filtered view.
 - Episode summaries, artwork, cast, actor filtering, actor portraits, runtimes, and available ratings.
@@ -71,6 +76,8 @@ Detailed setup and deployment instructions are in:
 - `docs/DEPLOYMENT.md`
 - `docs/SUPABASE.md`
 - `docs/DATA_MAINTENANCE.md`
+- `docs/CATALOGUE_AUDIT_V4.md`
+- `docs/TRAKT_LISTS.md`
 - `SECURITY.md`
 
 ## Local use

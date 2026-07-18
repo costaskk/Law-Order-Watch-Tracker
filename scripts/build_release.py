@@ -5,9 +5,10 @@ import argparse, shutil, tempfile, zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-EXCLUDED_DIRS = {'.git', '__pycache__', '_wolf_patch_backups', '.vercel', 'node_modules', 'legacy', 'archive'}
-EXCLUDED_FILES = {'.env', '.env.local', 'trakt_config.json', 'trakt_token.json', 'README.txt', 'FIRST_TIME_GITHUB_PUSH_EXACT_COMMANDS.txt', 'GITHUB_VERCEL_EXACT_STEPS.txt', 'PUSH_TO_GITHUB_EXACT_STEPS.txt', 'WEBSITE_TRIGGER_TRAKT_SYNC_SETUP.txt', 'wolf_v32_ui_cast_patch.js'}
-EXCLUDED_SUFFIXES = {'.pyc', '.bak', '.xlsx'}
+EXCLUDED_DIRS = {'.git', '__pycache__', '_wolf_patch_backups', '.vercel', 'node_modules', 'legacy', 'archive', 'outputs'}
+EXCLUDED_FILES = {'.env', '.env.local', 'trakt_config.json', 'trakt_token.json', 'README.txt', 'FIRST_TIME_GITHUB_PUSH_EXACT_COMMANDS.txt', 'GITHUB_VERCEL_EXACT_STEPS.txt', 'PUSH_TO_GITHUB_EXACT_STEPS.txt', 'WEBSITE_TRIGGER_TRAKT_SYNC_SETUP.txt', 'wolf_v32_ui_cast_patch.js', 'account_config.js', 'wolf_scope_config.js', 'wolf_scope_runtime.js'}
+EXCLUDED_SUFFIXES = {'.pyc', '.bak'}
+CANONICAL_WORKBOOK = 'Wolf_Universe_Professional_Watch_Tracker_v4.xlsx'
 
 
 def include(path: Path) -> bool:
@@ -15,9 +16,10 @@ def include(path: Path) -> bool:
     if any(part in EXCLUDED_DIRS for part in rel.parts): return False
     if path.name in EXCLUDED_FILES: return False
     if path.suffix in EXCLUDED_SUFFIXES: return False
-    if rel.parts and rel.parts[0] == 'docs' and path.name not in {'DEPLOYMENT.md', 'SUPABASE.md', 'DATA_MAINTENANCE.md'}: return False
+    if path.suffix == '.xlsx' and path.name != CANONICAL_WORKBOOK: return False
+    if rel.parts and rel.parts[0] == 'docs' and path.name not in {'DEPLOYMENT.md', 'SUPABASE.md', 'DATA_MAINTENANCE.md', 'CATALOGUE_AUDIT_V4.md', 'TRAKT_LISTS.md'}: return False
     if path.name.startswith('README_') and path.suffix == '.txt': return False
-    if path.name.startswith('apply_') and path.suffix == '.py': return False
+    if path.name.startswith('apply_') and path.suffix == '.py' and path.name != 'apply_v4_catalog_and_roles.py': return False
     if path.name in {'wolf_mobile_filter_fix.py', 'add_la_dragnet_config.py'}: return False
     if str(rel).replace('\\', '/') in {
         'law_order_tracker_app/data/tmdb_cache.json',

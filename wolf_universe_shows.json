@@ -267,19 +267,6 @@
       "connection": "Dick Wolf reality/legal anthology"
     },
     {
-      "show": "Dragnet",
-      "slug": "dragnet",
-      "alt_slugs": [
-        "dragnet-2003",
-        "l-a-dragnet"
-      ],
-      "franchise": "Crossover Adjacent",
-      "scope": "complete",
-      "optional": true,
-      "alwaysShow": false,
-      "connection": "Dick Wolf revival/producer connection"
-    },
-    {
       "show": "Cold Justice",
       "slug": "cold-justice",
       "franchise": "Crossover Adjacent",
@@ -290,10 +277,12 @@
     },
     {
       "show": "Blood & Money",
-      "slug": "blood-money",
+      "slug": "blood-money-2023",
       "alt_slugs": [
+        "blood-money",
         "blood-and-money"
       ],
+      "imdb": "tt26746481",
       "franchise": "Crossover Adjacent",
       "scope": "complete",
       "optional": true,
@@ -332,10 +321,11 @@
     },
     {
       "show": "South Beach",
-      "slug": "south-beach",
+      "slug": "south-beach-1993",
       "alt_slugs": [
-        "south-beach-1993"
+        "south-beach"
       ],
+      "imdb": "tt0106141",
       "franchise": "Crossover Adjacent",
       "scope": "complete",
       "optional": true,
@@ -425,18 +415,6 @@
       "connection": "Wolf Entertainment / Dick Wolf archive title"
     },
     {
-      "show": "The Invisible Man",
-      "slug": "the-invisible-man-1998",
-      "alt_slugs": [
-        "the-invisible-man"
-      ],
-      "franchise": "Crossover Adjacent",
-      "scope": "complete",
-      "optional": true,
-      "alwaysShow": false,
-      "connection": "Wolf Entertainment television movie / archive title"
-    },
-    {
       "show": "Paris enquêtes criminelles",
       "slug": "paris-enquetes-criminelles",
       "alt_slugs": [
@@ -483,7 +461,7 @@
       "alt_slugs": [
         "exiled-a-law-order-movie"
       ],
-      "imdb": "tt0169421",
+      "imdb": "tt0164023",
       "franchise": "Wolf Specials",
       "scope": "connected",
       "optional": false,
@@ -496,26 +474,52 @@
       "alt_slugs": [
         "homicide-the-movie"
       ],
-      "imdb": "tt0251436",
+      "imdb": "tt0226771",
       "franchise": "Wolf Specials",
       "scope": "connected",
       "optional": false,
       "alwaysShow": true,
       "connection": "Direct Homicide continuation / Munch timeline"
+    },
+    {
+      "show": "The Invisible Man",
+      "slug": "the-invisible-man-1998",
+      "alt_slugs": [
+        "the-invisible-man"
+      ],
+      "imdb": "tt0275427",
+      "franchise": "Wolf Specials",
+      "scope": "complete",
+      "optional": true,
+      "alwaysShow": false,
+      "connection": "1998 Dick Wolf-produced television movie / unaired pilot; not the unrelated 2000 series."
     }
   ],
   "removeShows": [
     "CIA",
     "CIA (1992)",
-    "FBI: CIA"
+    "FBI: CIA",
+    "Dragnet"
   ],
   "removeTraktSlugs": [
-    "cia"
+    "cia",
+    "dragnet",
+    "blood-money",
+    "south-beach",
+    "the-invisible-man"
   ],
   "removeImdbIds": [
-    "tt0250140"
+    "tt0250140",
+    "tt0043194",
+    "tt0081833",
+    "tt0460677",
+    "tt0220238"
   ],
   "removeTraktShowIds": [
-    16683
+    16683,
+    3693,
+    9586,
+    4305,
+    4711
   ]
 }

@@ -80,21 +80,21 @@ DEFAULT_UNIVERSE: Dict[str, Any] = {
         {"show": "FBI", "slug": "fbi", "franchise": "FBI"},
         {"show": "FBI: Most Wanted", "slug": "fbi-most-wanted", "franchise": "FBI"},
         {"show": "FBI: International", "slug": "fbi-international", "franchise": "FBI"},
-        {"show": "CIA", "slug": "cia", "alt_slugs": ["fbi-cia"], "franchise": "FBI", "optional": True},
+        {"show": "CIA (2026)", "slug": "cia-2026", "alt_slugs": ["fbi-cia-2026"], "imdb": "tt35515227", "franchise": "FBI", "optional": True},
         {"show": "Crime & Punishment", "slug": "crime-punishment", "franchise": "Crossover Adjacent", "optional": True},
         {"show": "Mann & Machine", "slug": "mann-machine", "franchise": "Crossover Adjacent", "optional": True},
         {"show": "Players", "slug": "players", "alt_slugs": ["players-1997"], "franchise": "Crossover Adjacent", "optional": True},
         {"show": "New York News", "slug": "new-york-news", "franchise": "Crossover Adjacent", "optional": True},
         {"show": "Arrest & Trial", "slug": "arrest-trial", "alt_slugs": ["arrest-and-trial"], "franchise": "Crossover Adjacent", "optional": True},
-        {"show": "Dragnet", "slug": "dragnet", "alt_slugs": ["dragnet-2003"], "franchise": "Crossover Adjacent", "optional": True},
         {"show": "Cold Justice", "slug": "cold-justice", "franchise": "Crossover Adjacent", "optional": True},
-        {"show": "Blood & Money", "slug": "blood-money", "alt_slugs": ["blood-and-money"], "franchise": "Crossover Adjacent", "optional": True},
+        {"show": "Blood & Money", "slug": "blood-money-2023", "alt_slugs": ["blood-money", "blood-and-money"], "imdb": "tt26746481", "franchise": "Crossover Adjacent", "optional": True},
         {"show": "LA Fire & Rescue", "slug": "la-fire-rescue", "alt_slugs": ["la-fire-and-rescue"], "franchise": "Crossover Adjacent", "optional": True},
         {"show": "On Call", "slug": "on-call", "franchise": "Crossover Adjacent", "optional": True}
     ],
     "movies": [
         {"show": "Exiled: A Law & Order Movie", "slug": "exiled-a-law-order-movie", "alt_slugs": ["exiled"], "franchise": "Wolf Specials", "optional": True},
-        {"show": "Homicide: The Movie", "slug": "homicide-the-movie", "franchise": "Wolf Specials", "optional": True}
+        {"show": "Homicide: The Movie", "slug": "homicide-the-movie", "imdb": "tt0226771", "franchise": "Wolf Specials", "optional": True},
+        {"show": "The Invisible Man", "slug": "the-invisible-man-1998", "alt_slugs": ["the-invisible-man"], "imdb": "tt0275427", "franchise": "Wolf Specials", "optional": True}
     ]
 }
 
@@ -111,6 +111,9 @@ def write_json(path: Path, data: Any) -> None:
 def merge_universe(custom: Dict[str, Any]) -> Dict[str, Any]:
     merged = json.loads(json.dumps(DEFAULT_UNIVERSE))
     merged["aliases"].update(custom.get("aliases") or {})
+    for key in ("scopes", "removeShows", "removeTraktSlugs", "removeImdbIds", "removeTraktShowIds"):
+        if key in custom:
+            merged[key] = custom[key]
     by_show = {x["show"]: x for x in merged["shows"]}
     for item in custom.get("shows") or []:
         base = by_show.get(item.get("show"), {})
@@ -606,6 +609,25 @@ def main() -> None:
 
     eps = load_episodes()
     original_rows = len(eps)
+
+    # Remove known false-positive catalogue matches before refreshing.  Trakt
+    # contains several identically named, unrelated shows (notably the 1951
+    # Dragnet, 1981 Blood & Money, 2006 South Beach and 2000 Invisible Man).
+    remove_shows = {norm_text(v) for v in universe.get("removeShows", [])}
+    remove_slugs = {norm_text(v) for v in universe.get("removeTraktSlugs", [])}
+    remove_imdb = {str(v).lower() for v in universe.get("removeImdbIds", [])}
+    remove_trakt = {safe_int(v) for v in universe.get("removeTraktShowIds", [])}
+
+    def excluded_row(ep: Dict[str, Any]) -> bool:
+        show_ids = ep.get("showTraktIds") or {}
+        return (
+            norm_text(ep.get("show")) in remove_shows
+            or norm_text(show_ids.get("slug") or ep.get("showSlug") or "") in remove_slugs
+            or str(show_ids.get("imdb") or "").lower() in remove_imdb
+            or safe_int(show_ids.get("trakt")) in remove_trakt
+        )
+
+    eps = [ep for ep in eps if not excluded_row(ep)]
     for ep in eps:
         if ep.get("show") in aliases:
             ep["show"] = aliases[ep["show"]]
@@ -663,8 +685,10 @@ def main() -> None:
     for item in movie_items:
         print(f"Fetching Trakt movie/special: {item['show']} ({item['slug']})")
         try:
-            next_num = 1 + max([safe_int(e.get("episode")) for e in eps if e.get("show") == item["show"] and safe_int(e.get("season")) == 0] or [0])
-            movie_ep = fetch_movie_catalog(cfg, item, next_num)
+            # A movie is one canonical guide row.  Earlier versions allocated
+            # the next season-zero number on every refresh and created a new
+            # duplicate each time.
+            movie_ep = fetch_movie_catalog(cfg, item, 1)
         except Exception as exc:
             failed.append({"movie": item["show"], "slug": item["slug"], "error": str(exc)})
             print(f"  WARNING failed: {exc}")
@@ -672,8 +696,17 @@ def main() -> None:
         if not movie_ep:
             print("  Not found/unsupported; skipped")
             continue
-        key = (norm_text(movie_ep["show"]), 0, safe_int(movie_ep["episode"]), True)
-        if key not in existing:
+        key = (norm_text(movie_ep["show"]), 0, 1, True)
+        current_movie = next((e for e in eps if norm_text(e.get("show")) == key[0] and e.get("isMovie")), None)
+        if current_movie:
+            for field, value in movie_ep.items():
+                update_field(current_movie, field, value, changes, movie_ep["show"], force=field in {"episode", "airDate", "traktIds", "showTraktIds"})
+            current_movie["episode"] = 1
+            current_movie["id"] = stable_id(current_movie)
+            # Collapse any duplicates left by older updater versions.
+            eps = [e for e in eps if e is current_movie or not (norm_text(e.get("show")) == key[0] and e.get("isMovie"))]
+            existing[key] = current_movie
+        else:
             movie_ep["id"] = stable_id(movie_ep)
             eps.append(movie_ep)
             existing[key] = movie_ep
